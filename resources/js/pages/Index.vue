@@ -995,7 +995,7 @@ const socials = [
 
                         <p class="text-[13px] mt-4 text-kitb-ink-900/45">
                             Rute 2 melalui Selat Asam adalah jalur tersingkat
-                            menuju Selat Malaka.
+                            menuju Selat Malaka
                         </p>
                     </div>
                 </div>
