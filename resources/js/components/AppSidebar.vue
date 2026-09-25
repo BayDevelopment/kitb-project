@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
-import AppLogo from '@/components/AppLogo.vue';
-import NavFooter from '@/components/NavFooter.vue';
-import NavMain from '@/components/NavMain.vue';
-import NavUser from '@/components/NavUser.vue';
+import { Link } from '@inertiajs/vue3'
+import {
+    BookOpen,
+    FolderGit2,
+    LayoutGrid,
+    Building2,
+    Target,
+    Network,
+    Users,
+} from 'lucide-vue-next'
+
+import AppLogo from '@/components/AppLogo.vue'
+import NavFooter from '@/components/NavFooter.vue'
+import NavMain from '@/components/NavMain.vue'
+import NavUser from '@/components/NavUser.vue'
+
 import {
     Sidebar,
     SidebarContent,
@@ -13,9 +23,10 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+} from '@/components/ui/sidebar'
+
+import { dashboard } from '@/routes'
+import type { NavItem } from '@/types'
 
 const mainNavItems: NavItem[] = [
     {
@@ -23,7 +34,34 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
-];
+
+    {
+        title: 'Profil Perusahaan',
+        icon: Building2,
+        items: [
+            {
+                title: 'Tentang Kami',
+                href: '/profil-perusahaan/tentang-kami',
+                icon: Building2,
+            },
+            {
+                title: 'Visi, Misi & Nilai',
+                href: '/profil-perusahaan/visi-misi',
+                icon: Target,
+            },
+            {
+                title: 'Struktur Perusahaan',
+                href: '/profil-perusahaan/struktur',
+                icon: Network,
+            },
+            {
+                title: 'Anak Usaha',
+                href: '/profil-perusahaan/anak-usaha',
+                icon: Users,
+            },
+        ],
+    },
+]
 
 const footerNavItems: NavItem[] = [
     {
@@ -36,7 +74,7 @@ const footerNavItems: NavItem[] = [
         href: 'https://laravel.com/docs/starter-kits#vue',
         icon: BookOpen,
     },
-];
+]
 </script>
 
 <template>
@@ -62,5 +100,6 @@ const footerNavItems: NavItem[] = [
             <NavUser />
         </SidebarFooter>
     </Sidebar>
+
     <slot />
 </template>

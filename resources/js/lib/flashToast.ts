@@ -1,16 +1,34 @@
-import { router } from '@inertiajs/vue3';
-import { toast } from 'vue-sonner';
-import type { FlashToast } from '@/types/ui';
+import { router } from '@inertiajs/vue3'
+import { toast } from 'vue-sonner'
+import type { FlashToast } from '@/types/ui'
+
+let lastMessage = ''
+let lastShownAt = 0
 
 export function initializeFlashToast(): void {
-    router.on('flash', (event) => {
-        const flash = (event as CustomEvent).detail?.flash;
-        const data = flash?.toast as FlashToast | undefined;
+    router.on('success', (event) => {
+        const flash = event.detail.page.props.flash as
+            | { toast?: FlashToast }
+            | undefined
 
-        if (!data) {
-            return;
+        const data = flash?.toast
+
+        if (!data?.message) {
+            return
         }
 
-        toast[data.type](data.message);
-    });
+        const now = Date.now()
+
+        if (
+            data.message === lastMessage &&
+            now - lastShownAt < 1000
+        ) {
+            return
+        }
+
+        lastMessage = data.message
+        lastShownAt = now
+
+        toast[data.type](data.message)
+    })
 }
