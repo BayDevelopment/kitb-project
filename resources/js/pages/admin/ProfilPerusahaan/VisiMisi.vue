@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { router } from "@inertiajs/vue3";
 import {
     ArrowDown,
@@ -108,6 +108,45 @@ const movingMisiId = ref<number | null>(null);
 
 /*
 |--------------------------------------------------------------------------
+| Page Loading State
+|--------------------------------------------------------------------------
+*/
+
+const isPageLoading = ref(true);
+
+let removeRouterStartListener: (() => void) | null = null;
+let removeRouterFinishListener: (() => void) | null = null;
+
+onMounted(() => {
+    removeRouterStartListener = router.on("start", (event) => {
+        // Skeleton hanya untuk navigasi halaman.
+        // Request CRUD menggunakan preserveState, sehingga tidak
+        // menyebabkan seluruh halaman berkedip.
+        if (!event.detail.visit.preserveState) {
+            isPageLoading.value = true;
+        }
+    });
+
+    removeRouterFinishListener = router.on("finish", () => {
+        isPageLoading.value = false;
+    });
+
+    // Tampilkan skeleton terlebih dahulu saat halaman pertama dibuka,
+    // kemudian tampilkan konten dengan transisi fade-in.
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            isPageLoading.value = false;
+        });
+    });
+});
+
+onBeforeUnmount(() => {
+    removeRouterStartListener?.();
+    removeRouterFinishListener?.();
+});
+
+/*
+|--------------------------------------------------------------------------
 | Helper
 |--------------------------------------------------------------------------
 */
@@ -117,9 +156,7 @@ const truncate = (text: string | null, length = 180) => {
         return "-";
     }
 
-    return text.length > length
-        ? `${text.substring(0, length)}...`
-        : text;
+    return text.length > length ? `${text.substring(0, length)}...` : text;
 };
 
 /*
@@ -148,10 +185,6 @@ const openEditVisi = () => {
 };
 
 const closeVisiModal = () => {
-    if (processingVisi.value) {
-        return;
-    }
-
     showVisiModal.value = false;
     visiForm.value = emptyVisiForm();
 };
@@ -243,10 +276,6 @@ const openEditMisi = (misi: Misi) => {
 };
 
 const closeMisiModal = () => {
-    if (processingMisi.value) {
-        return;
-    }
-
     showMisiModal.value = false;
     selectedMisi.value = null;
     misiForm.value = emptyMisiForm();
@@ -341,20 +370,12 @@ const openDelete = (misi: Misi) => {
 };
 
 const closeDelete = () => {
-    if (processingDelete.value) {
-        return;
-    }
-
     showDelete.value = false;
     selectedMisi.value = null;
 };
 
 const deleteMisi = () => {
-    if (
-        !props.visi ||
-        !selectedMisi.value ||
-        processingDelete.value
-    ) {
+    if (!props.visi || !selectedMisi.value || processingDelete.value) {
         return;
     }
 
@@ -383,31 +404,20 @@ const deleteMisi = () => {
 |--------------------------------------------------------------------------
 */
 
-const moveMisi = (
-    misi: Misi,
-    direction: "up" | "down",
-) => {
+const moveMisi = (misi: Misi, direction: "up" | "down") => {
     if (!props.visi || movingMisiId.value !== null) {
         return;
     }
 
-    const index = sortedMisis.value.findIndex(
-        (item) => item.id === misi.id,
-    );
+    const index = sortedMisis.value.findIndex((item) => item.id === misi.id);
 
     if (index === -1) {
         return;
     }
 
-    const targetIndex =
-        direction === "up"
-            ? index - 1
-            : index + 1;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
 
-    if (
-        targetIndex < 0 ||
-        targetIndex >= sortedMisis.value.length
-    ) {
+    if (targetIndex < 0 || targetIndex >= sortedMisis.value.length) {
         return;
     }
 
@@ -421,10 +431,7 @@ const moveMisi = (
         {
             preserveScroll: true,
             onError: (errors) => {
-                console.error(
-                    "Gagal mengubah urutan misi:",
-                    errors,
-                );
+                console.error("Gagal mengubah urutan misi:", errors);
             },
             onFinish: () => {
                 movingMisiId.value = null;
@@ -443,408 +450,501 @@ const isLastMisi = (index: number) => {
 </script>
 
 <template>
-    <div
-        class="min-h-full bg-slate-50/50 p-6 dark:bg-slate-950/50"
-    >
-        <!-- ========================================================= -->
-        <!-- HEADER -->
-        <!-- ========================================================= -->
+    <div class="min-h-full bg-slate-50/50 p-6 dark:bg-slate-950/50">
+        <Transition name="page-fade" mode="out-in">
+            <!-- ========================================================= -->
+            <!-- PAGE SKELETON -->
+            <!-- ========================================================= -->
+            <div
+                v-if="isPageLoading"
+                key="skeleton"
+                class="animate-pulse space-y-5"
+            >
+                <div class="mb-6 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="size-10 rounded-xl bg-slate-200 dark:bg-slate-800"
+                        ></div>
 
-        <div class="mb-6 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div
-                    class="flex size-10 items-center justify-center rounded-xl bg-blue-600/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400"
-                >
-                    <Target class="size-5" />
+                        <div class="space-y-2">
+                            <div
+                                class="h-5 w-36 rounded bg-slate-200 dark:bg-slate-800"
+                            ></div>
+                            <div
+                                class="h-4 w-64 rounded bg-slate-200 dark:bg-slate-800"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="h-10 w-32 rounded-xl bg-slate-200 dark:bg-slate-800"
+                    ></div>
                 </div>
 
-                <div>
-                    <h1
-                        class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white"
+                <div
+                    class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <div
+                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
                     >
-                        Visi & Misi
-                    </h1>
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="size-9 rounded-xl bg-slate-200 dark:bg-slate-800"
+                            ></div>
 
-                    <p
-                        class="text-sm text-slate-500 dark:text-slate-400"
+                            <div class="space-y-2">
+                                <div
+                                    class="h-4 w-32 rounded bg-slate-200 dark:bg-slate-800"
+                                ></div>
+                                <div
+                                    class="h-3 w-48 rounded bg-slate-200 dark:bg-slate-800"
+                                ></div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="h-9 w-24 rounded-xl bg-slate-200 dark:bg-slate-800"
+                        ></div>
+                    </div>
+
+                    <div class="space-y-3 p-6">
+                        <div
+                            class="h-4 w-full rounded bg-slate-200 dark:bg-slate-800"
+                        ></div>
+                        <div
+                            class="h-4 w-11/12 rounded bg-slate-200 dark:bg-slate-800"
+                        ></div>
+                        <div
+                            class="h-4 w-4/5 rounded bg-slate-200 dark:bg-slate-800"
+                        ></div>
+                    </div>
+                </div>
+
+                <div
+                    class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <div
+                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
                     >
-                        Kelola visi dan misi perusahaan.
-                    </p>
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="size-9 rounded-xl bg-slate-200 dark:bg-slate-800"
+                            ></div>
+
+                            <div class="space-y-2">
+                                <div
+                                    class="h-4 w-36 rounded bg-slate-200 dark:bg-slate-800"
+                                ></div>
+                                <div
+                                    class="h-3 w-56 rounded bg-slate-200 dark:bg-slate-800"
+                                ></div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="h-9 w-28 rounded-xl bg-slate-200 dark:bg-slate-800"
+                        ></div>
+                    </div>
+
+                    <div
+                        class="divide-y divide-slate-100 dark:divide-slate-800"
+                    >
+                        <div
+                            v-for="i in 5"
+                            :key="i"
+                            class="flex items-center gap-4 px-6 py-5"
+                        >
+                            <div
+                                class="size-9 rounded-xl bg-slate-200 dark:bg-slate-800"
+                            ></div>
+                            <div
+                                class="h-4 flex-1 rounded bg-slate-200 dark:bg-slate-800"
+                            ></div>
+                            <div
+                                class="h-7 w-12 rounded-full bg-slate-200 dark:bg-slate-800"
+                            ></div>
+                            <div
+                                class="h-8 w-40 rounded-lg bg-slate-200 dark:bg-slate-800"
+                            ></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <button
-                v-if="!props.visi"
-                type="button"
-                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                @click="openCreateVisi"
-            >
-                <Plus class="size-4" />
-                Tambah Visi
-            </button>
-        </div>
+            <!-- ========================================================= -->
+            <!-- PAGE CONTENT -->
+            <!-- ========================================================= -->
+            <div v-else key="content">
+                <!-- ========================================================= -->
+                <!-- HEADER -->
+                <!-- ========================================================= -->
 
-        <!-- ========================================================= -->
-        <!-- CONTENT -->
-        <!-- ========================================================= -->
-
-        <div class="space-y-5">
-            <!-- ===================================================== -->
-            <!-- VISI -->
-            <!-- ===================================================== -->
-
-            <div
-                class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-            >
-                <!-- HEADER CARD -->
-                <div
-                    class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
-                >
+                <div class="mb-6 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div
-                            class="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                            class="flex size-10 items-center justify-center rounded-xl bg-blue-600/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400"
                         >
-                            <Target class="size-4" />
+                            <Target class="size-5" />
                         </div>
 
                         <div>
-                            <h2
-                                class="font-semibold text-slate-900 dark:text-white"
+                            <h1
+                                class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white"
                             >
-                                Visi Perusahaan
-                            </h2>
+                                Visi & Misi
+                            </h1>
 
                             <p
-                                class="text-xs text-slate-500 dark:text-slate-400"
+                                class="text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Pernyataan visi perusahaan.
+                                Kelola visi dan misi perusahaan.
                             </p>
                         </div>
                     </div>
 
                     <button
-                        v-if="props.visi"
+                        v-if="!props.visi"
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-amber-50 hover:text-amber-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-amber-950/30 dark:hover:text-amber-400"
-                        @click="openEditVisi"
-                    >
-                        <Pencil class="size-4" />
-                        Edit Visi
-                    </button>
-                </div>
-
-                <!-- VISI CONTENT -->
-                <div
-                    v-if="props.visi"
-                    class="p-6"
-                >
-                    <div
-                        class="rounded-xl border border-blue-100 bg-blue-50/50 p-5 dark:border-blue-900/50 dark:bg-blue-950/20"
-                    >
-                        <p
-                            class="whitespace-pre-line text-base leading-7 text-slate-700 dark:text-slate-200"
-                        >
-                            {{ props.visi.isi }}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- EMPTY VISI -->
-                <div
-                    v-else
-                    class="px-6 py-12 text-center"
-                >
-                    <Target
-                        class="mx-auto mb-3 size-10 text-slate-300 dark:text-slate-700"
-                    />
-
-                    <p
-                        class="font-medium text-slate-700 dark:text-slate-300"
-                    >
-                        Visi belum tersedia
-                    </p>
-
-                    <p
-                        class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-                    >
-                        Tambahkan visi perusahaan untuk mulai mengelola
-                        data misi.
-                    </p>
-
-                    <button
-                        type="button"
-                        class="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                        class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                         @click="openCreateVisi"
                     >
                         <Plus class="size-4" />
                         Tambah Visi
                     </button>
                 </div>
-            </div>
 
-            <!-- ===================================================== -->
-            <!-- MISI -->
-            <!-- ===================================================== -->
+                <!-- ========================================================= -->
+                <!-- CONTENT -->
+                <!-- ========================================================= -->
 
-            <div
-                class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-            >
-                <!-- HEADER -->
-                <div
-                    class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
-                >
-                    <div class="flex items-center gap-3">
+                <div class="space-y-5">
+                    <!-- ===================================================== -->
+                    <!-- VISI -->
+                    <!-- ===================================================== -->
+
+                    <div
+                        class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    >
+                        <!-- HEADER CARD -->
                         <div
-                            class="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                            class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
                         >
-                            <FileText class="size-4" />
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                >
+                                    <Target class="size-4" />
+                                </div>
+
+                                <div>
+                                    <h2
+                                        class="font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        Visi Perusahaan
+                                    </h2>
+
+                                    <p
+                                        class="text-xs text-slate-500 dark:text-slate-400"
+                                    >
+                                        Pernyataan visi perusahaan.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                v-if="props.visi"
+                                type="button"
+                                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-amber-50 hover:text-amber-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-amber-950/30 dark:hover:text-amber-400"
+                                @click="openEditVisi"
+                            >
+                                <Pencil class="size-4" />
+                                Edit Visi
+                            </button>
                         </div>
 
-                        <div>
-                            <h2
-                                class="font-semibold text-slate-900 dark:text-white"
+                        <!-- VISI CONTENT -->
+                        <div v-if="props.visi" class="p-6">
+                            <div
+                                class="rounded-xl border border-blue-100 bg-blue-50/50 p-5 dark:border-blue-900/50 dark:bg-blue-950/20"
                             >
-                                Misi Perusahaan
-                            </h2>
+                                <p
+                                    class="whitespace-pre-line text-base leading-7 text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ props.visi.isi }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- EMPTY VISI -->
+                        <div v-else class="px-6 py-12 text-center">
+                            <Target
+                                class="mx-auto mb-3 size-10 text-slate-300 dark:text-slate-700"
+                            />
 
                             <p
-                                class="text-xs text-slate-500 dark:text-slate-400"
+                                class="font-medium text-slate-700 dark:text-slate-300"
                             >
-                                Daftar misi dan urutan misi perusahaan.
+                                Visi belum tersedia
                             </p>
+
+                            <p
+                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                Tambahkan visi perusahaan untuk mulai mengelola
+                                data misi.
+                            </p>
+
+                            <button
+                                type="button"
+                                class="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                                @click="openCreateVisi"
+                            >
+                                <Plus class="size-4" />
+                                Tambah Visi
+                            </button>
                         </div>
                     </div>
 
-                    <button
-                        v-if="props.visi"
-                        type="button"
-                        class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                        @click="openCreateMisi"
+                    <!-- ===================================================== -->
+                    <!-- MISI -->
+                    <!-- ===================================================== -->
+
+                    <div
+                        class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                     >
-                        <Plus class="size-4" />
-                        Tambah Misi
-                    </button>
-                </div>
-
-                <!-- TABLE -->
-                <div
-                    v-if="props.visi && sortedMisis.length > 0"
-                    class="overflow-x-auto"
-                >
-                    <table class="w-full text-left text-sm">
-                        <!-- TABLE HEADER -->
-                        <thead
-                            class="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-800/50"
+                        <!-- HEADER -->
+                        <div
+                            class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
                         >
-                            <tr>
-                                <th
-                                    class="w-20 px-6 py-4 text-center font-semibold text-slate-700 dark:text-slate-200"
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
                                 >
-                                    No.
-                                </th>
+                                    <FileText class="size-4" />
+                                </div>
 
-                                <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
-                                >
-                                    Misi
-                                </th>
-
-                                <th
-                                    class="w-36 px-6 py-4 text-center font-semibold text-slate-700 dark:text-slate-200"
-                                >
-                                    Urutan
-                                </th>
-
-                                <th
-                                    class="w-44 px-6 py-4 text-right font-semibold text-slate-700 dark:text-slate-200"
-                                >
-                                    Aksi
-                                </th>
-                            </tr>
-                        </thead>
-
-                        <!-- TABLE BODY -->
-                        <tbody
-                            class="divide-y divide-slate-100 dark:divide-slate-800"
-                        >
-                            <tr
-                                v-for="(misi, index) in sortedMisis"
-                                :key="misi.id"
-                                class="transition-colors hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
-                            >
-                                <!-- NOMOR -->
-                                <td class="px-6 py-5 text-center">
-                                    <div
-                                        class="mx-auto flex size-9 items-center justify-center rounded-xl bg-blue-50 font-semibold text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                <div>
+                                    <h2
+                                        class="font-semibold text-slate-900 dark:text-white"
                                     >
-                                        {{ index + 1 }}
-                                    </div>
-                                </td>
+                                        Misi Perusahaan
+                                    </h2>
 
-                                <!-- ISI MISI -->
-                                <td class="max-w-2xl px-6 py-5">
                                     <p
-                                        class="whitespace-pre-line leading-6 text-slate-700 dark:text-slate-300"
+                                        class="text-xs text-slate-500 dark:text-slate-400"
                                     >
-                                        {{ truncate(misi.isi) }}
+                                        Daftar misi dan urutan misi perusahaan.
                                     </p>
-                                </td>
+                                </div>
+                            </div>
 
-                                <!-- URUTAN -->
-                                <td class="px-6 py-5 text-center">
-                                    <span
-                                        class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            <button
+                                v-if="props.visi"
+                                type="button"
+                                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                @click="openCreateMisi"
+                            >
+                                <Plus class="size-4" />
+                                Tambah Misi
+                            </button>
+                        </div>
+
+                        <!-- TABLE -->
+                        <div
+                            v-if="props.visi && sortedMisis.length > 0"
+                            class="overflow-x-auto"
+                        >
+                            <table class="w-full text-left text-sm">
+                                <!-- TABLE HEADER -->
+                                <thead
+                                    class="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-800/50"
+                                >
+                                    <tr>
+                                        <th
+                                            class="w-20 px-6 py-4 text-center font-semibold text-slate-700 dark:text-slate-200"
+                                        >
+                                            No.
+                                        </th>
+
+                                        <th
+                                            class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                        >
+                                            Misi
+                                        </th>
+
+                                        <th
+                                            class="w-36 px-6 py-4 text-center font-semibold text-slate-700 dark:text-slate-200"
+                                        >
+                                            Urutan
+                                        </th>
+
+                                        <th
+                                            class="w-44 px-6 py-4 text-right font-semibold text-slate-700 dark:text-slate-200"
+                                        >
+                                            Aksi
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <!-- TABLE BODY -->
+                                <tbody
+                                    class="divide-y divide-slate-100 dark:divide-slate-800"
+                                >
+                                    <tr
+                                        v-for="(misi, index) in sortedMisis"
+                                        :key="misi.id"
+                                        class="transition-colors hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
                                     >
-                                        {{ misi.urutan }}
-                                    </span>
-                                </td>
+                                        <!-- NOMOR -->
+                                        <td class="px-6 py-5 text-center">
+                                            <div
+                                                class="mx-auto flex size-9 items-center justify-center rounded-xl bg-blue-50 font-semibold text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                            >
+                                                {{ index + 1 }}
+                                            </div>
+                                        </td>
 
-                                <!-- AKSI -->
-                                <td class="px-6 py-5">
-                                    <div
-                                        class="flex justify-end gap-1"
-                                    >
-                                        <!-- UP -->
-                                        <button
-                                            type="button"
-                                            :disabled="
-                                                isFirstMisi(index) ||
-                                                movingMisiId === misi.id
-                                            "
-                                            class="rounded-lg p-2 transition"
-                                            :class="
-                                                isFirstMisi(index) ||
-                                                movingMisiId === misi.id
-                                                    ? 'cursor-not-allowed text-slate-300 dark:text-slate-700'
-                                                    : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
-                                            "
-                                            title="Naikkan urutan"
-                                            @click="
-                                                moveMisi(
-                                                    misi,
-                                                    'up',
-                                                )
-                                            "
-                                        >
-                                            <ArrowUp
-                                                class="size-4"
-                                            />
-                                        </button>
+                                        <!-- ISI MISI -->
+                                        <td class="max-w-2xl px-6 py-5">
+                                            <p
+                                                class="whitespace-pre-line leading-6 text-slate-700 dark:text-slate-300"
+                                            >
+                                                {{ truncate(misi.isi) }}
+                                            </p>
+                                        </td>
 
-                                        <!-- DOWN -->
-                                        <button
-                                            type="button"
-                                            :disabled="
-                                                isLastMisi(index) ||
-                                                movingMisiId === misi.id
-                                            "
-                                            class="rounded-lg p-2 transition"
-                                            :class="
-                                                isLastMisi(index) ||
-                                                movingMisiId === misi.id
-                                                    ? 'cursor-not-allowed text-slate-300 dark:text-slate-700'
-                                                    : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
-                                            "
-                                            title="Turunkan urutan"
-                                            @click="
-                                                moveMisi(
-                                                    misi,
-                                                    'down',
-                                                )
-                                            "
-                                        >
-                                            <ArrowDown
-                                                class="size-4"
-                                            />
-                                        </button>
+                                        <!-- URUTAN -->
+                                        <td class="px-6 py-5 text-center">
+                                            <span
+                                                class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                                            >
+                                                {{ misi.urutan }}
+                                            </span>
+                                        </td>
 
-                                        <!-- DETAIL -->
-                                        <button
-                                            type="button"
-                                            class="rounded-lg p-2 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
-                                            title="Lihat"
-                                            @click="
-                                                openDetail(misi)
-                                            "
-                                        >
-                                            <Eye class="size-4" />
-                                        </button>
+                                        <!-- AKSI -->
+                                        <td class="px-6 py-5">
+                                            <div class="flex justify-end gap-1">
+                                                <!-- UP -->
+                                                <button
+                                                    type="button"
+                                                    :disabled="
+                                                        isFirstMisi(index) ||
+                                                        movingMisiId === misi.id
+                                                    "
+                                                    class="rounded-lg p-2 transition"
+                                                    :class="
+                                                        isFirstMisi(index) ||
+                                                        movingMisiId === misi.id
+                                                            ? 'cursor-not-allowed text-slate-300 dark:text-slate-700'
+                                                            : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
+                                                    "
+                                                    title="Naikkan urutan"
+                                                    @click="
+                                                        moveMisi(misi, 'up')
+                                                    "
+                                                >
+                                                    <ArrowUp class="size-4" />
+                                                </button>
 
-                                        <!-- EDIT -->
-                                        <button
-                                            type="button"
-                                            class="rounded-lg p-2 text-slate-500 transition hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
-                                            title="Edit"
-                                            @click="
-                                                openEditMisi(misi)
-                                            "
-                                        >
-                                            <Pencil
-                                                class="size-4"
-                                            />
-                                        </button>
+                                                <!-- DOWN -->
+                                                <button
+                                                    type="button"
+                                                    :disabled="
+                                                        isLastMisi(index) ||
+                                                        movingMisiId === misi.id
+                                                    "
+                                                    class="rounded-lg p-2 transition"
+                                                    :class="
+                                                        isLastMisi(index) ||
+                                                        movingMisiId === misi.id
+                                                            ? 'cursor-not-allowed text-slate-300 dark:text-slate-700'
+                                                            : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
+                                                    "
+                                                    title="Turunkan urutan"
+                                                    @click="
+                                                        moveMisi(misi, 'down')
+                                                    "
+                                                >
+                                                    <ArrowDown class="size-4" />
+                                                </button>
 
-                                        <!-- DELETE -->
-                                        <button
-                                            type="button"
-                                            class="rounded-lg p-2 text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
-                                            title="Hapus"
-                                            @click="
-                                                openDelete(misi)
-                                            "
-                                        >
-                                            <Trash2
-                                                class="size-4"
-                                            />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                                                <!-- DETAIL -->
+                                                <button
+                                                    type="button"
+                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                                                    title="Lihat"
+                                                    @click="openDetail(misi)"
+                                                >
+                                                    <Eye class="size-4" />
+                                                </button>
 
-                <!-- EMPTY MISI -->
-                <div
-                    v-else
-                    class="px-6 py-12 text-center"
-                >
-                    <FileText
-                        class="mx-auto mb-3 size-10 text-slate-300 dark:text-slate-700"
-                    />
+                                                <!-- EDIT -->
+                                                <button
+                                                    type="button"
+                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
+                                                    title="Edit"
+                                                    @click="openEditMisi(misi)"
+                                                >
+                                                    <Pencil class="size-4" />
+                                                </button>
 
-                    <p
-                        class="font-medium text-slate-700 dark:text-slate-300"
-                    >
-                        {{
-                            props.visi
-                                ? "Belum ada misi"
-                                : "Visi belum tersedia"
-                        }}
-                    </p>
+                                                <!-- DELETE -->
+                                                <button
+                                                    type="button"
+                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                                                    title="Hapus"
+                                                    @click="openDelete(misi)"
+                                                >
+                                                    <Trash2 class="size-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                    <p
-                        class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-                    >
-                        {{
-                            props.visi
-                                ? "Tambahkan misi perusahaan untuk melengkapi informasi."
-                                : "Tambahkan visi terlebih dahulu sebelum menambahkan misi."
-                        }}
-                    </p>
+                        <!-- EMPTY MISI -->
+                        <div v-else class="px-6 py-12 text-center">
+                            <FileText
+                                class="mx-auto mb-3 size-10 text-slate-300 dark:text-slate-700"
+                            />
 
-                    <button
-                        v-if="props.visi"
-                        type="button"
-                        class="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
-                        @click="openCreateMisi"
-                    >
-                        <Plus class="size-4" />
-                        Tambah Misi
-                    </button>
+                            <p
+                                class="font-medium text-slate-700 dark:text-slate-300"
+                            >
+                                {{
+                                    props.visi
+                                        ? "Belum ada misi"
+                                        : "Visi belum tersedia"
+                                }}
+                            </p>
+
+                            <p
+                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                {{
+                                    props.visi
+                                        ? "Tambahkan misi perusahaan untuk melengkapi informasi."
+                                        : "Tambahkan visi terlebih dahulu sebelum menambahkan misi."
+                                }}
+                            </p>
+
+                            <button
+                                v-if="props.visi"
+                                type="button"
+                                class="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                                @click="openCreateMisi"
+                            >
+                                <Plus class="size-4" />
+                                Tambah Misi
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </Transition>
     </div>
 
     <!-- ============================================================= -->
@@ -874,9 +974,7 @@ const isLastMisi = (index: number) => {
                         }}
                     </h2>
 
-                    <p
-                        class="text-sm text-slate-500 dark:text-slate-400"
-                    >
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
                         Kelola pernyataan visi perusahaan.
                     </p>
                 </div>
@@ -892,10 +990,7 @@ const isLastMisi = (index: number) => {
             </div>
 
             <!-- FORM -->
-            <form
-                class="p-6"
-                @submit.prevent="submitVisi"
-            >
+            <form class="p-6" @submit.prevent="submitVisi">
                 <div>
                     <label
                         class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -920,9 +1015,7 @@ const isLastMisi = (index: number) => {
                             Gunakan kalimat visi yang jelas dan ringkas.
                         </span>
 
-                        <span>
-                            {{ visiForm.isi.length }}/10000
-                        </span>
+                        <span> {{ visiForm.isi.length }}/10000 </span>
                     </div>
                 </div>
 
@@ -941,10 +1034,7 @@ const isLastMisi = (index: number) => {
 
                     <button
                         type="submit"
-                        :disabled="
-                            processingVisi ||
-                            !visiForm.isi.trim()
-                        "
+                        :disabled="processingVisi || !visiForm.isi.trim()"
                         class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {{
@@ -987,9 +1077,7 @@ const isLastMisi = (index: number) => {
                         }}
                     </h2>
 
-                    <p
-                        class="text-sm text-slate-500 dark:text-slate-400"
-                    >
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
                         {{
                             misiModalMode === "create"
                                 ? "Tambahkan misi baru ke perusahaan."
@@ -1009,10 +1097,7 @@ const isLastMisi = (index: number) => {
             </div>
 
             <!-- FORM -->
-            <form
-                class="p-6"
-                @submit.prevent="submitMisi"
-            >
+            <form class="p-6" @submit.prevent="submitMisi">
                 <div>
                     <label
                         class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1033,13 +1118,9 @@ const isLastMisi = (index: number) => {
                     <div
                         class="mt-1.5 flex justify-between text-xs text-slate-400"
                     >
-                        <span>
-                            Jelaskan misi perusahaan secara spesifik.
-                        </span>
+                        <span> Jelaskan misi perusahaan secara spesifik. </span>
 
-                        <span>
-                            {{ misiForm.isi.length }}/5000
-                        </span>
+                        <span> {{ misiForm.isi.length }}/5000 </span>
                     </div>
                 </div>
 
@@ -1077,10 +1158,7 @@ const isLastMisi = (index: number) => {
 
                     <button
                         type="submit"
-                        :disabled="
-                            processingMisi ||
-                            !misiForm.isi.trim()
-                        "
+                        :disabled="processingMisi || !misiForm.isi.trim()"
                         class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {{
@@ -1119,9 +1197,7 @@ const isLastMisi = (index: number) => {
                         Detail Misi
                     </h2>
 
-                    <p
-                        class="text-sm text-slate-500 dark:text-slate-400"
-                    >
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
                         Informasi lengkap misi perusahaan.
                     </p>
                 </div>
@@ -1241,13 +1317,24 @@ const isLastMisi = (index: number) => {
                     class="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                     @click="deleteMisi"
                 >
-                    {{
-                        processingDelete
-                            ? "Menghapus..."
-                            : "Ya, Hapus"
-                    }}
+                    {{ processingDelete ? "Menghapus..." : "Ya, Hapus" }}
                 </button>
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+.page-fade-enter-active,
+.page-fade-leave-active {
+    transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+    opacity: 0;
+    transform: translateY(6px);
+}
+</style>

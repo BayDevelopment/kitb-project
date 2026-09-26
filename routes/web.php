@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Admin\AnakUsahaController;
 use App\Http\Controllers\Admin\ProfilPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
+use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -96,6 +98,72 @@ Route::middleware(['auth', 'verified'])->group(function () {
         '/profil-perusahaan/visi-misi/{visi}/misi/{misi}/move',
         [VisiMisiController::class, 'moveMisi']
     )->name('profil-perusahaan.visi-misi.misi.move');
+
+    Route::get(
+        '/profil-perusahaan/struktur-perusahaan',
+        [StrukturPerusahaanController::class, 'index']
+    )->name('profil-perusahaan.struktur-perusahaan');
+
+    Route::post(
+        '/profil-perusahaan/struktur-perusahaan',
+        [StrukturPerusahaanController::class, 'store']
+    )->name('profil-perusahaan.struktur-perusahaan.store');
+
+    Route::put(
+        '/profil-perusahaan/struktur-perusahaan/{strukturPerusahaan}',
+        [StrukturPerusahaanController::class, 'update']
+    )->name('profil-perusahaan.struktur-perusahaan.update');
+
+    Route::delete(
+        '/profil-perusahaan/struktur-perusahaan/{strukturPerusahaan}',
+        [StrukturPerusahaanController::class, 'destroy']
+    )->name('profil-perusahaan.struktur-perusahaan.destroy');
+
+    Route::patch(
+        '/profil-perusahaan/struktur-perusahaan/{strukturPerusahaan}/toggle-aktif',
+        [StrukturPerusahaanController::class, 'toggleAktif']
+    )->name('profil-perusahaan.struktur-perusahaan.toggle-aktif');
+
+    Route::patch(
+        '/profil-perusahaan/struktur-perusahaan/{strukturPerusahaan}/move',
+        [StrukturPerusahaanController::class, 'move']
+    )->name('profil-perusahaan.struktur-perusahaan.move');
+
+    /*
+|--------------------------------------------------------------------------
+| Profil Perusahaan - Anak Usaha
+|--------------------------------------------------------------------------
+*/
+
+    Route::get(
+        '/profil-perusahaan/anak-usaha',
+        [AnakUsahaController::class, 'index']
+    )->name('profil-perusahaan.anak-usaha');
+
+    Route::post(
+        '/profil-perusahaan/anak-usaha',
+        [AnakUsahaController::class, 'store']
+    )->name('profil-perusahaan.anak-usaha.store');
+
+    Route::put(
+        '/profil-perusahaan/anak-usaha/{anakUsaha}',
+        [AnakUsahaController::class, 'update']
+    )->name('profil-perusahaan.anak-usaha.update');
+
+    Route::delete(
+        '/profil-perusahaan/anak-usaha/{anakUsaha}',
+        [AnakUsahaController::class, 'destroy']
+    )->name('profil-perusahaan.anak-usaha.destroy');
+
+    Route::patch(
+        '/profil-perusahaan/anak-usaha/{anakUsaha}/toggle-aktif',
+        [AnakUsahaController::class, 'toggleAktif']
+    )->name('profil-perusahaan.anak-usaha.toggle-aktif');
+
+    Route::patch(
+        '/profil-perusahaan/anak-usaha/{anakUsaha}/move',
+        [AnakUsahaController::class, 'move']
+    )->name('profil-perusahaan.anak-usaha.move');
 });
 
 require __DIR__ . '/settings.php';

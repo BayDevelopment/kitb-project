@@ -51,7 +51,7 @@ const mainNavItems: NavItem[] = [
             },
             {
                 title: 'Struktur Perusahaan',
-                href: '/profil-perusahaan/struktur',
+                href: '/profil-perusahaan/struktur-perusahaan',
                 icon: Network,
             },
             {
