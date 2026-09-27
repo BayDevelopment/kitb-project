@@ -19,20 +19,21 @@ class VisiMisiController extends Controller
      */
     public function index(): Response
     {
-        $visi = Visi::query()
-            ->with([
-                'misis' => function ($query) {
-                    $query
-                        ->orderBy('urutan')
-                        ->orderBy('id');
-                },
-            ])
-            ->first();
+        $visi = Visi::query()->first();
+
+        $misis = $visi
+            ? $visi->misis()
+            ->orderBy('urutan')
+            ->orderBy('id')
+            ->paginate(10)
+            ->withQueryString()
+            : null;
 
         return Inertia::render(
             'admin/ProfilPerusahaan/VisiMisi',
             [
                 'visi' => $visi,
+                'misis' => $misis,
             ]
         );
     }
@@ -206,8 +207,8 @@ class VisiMisiController extends Controller
                 ->values();
 
             $currentIndex = $misis->search(
-                fn (Misi $item): bool =>
-                    $item->id === $misi->id
+                fn(Misi $item): bool =>
+                $item->id === $misi->id
             );
 
             if ($currentIndex === false) {

@@ -14,12 +14,7 @@ import {
     ExternalLink,
 } from "lucide-vue-next";
 
-import {
-    computed,
-    onBeforeUnmount,
-    onMounted,
-    ref,
-} from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { router } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
@@ -77,31 +72,22 @@ const props = defineProps<Props>();
 
 const isPageLoading = ref(true);
 
-let initialLoadingTimer:
-    ReturnType<typeof setTimeout> | null = null;
+let initialLoadingTimer: ReturnType<typeof setTimeout> | null = null;
 
-let removeRouterStartListener:
-    (() => void) | null = null;
+let removeRouterStartListener: (() => void) | null = null;
 
-let removeRouterFinishListener:
-    (() => void) | null = null;
+let removeRouterFinishListener: (() => void) | null = null;
 
 onMounted(() => {
-    removeRouterStartListener = router.on(
-        "start",
-        (event) => {
-            if (!event.detail.visit.preserveState) {
-                isPageLoading.value = true;
-            }
-        },
-    );
+    removeRouterStartListener = router.on("start", (event) => {
+        if (!event.detail.visit.preserveState) {
+            isPageLoading.value = true;
+        }
+    });
 
-    removeRouterFinishListener = router.on(
-        "finish",
-        () => {
-            isPageLoading.value = false;
-        },
-    );
+    removeRouterFinishListener = router.on("finish", () => {
+        isPageLoading.value = false;
+    });
 
     initialLoadingTimer = setTimeout(() => {
         isPageLoading.value = false;
@@ -129,42 +115,24 @@ onBeforeUnmount(() => {
 
 const search = ref("");
 
-const statusFilter =
-    ref<"all" | "active" | "inactive">("all");
+const statusFilter = ref<"all" | "active" | "inactive">("all");
 
 const filteredAnakUsaha = computed(() => {
-    const keyword = search.value
-        .trim()
-        .toLowerCase();
+    const keyword = search.value.trim().toLowerCase();
 
-    return [...props.anakUsaha.data].filter(
-        (item) => {
-            const matchesSearch =
-                !keyword ||
-                item.nama
-                    .toLowerCase()
-                    .includes(keyword) ||
-                (item.deskripsi ?? "")
-                    .toLowerCase()
-                    .includes(keyword);
+    return [...props.anakUsaha.data].filter((item) => {
+        const matchesSearch =
+            !keyword ||
+            item.nama.toLowerCase().includes(keyword) ||
+            (item.deskripsi ?? "").toLowerCase().includes(keyword);
 
-            const matchesStatus =
-                statusFilter.value === "all" ||
-                (
-                    statusFilter.value === "active" &&
-                    item.aktif
-                ) ||
-                (
-                    statusFilter.value === "inactive" &&
-                    !item.aktif
-                );
+        const matchesStatus =
+            statusFilter.value === "all" ||
+            (statusFilter.value === "active" && item.aktif) ||
+            (statusFilter.value === "inactive" && !item.aktif);
 
-            return (
-                matchesSearch &&
-                matchesStatus
-            );
-        },
-    );
+        return matchesSearch && matchesStatus;
+    });
 });
 
 /*
@@ -173,9 +141,7 @@ const filteredAnakUsaha = computed(() => {
 |--------------------------------------------------------------------------
 */
 
-const goToPage = (
-    url: string | null,
-) => {
+const goToPage = (url: string | null) => {
     if (!url) {
         return;
     }
@@ -191,18 +157,11 @@ const goToPage = (
 };
 
 const previousPageUrl = computed(() => {
-    return (
-        props.anakUsaha.links[0]?.url ??
-        null
-    );
+    return props.anakUsaha.links[0]?.url ?? null;
 });
 
 const nextPageUrl = computed(() => {
-    return (
-        props.anakUsaha.links[
-            props.anakUsaha.links.length - 1
-        ]?.url ?? null
-    );
+    return props.anakUsaha.links[props.anakUsaha.links.length - 1]?.url ?? null;
 });
 
 /*
@@ -215,11 +174,9 @@ const showFormModal = ref(false);
 const showDetailModal = ref(false);
 const showDeleteModal = ref(false);
 
-const modalMode =
-    ref<"create" | "edit">("create");
+const modalMode = ref<"create" | "edit">("create");
 
-const selectedItem =
-    ref<AnakUsaha | null>(null);
+const selectedItem = ref<AnakUsaha | null>(null);
 
 const form = ref({
     nama: "",
@@ -229,17 +186,14 @@ const form = ref({
     aktif: true,
 });
 
-const previewUrl =
-    ref<string | null>(null);
+const previewUrl = ref<string | null>(null);
 
 const processingForm = ref(false);
 const processingDelete = ref(false);
 
-const processingToggleId =
-    ref<number | null>(null);
+const processingToggleId = ref<number | null>(null);
 
-const movingId =
-    ref<number | null>(null);
+const movingId = ref<number | null>(null);
 
 /*
 |--------------------------------------------------------------------------
@@ -248,18 +202,12 @@ const movingId =
 */
 
 const formTitle = computed(() =>
-    modalMode.value === "create"
-        ? "Tambah Anak Usaha"
-        : "Edit Anak Usaha",
+    modalMode.value === "create" ? "Tambah Anak Usaha" : "Edit Anak Usaha",
 );
 
 const resetForm = () => {
-    if (
-        previewUrl.value?.startsWith("blob:")
-    ) {
-        URL.revokeObjectURL(
-            previewUrl.value,
-        );
+    if (previewUrl.value?.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl.value);
     }
 
     form.value = {
@@ -283,15 +231,9 @@ const openCreate = () => {
     showFormModal.value = true;
 };
 
-const openEdit = (
-    item: AnakUsaha,
-) => {
-    if (
-        previewUrl.value?.startsWith("blob:")
-    ) {
-        URL.revokeObjectURL(
-            previewUrl.value,
-        );
+const openEdit = (item: AnakUsaha) => {
+    if (previewUrl.value?.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl.value);
     }
 
     selectedItem.value = item;
@@ -306,9 +248,7 @@ const openEdit = (
         aktif: item.aktif,
     };
 
-    previewUrl.value = item.logo
-        ? `/storage/${item.logo}`
-        : null;
+    previewUrl.value = item.logo ? `/storage/${item.logo}` : null;
 
     showFormModal.value = true;
 };
@@ -321,9 +261,7 @@ const closeForm = () => {
     selectedItem.value = null;
 };
 
-const openDetail = (
-    item: AnakUsaha,
-) => {
+const openDetail = (item: AnakUsaha) => {
     selectedItem.value = item;
 
     showDetailModal.value = true;
@@ -335,9 +273,7 @@ const closeDetail = () => {
     selectedItem.value = null;
 };
 
-const openDelete = (
-    item: AnakUsaha,
-) => {
+const openDelete = (item: AnakUsaha) => {
     selectedItem.value = item;
 
     showDeleteModal.value = true;
@@ -359,14 +295,10 @@ const closeDelete = () => {
 |--------------------------------------------------------------------------
 */
 
-const handleFile = (
-    event: Event,
-) => {
-    const target =
-        event.target as HTMLInputElement;
+const handleFile = (event: Event) => {
+    const target = event.target as HTMLInputElement;
 
-    const file =
-        target.files?.[0] ?? null;
+    const file = target.files?.[0] ?? null;
 
     if (!file) {
         return;
@@ -378,17 +310,14 @@ const handleFile = (
     |--------------------------------------------------------------------------
     */
 
-    const maxSize =
-        1024 * 1024;
+    const maxSize = 1024 * 1024;
 
     if (file.size > maxSize) {
         target.value = "";
 
         form.value.logo = null;
 
-        alert(
-            "Ukuran logo maksimal 1 MB.",
-        );
+        alert("Ukuran logo maksimal 1 MB.");
 
         return;
     }
@@ -399,24 +328,14 @@ const handleFile = (
     |--------------------------------------------------------------------------
     */
 
-    const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-    ];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
-    if (
-        !allowedTypes.includes(
-            file.type,
-        )
-    ) {
+    if (!allowedTypes.includes(file.type)) {
         target.value = "";
 
         form.value.logo = null;
 
-        alert(
-            "Format logo harus JPG, JPEG, PNG, atau WEBP.",
-        );
+        alert("Format logo harus JPG, JPEG, PNG, atau WEBP.");
 
         return;
     }
@@ -427,28 +346,17 @@ const handleFile = (
     |--------------------------------------------------------------------------
     */
 
-    if (
-        previewUrl.value?.startsWith(
-            "blob:",
-        )
-    ) {
-        URL.revokeObjectURL(
-            previewUrl.value,
-        );
+    if (previewUrl.value?.startsWith("blob:")) {
+        URL.revokeObjectURL(previewUrl.value);
     }
 
     form.value.logo = file;
 
-    previewUrl.value =
-        URL.createObjectURL(file);
+    previewUrl.value = URL.createObjectURL(file);
 };
 
-const getImageUrl = (
-    logo: string | null,
-) => {
-    return logo
-        ? `/storage/${logo}`
-        : null;
+const getImageUrl = (logo: string | null) => {
+    return logo ? `/storage/${logo}` : null;
 };
 
 /*
@@ -466,36 +374,18 @@ const submitForm = () => {
         return;
     }
 
-    const formData =
-        new FormData();
+    const formData = new FormData();
 
-    formData.append(
-        "nama",
-        form.value.nama.trim(),
-    );
+    formData.append("nama", form.value.nama.trim());
 
-    formData.append(
-        "deskripsi",
-        form.value.deskripsi.trim(),
-    );
+    formData.append("deskripsi", form.value.deskripsi.trim());
 
-    formData.append(
-        "website",
-        form.value.website.trim(),
-    );
+    formData.append("website", form.value.website.trim());
 
-    formData.append(
-        "aktif",
-        form.value.aktif
-            ? "1"
-            : "0",
-    );
+    formData.append("aktif", form.value.aktif ? "1" : "0");
 
     if (form.value.logo) {
-        formData.append(
-            "logo",
-            form.value.logo,
-        );
+        formData.append("logo", form.value.logo);
     }
 
     /*
@@ -504,14 +394,8 @@ const submitForm = () => {
     |--------------------------------------------------------------------------
     */
 
-    if (
-        modalMode.value === "edit" &&
-        selectedItem.value
-    ) {
-        formData.append(
-            "_method",
-            "PUT",
-        );
+    if (modalMode.value === "edit" && selectedItem.value) {
+        formData.append("_method", "PUT");
 
         router.post(
             `/profil-perusahaan/anak-usaha/${selectedItem.value.id}`,
@@ -522,8 +406,7 @@ const submitForm = () => {
                 preserveScroll: true,
 
                 onStart: () => {
-                    processingForm.value =
-                        true;
+                    processingForm.value = true;
                 },
 
                 onSuccess: () => {
@@ -531,15 +414,11 @@ const submitForm = () => {
                 },
 
                 onError: (errors) => {
-                    console.error(
-                        "Gagal memperbarui anak usaha:",
-                        errors,
-                    );
+                    console.error("Gagal memperbarui anak usaha:", errors);
                 },
 
                 onFinish: () => {
-                    processingForm.value =
-                        false;
+                    processingForm.value = false;
                 },
             },
         );
@@ -553,36 +432,27 @@ const submitForm = () => {
     |--------------------------------------------------------------------------
     */
 
-    router.post(
-        "/profil-perusahaan/anak-usaha",
-        formData,
-        {
-            forceFormData: true,
+    router.post("/profil-perusahaan/anak-usaha", formData, {
+        forceFormData: true,
 
-            preserveScroll: true,
+        preserveScroll: true,
 
-            onStart: () => {
-                processingForm.value =
-                    true;
-            },
-
-            onSuccess: () => {
-                closeForm();
-            },
-
-            onError: (errors) => {
-                console.error(
-                    "Gagal menambahkan anak usaha:",
-                    errors,
-                );
-            },
-
-            onFinish: () => {
-                processingForm.value =
-                    false;
-            },
+        onStart: () => {
+            processingForm.value = true;
         },
-    );
+
+        onSuccess: () => {
+            closeForm();
+        },
+
+        onError: (errors) => {
+            console.error("Gagal menambahkan anak usaha:", errors);
+        },
+
+        onFinish: () => {
+            processingForm.value = false;
+        },
+    });
 };
 
 /*
@@ -592,40 +462,29 @@ const submitForm = () => {
 */
 
 const deleteItem = () => {
-    if (
-        !selectedItem.value ||
-        processingDelete.value
-    ) {
+    if (!selectedItem.value || processingDelete.value) {
         return;
     }
 
     processingDelete.value = true;
 
-    router.delete(
-        `/profil-perusahaan/anak-usaha/${selectedItem.value.id}`,
-        {
-            preserveScroll: true,
+    router.delete(`/profil-perusahaan/anak-usaha/${selectedItem.value.id}`, {
+        preserveScroll: true,
 
-            onSuccess: () => {
-                showDeleteModal.value =
-                    false;
+        onSuccess: () => {
+            showDeleteModal.value = false;
 
-                selectedItem.value = null;
-            },
-
-            onError: (errors) => {
-                console.error(
-                    "Gagal menghapus anak usaha:",
-                    errors,
-                );
-            },
-
-            onFinish: () => {
-                processingDelete.value =
-                    false;
-            },
+            selectedItem.value = null;
         },
-    );
+
+        onError: (errors) => {
+            console.error("Gagal menghapus anak usaha:", errors);
+        },
+
+        onFinish: () => {
+            processingDelete.value = false;
+        },
+    });
 };
 
 /*
@@ -634,18 +493,12 @@ const deleteItem = () => {
 |--------------------------------------------------------------------------
 */
 
-const toggleAktif = (
-    item: AnakUsaha,
-) => {
-    if (
-        processingToggleId.value !==
-        null
-    ) {
+const toggleAktif = (item: AnakUsaha) => {
+    if (processingToggleId.value !== null) {
         return;
     }
 
-    processingToggleId.value =
-        item.id;
+    processingToggleId.value = item.id;
 
     router.patch(
         `/profil-perusahaan/anak-usaha/${item.id}/toggle-aktif`,
@@ -654,15 +507,11 @@ const toggleAktif = (
             preserveScroll: true,
 
             onError: (errors) => {
-                console.error(
-                    "Gagal mengubah status:",
-                    errors,
-                );
+                console.error("Gagal mengubah status:", errors);
             },
 
             onFinish: () => {
-                processingToggleId.value =
-                    null;
+                processingToggleId.value = null;
             },
         },
     );
@@ -674,33 +523,20 @@ const toggleAktif = (
 |--------------------------------------------------------------------------
 */
 
-const moveItem = (
-    item: AnakUsaha,
-    direction: "up" | "down",
-) => {
-    if (
-        movingId.value !== null
-    ) {
+const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
+    if (movingId.value !== null) {
         return;
     }
 
-    if (
-        direction === "up" &&
-        item.urutan <= 1
-    ) {
+    if (direction === "up" && item.urutan <= 1) {
         return;
     }
 
-    if (
-        direction === "down" &&
-        item.urutan >=
-            props.anakUsaha.total
-    ) {
+    if (direction === "down" && item.urutan >= props.anakUsaha.total) {
         return;
     }
 
-    movingId.value =
-        item.id;
+    movingId.value = item.id;
 
     router.patch(
         `/profil-perusahaan/anak-usaha/${item.id}/move`,
@@ -711,15 +547,11 @@ const moveItem = (
             preserveScroll: true,
 
             onError: (errors) => {
-                console.error(
-                    "Gagal mengubah urutan:",
-                    errors,
-                );
+                console.error("Gagal mengubah urutan:", errors);
             },
 
             onFinish: () => {
-                movingId.value =
-                    null;
+                movingId.value = null;
             },
         },
     );
@@ -728,12 +560,27 @@ const moveItem = (
 
 <template>
     <div
-        class="min-h-full bg-slate-50/50 p-6 dark:bg-slate-950/50"
+        class="relative min-h-full overflow-hidden bg-slate-50/50 p-6 dark:bg-slate-950/50"
     >
-        <Transition
-            name="page-fade"
-            mode="out-in"
+        <!-- ================================================= -->
+        <!-- BLOB DECORATION -->
+        <!-- Satu aksen visual di belakang header, halus dan tidak mengganggu keterbacaan tabel. -->
+        <!-- ================================================= -->
+
+        <div
+            class="pointer-events-none absolute inset-x-0 top-0 -z-0 h-80 overflow-hidden"
+            aria-hidden="true"
         >
+            <div
+                class="blob-shape absolute -left-24 -top-32 size-96 rounded-full bg-gradient-to-br from-blue-400/30 to-indigo-500/20 blur-3xl dark:from-blue-500/20 dark:to-indigo-600/10"
+            ></div>
+
+            <div
+                class="blob-shape-delayed absolute -right-16 top-10 size-72 rounded-full bg-gradient-to-tr from-sky-300/25 to-blue-400/15 blur-3xl dark:from-sky-500/15 dark:to-blue-600/10"
+            ></div>
+        </div>
+
+        <Transition name="page-fade" mode="out-in">
             <!-- ================================================= -->
             <!-- SKELETON -->
             <!-- ================================================= -->
@@ -741,21 +588,15 @@ const moveItem = (
             <div
                 v-if="isPageLoading"
                 key="skeleton"
-                class="animate-pulse space-y-5"
+                class="relative animate-pulse space-y-5"
             >
-                <div
-                    class="mb-6 flex items-center justify-between"
-                >
-                    <div
-                        class="flex items-center gap-3"
-                    >
+                <div class="mb-6 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
                         <div
                             class="size-10 rounded-xl bg-slate-200 dark:bg-slate-800"
                         ></div>
 
-                        <div
-                            class="space-y-2"
-                        >
+                        <div class="space-y-2">
                             <div
                                 class="h-5 w-48 rounded bg-slate-200 dark:bg-slate-800"
                             ></div>
@@ -782,9 +623,7 @@ const moveItem = (
                         ></div>
                     </div>
 
-                    <div
-                        class="space-y-4 p-6"
-                    >
+                    <div class="space-y-4 p-6">
                         <div
                             v-for="i in 6"
                             :key="i"
@@ -794,9 +633,7 @@ const moveItem = (
                                 class="size-12 rounded-xl bg-slate-200 dark:bg-slate-800"
                             ></div>
 
-                            <div
-                                class="flex-1 space-y-2"
-                            >
+                            <div class="flex-1 space-y-2">
                                 <div
                                     class="h-4 w-48 rounded bg-slate-200 dark:bg-slate-800"
                                 ></div>
@@ -818,25 +655,17 @@ const moveItem = (
             <!-- CONTENT -->
             <!-- ================================================= -->
 
-            <div
-                v-else
-                key="content"
-                class="space-y-5"
-            >
+            <div v-else key="content" class="relative space-y-5">
                 <!-- HEADER -->
 
                 <div
                     class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <div
-                        class="flex items-center gap-3"
-                    >
+                    <div class="flex items-center gap-3">
                         <div
                             class="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
                         >
-                            <Building2
-                                class="size-5"
-                            />
+                            <Building2 class="size-5" />
                         </div>
 
                         <div>
@@ -859,9 +688,7 @@ const moveItem = (
                         class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
                         @click="openCreate"
                     >
-                        <Plus
-                            class="size-4"
-                        />
+                        <Plus class="size-4" />
 
                         Tambah Anak Usaha
                     </button>
@@ -887,19 +714,13 @@ const moveItem = (
                             <p
                                 class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                {{
-                                    props.anakUsaha.total
-                                }}
+                                {{ props.anakUsaha.total }}
                                 data anak usaha.
                             </p>
                         </div>
 
-                        <div
-                            class="flex flex-col gap-2 sm:flex-row"
-                        >
-                            <div
-                                class="relative"
-                            >
+                        <div class="flex flex-col gap-2 sm:flex-row">
+                            <div class="relative">
                                 <Search
                                     class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
                                 />
@@ -916,23 +737,11 @@ const moveItem = (
                                 v-model="statusFilter"
                                 class="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             >
-                                <option
-                                    value="all"
-                                >
-                                    Semua Status
-                                </option>
+                                <option value="all">Semua Status</option>
 
-                                <option
-                                    value="active"
-                                >
-                                    Aktif
-                                </option>
+                                <option value="active">Aktif</option>
 
-                                <option
-                                    value="inactive"
-                                >
-                                    Nonaktif
-                                </option>
+                                <option value="inactive">Nonaktif</option>
                             </select>
                         </div>
                     </div>
@@ -940,18 +749,13 @@ const moveItem = (
                     <!-- EMPTY -->
 
                     <div
-                        v-if="
-                            filteredAnakUsaha.length ===
-                            0
-                        "
+                        v-if="filteredAnakUsaha.length === 0"
                         class="px-6 py-16 text-center"
                     >
                         <div
                             class="mx-auto flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800"
                         >
-                            <Building2
-                                class="size-5"
-                            />
+                            <Building2 class="size-5" />
                         </div>
 
                         <h3
@@ -964,9 +768,7 @@ const moveItem = (
                             class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                         >
                             {{
-                                search ||
-                                statusFilter !==
-                                    "all"
+                                search || statusFilter !== "all"
                                     ? "Data yang sesuai dengan pencarian tidak ditemukan."
                                     : "Tambahkan anak usaha untuk mulai mengisi halaman ini."
                             }}
@@ -975,13 +777,8 @@ const moveItem = (
 
                     <!-- TABLE -->
 
-                    <div
-                        v-else
-                        class="overflow-x-auto"
-                    >
-                        <table
-                            class="w-full text-left"
-                        >
+                    <div v-else class="overflow-x-auto">
+                        <table class="w-full text-left">
                             <thead
                                 class="border-b border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/30"
                             >
@@ -1028,60 +825,40 @@ const moveItem = (
                                 >
                                     <!-- URUTAN -->
 
-                                    <td
-                                        class="px-6 py-4"
-                                    >
-                                        <div
-                                            class="flex items-center gap-1"
-                                        >
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-1">
                                             <span
                                                 class="inline-flex size-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                             >
-                                                {{
-                                                    item.urutan
-                                                }}
+                                                {{ item.urutan }}
                                             </span>
 
-                                            <div
-                                                class="flex flex-col"
-                                            >
+                                            <div class="flex flex-col">
                                                 <button
                                                     type="button"
                                                     :disabled="
-                                                        item.urutan <=
-                                                            1 ||
-                                                        movingId !==
-                                                            null
+                                                        item.urutan <= 1 ||
+                                                        movingId !== null
                                                     "
                                                     class="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30"
                                                     @click="
-                                                        moveItem(
-                                                            item,
-                                                            'up',
-                                                        )
+                                                        moveItem(item, 'up')
                                                     "
                                                 >
-                                                    <ArrowUp
-                                                        class="size-3.5"
-                                                    />
+                                                    <ArrowUp class="size-3.5" />
                                                 </button>
 
                                                 <button
                                                     type="button"
                                                     :disabled="
                                                         item.urutan >=
-                                                            props
-                                                                .anakUsaha
+                                                            props.anakUsaha
                                                                 .total ||
-                                                        movingId !==
-                                                            null
+                                                        movingId !== null
                                                     "
                                                     class="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30"
                                                     @click="
-                                                        moveItem(
-                                                            item,
-                                                            'down',
-                                                        )
+                                                        moveItem(item, 'down')
                                                     "
                                                 >
                                                     <ArrowDown
@@ -1094,29 +871,19 @@ const moveItem = (
 
                                     <!-- ANAK USAHA -->
 
-                                    <td
-                                        class="px-6 py-4"
-                                    >
-                                        <div
-                                            class="flex items-center gap-3"
-                                        >
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
                                             <div
                                                 class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-slate-400 dark:bg-slate-800"
                                             >
                                                 <img
                                                     v-if="
-                                                        getImageUrl(
-                                                            item.logo,
-                                                        )
+                                                        getImageUrl(item.logo)
                                                     "
                                                     :src="
-                                                        getImageUrl(
-                                                            item.logo,
-                                                        )!
+                                                        getImageUrl(item.logo)!
                                                     "
-                                                    :alt="
-                                                        item.nama
-                                                    "
+                                                    :alt="item.nama"
                                                     class="size-full object-contain p-1"
                                                 />
 
@@ -1126,26 +893,18 @@ const moveItem = (
                                                 />
                                             </div>
 
-                                            <div
-                                                class="min-w-0"
-                                            >
+                                            <div class="min-w-0">
                                                 <p
                                                     class="font-medium text-slate-800 dark:text-slate-200"
                                                 >
-                                                    {{
-                                                        item.nama
-                                                    }}
+                                                    {{ item.nama }}
                                                 </p>
 
                                                 <p
-                                                    v-if="
-                                                        item.deskripsi
-                                                    "
+                                                    v-if="item.deskripsi"
                                                     class="mt-1 max-w-md truncate text-xs text-slate-400"
                                                 >
-                                                    {{
-                                                        item.deskripsi
-                                                    }}
+                                                    {{ item.deskripsi }}
                                                 </p>
                                             </div>
                                         </div>
@@ -1153,16 +912,10 @@ const moveItem = (
 
                                     <!-- WEBSITE -->
 
-                                    <td
-                                        class="px-6 py-4"
-                                    >
+                                    <td class="px-6 py-4">
                                         <a
-                                            v-if="
-                                                item.website
-                                            "
-                                            :href="
-                                                item.website
-                                            "
+                                            v-if="item.website"
+                                            :href="item.website"
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
@@ -1170,9 +923,7 @@ const moveItem = (
                                             <span
                                                 class="max-w-[180px] truncate"
                                             >
-                                                {{
-                                                    item.website
-                                                }}
+                                                {{ item.website }}
                                             </span>
 
                                             <ExternalLink
@@ -1190,14 +941,11 @@ const moveItem = (
 
                                     <!-- STATUS -->
 
-                                    <td
-                                        class="px-6 py-4"
-                                    >
+                                    <td class="px-6 py-4">
                                         <button
                                             type="button"
                                             :disabled="
-                                                processingToggleId ===
-                                                item.id
+                                                processingToggleId === item.id
                                             "
                                             class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
                                             :class="
@@ -1205,11 +953,7 @@ const moveItem = (
                                                     ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
                                                     : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                                             "
-                                            @click="
-                                                toggleAktif(
-                                                    item,
-                                                )
-                                            "
+                                            @click="toggleAktif(item)"
                                         >
                                             {{
                                                 item.aktif
@@ -1221,52 +965,30 @@ const moveItem = (
 
                                     <!-- AKSI -->
 
-                                    <td
-                                        class="px-6 py-4"
-                                    >
-                                        <div
-                                            class="flex justify-end gap-1"
-                                        >
+                                    <td class="px-6 py-4">
+                                        <div class="flex justify-end gap-1">
                                             <button
                                                 type="button"
                                                 class="rounded-lg p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600"
-                                                @click="
-                                                    openDetail(
-                                                        item,
-                                                    )
-                                                "
+                                                @click="openDetail(item)"
                                             >
-                                                <Eye
-                                                    class="size-4"
-                                                />
+                                                <Eye class="size-4" />
                                             </button>
 
                                             <button
                                                 type="button"
                                                 class="rounded-lg p-2 text-slate-400 hover:bg-amber-50 hover:text-amber-600"
-                                                @click="
-                                                    openEdit(
-                                                        item,
-                                                    )
-                                                "
+                                                @click="openEdit(item)"
                                             >
-                                                <Pencil
-                                                    class="size-4"
-                                                />
+                                                <Pencil class="size-4" />
                                             </button>
 
                                             <button
                                                 type="button"
                                                 class="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                                                @click="
-                                                    openDelete(
-                                                        item,
-                                                    )
-                                                "
+                                                @click="openDelete(item)"
                                             >
-                                                <Trash2
-                                                    class="size-4"
-                                                />
+                                                <Trash2 class="size-4" />
                                             </button>
                                         </div>
                                     </td>
@@ -1278,79 +1000,49 @@ const moveItem = (
                     <!-- PAGINATION -->
 
                     <div
-                        v-if="
-                            props.anakUsaha
-                                .last_page > 1
-                        "
+                        v-if="props.anakUsaha.last_page > 1"
                         class="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
                     >
-                        <p
-                            class="text-sm text-slate-500 dark:text-slate-400"
-                        >
+                        <p class="text-sm text-slate-500 dark:text-slate-400">
                             Menampilkan
                             <span
                                 class="font-medium text-slate-700 dark:text-slate-200"
                             >
-                                {{
-                                    props.anakUsaha
-                                        .from ??
-                                    0
-                                }}
+                                {{ props.anakUsaha.from ?? 0 }}
                             </span>
                             -
                             <span
                                 class="font-medium text-slate-700 dark:text-slate-200"
                             >
-                                {{
-                                    props.anakUsaha
-                                        .to ??
-                                    0
-                                }}
+                                {{ props.anakUsaha.to ?? 0 }}
                             </span>
                             dari
                             <span
                                 class="font-medium text-slate-700 dark:text-slate-200"
                             >
-                                {{
-                                    props.anakUsaha
-                                        .total
-                                }}
+                                {{ props.anakUsaha.total }}
                             </span>
                             data
                         </p>
 
-                        <div
-                            class="flex items-center gap-2"
-                        >
+                        <div class="flex items-center gap-2">
                             <button
                                 type="button"
-                                :disabled="
-                                    !previousPageUrl
-                                "
+                                :disabled="!previousPageUrl"
                                 class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                                @click="
-                                    goToPage(
-                                        previousPageUrl,
-                                    )
-                                "
+                                @click="goToPage(previousPageUrl)"
                             >
                                 Previous
                             </button>
 
                             <template
                                 v-for="(
-                                    link,
-                                    index
-                                ) in props.anakUsaha.links.slice(
-                                    1,
-                                    -1,
-                                )"
+                                    link, index
+                                ) in props.anakUsaha.links.slice(1, -1)"
                                 :key="index"
                             >
                                 <button
-                                    v-if="
-                                        link.url
-                                    "
+                                    v-if="link.url"
                                     type="button"
                                     class="min-w-9 rounded-lg px-3 py-2 text-sm font-medium transition"
                                     :class="
@@ -1358,36 +1050,22 @@ const moveItem = (
                                             ? 'bg-blue-600 text-white'
                                             : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
                                     "
-                                    @click="
-                                        goToPage(
-                                            link.url,
-                                        )
-                                    "
-                                    v-html="
-                                        link.label
-                                    "
+                                    @click="goToPage(link.url)"
+                                    v-html="link.label"
                                 />
 
                                 <span
                                     v-else
                                     class="px-2 text-sm text-slate-400"
-                                    v-html="
-                                        link.label
-                                    "
+                                    v-html="link.label"
                                 />
                             </template>
 
                             <button
                                 type="button"
-                                :disabled="
-                                    !nextPageUrl
-                                "
+                                :disabled="!nextPageUrl"
                                 class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                                @click="
-                                    goToPage(
-                                        nextPageUrl,
-                                    )
-                                "
+                                @click="goToPage(nextPageUrl)"
                             >
                                 Next
                             </button>
@@ -1430,28 +1108,17 @@ const moveItem = (
 
                     <button
                         type="button"
-                        :disabled="
-                            processingForm
-                        "
+                        :disabled="processingForm"
                         class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
-                        @click="
-                            closeForm
-                        "
+                        @click="closeForm"
                     >
-                        <X
-                            class="size-5"
-                        />
+                        <X class="size-5" />
                     </button>
                 </div>
 
                 <!-- FORM -->
 
-                <form
-                    class="space-y-5 p-6"
-                    @submit.prevent="
-                        submitForm
-                    "
-                >
+                <form class="space-y-5 p-6" @submit.prevent="submitForm">
                     <!-- NAMA -->
 
                     <div>
@@ -1462,9 +1129,7 @@ const moveItem = (
                         </label>
 
                         <input
-                            v-model="
-                                form.nama
-                            "
+                            v-model="form.nama"
                             type="text"
                             placeholder="Contoh: PT KITB Properti"
                             class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
@@ -1483,9 +1148,7 @@ const moveItem = (
                         <label
                             class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-5 py-7 hover:border-blue-400 dark:border-slate-700 dark:bg-slate-800/50"
                         >
-                            <Upload
-                                class="size-6 text-slate-400"
-                            />
+                            <Upload class="size-6 text-slate-400" />
 
                             <span
                                 class="mt-2 text-sm font-medium text-slate-600 dark:text-slate-300"
@@ -1493,9 +1156,7 @@ const moveItem = (
                                 Klik untuk memilih logo
                             </span>
 
-                            <span
-                                class="mt-1 text-xs text-slate-400"
-                            >
+                            <span class="mt-1 text-xs text-slate-400">
                                 JPG, JPEG, PNG, WEBP maksimal 1 MB
                             </span>
 
@@ -1503,25 +1164,19 @@ const moveItem = (
                                 type="file"
                                 accept="image/jpeg,image/png,image/webp"
                                 class="hidden"
-                                @change="
-                                    handleFile
-                                "
+                                @change="handleFile"
                             />
                         </label>
 
                         <div
-                            v-if="
-                                previewUrl
-                            "
+                            v-if="previewUrl"
                             class="mt-4 flex items-center gap-4 rounded-xl border border-slate-200 p-3 dark:border-slate-700"
                         >
                             <div
                                 class="flex size-16 items-center justify-center overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800"
                             >
                                 <img
-                                    :src="
-                                        previewUrl
-                                    "
+                                    :src="previewUrl"
                                     alt="Preview logo"
                                     class="size-full object-contain p-1"
                                 />
@@ -1531,17 +1186,10 @@ const moveItem = (
                                 <p
                                     class="text-sm font-medium text-slate-700 dark:text-slate-200"
                                 >
-                                    {{
-                                        form
-                                            .logo
-                                            ?.name ??
-                                        "Logo saat ini"
-                                    }}
+                                    {{ form.logo?.name ?? "Logo saat ini" }}
                                 </p>
 
-                                <p
-                                    class="mt-1 text-xs text-slate-400"
-                                >
+                                <p class="mt-1 text-xs text-slate-400">
                                     Preview logo
                                 </p>
                             </div>
@@ -1558,9 +1206,7 @@ const moveItem = (
                         </label>
 
                         <textarea
-                            v-model="
-                                form.deskripsi
-                            "
+                            v-model="form.deskripsi"
                             rows="4"
                             placeholder="Masukkan deskripsi anak usaha..."
                             class="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
@@ -1577,17 +1223,13 @@ const moveItem = (
                         </label>
 
                         <input
-                            v-model="
-                                form.website
-                            "
+                            v-model="form.website"
                             type="url"
                             placeholder="https://www.example.com"
                             class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                         />
 
-                        <p
-                            class="mt-1.5 text-xs text-slate-400"
-                        >
+                        <p class="mt-1.5 text-xs text-slate-400">
                             Masukkan URL lengkap, contoh https://www.example.com
                         </p>
                     </div>
@@ -1598,9 +1240,7 @@ const moveItem = (
                         class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700"
                     >
                         <input
-                            v-model="
-                                form.aktif
-                            "
+                            v-model="form.aktif"
                             type="checkbox"
                             class="size-4 rounded border-slate-300 text-blue-600"
                         />
@@ -1612,9 +1252,7 @@ const moveItem = (
                                 Aktif
                             </p>
 
-                            <p
-                                class="text-xs text-slate-400"
-                            >
+                            <p class="text-xs text-slate-400">
                                 Tampilkan anak usaha sebagai data aktif.
                             </p>
                         </div>
@@ -1627,30 +1265,22 @@ const moveItem = (
                     >
                         <button
                             type="button"
-                            :disabled="
-                                processingForm
-                            "
+                            :disabled="processingForm"
                             class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
-                            @click="
-                                closeForm
-                            "
+                            @click="closeForm"
                         >
                             Batal
                         </button>
 
                         <button
                             type="submit"
-                            :disabled="
-                                processingForm ||
-                                !form.nama.trim()
-                            "
+                            :disabled="processingForm || !form.nama.trim()"
                             class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {{
                                 processingForm
                                     ? "Menyimpan..."
-                                    : modalMode ===
-                                        "create"
+                                    : modalMode === "create"
                                       ? "Simpan"
                                       : "Perbarui"
                             }}
@@ -1665,14 +1295,9 @@ const moveItem = (
         <!-- ========================================================= -->
 
         <div
-            v-if="
-                showDetailModal &&
-                selectedItem
-            "
+            v-if="showDetailModal && selectedItem"
             class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
-            @click.self="
-                closeDetail
-            "
+            @click.self="closeDetail"
         >
             <div
                 class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
@@ -1697,71 +1322,44 @@ const moveItem = (
                     <button
                         type="button"
                         class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        @click="
-                            closeDetail
-                        "
+                        @click="closeDetail"
                     >
-                        <X
-                            class="size-5"
-                        />
+                        <X class="size-5" />
                     </button>
                 </div>
 
-                <div
-                    class="space-y-5 p-6"
-                >
+                <div class="space-y-5 p-6">
                     <!-- LOGO -->
 
-                    <div
-                        class="flex justify-center"
-                    >
+                    <div class="flex justify-center">
                         <div
                             class="flex size-32 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800"
                         >
                             <img
-                                v-if="
-                                    getImageUrl(
-                                        selectedItem.logo,
-                                    )
-                                "
-                                :src="
-                                    getImageUrl(
-                                        selectedItem.logo,
-                                    )!
-                                "
-                                :alt="
-                                    selectedItem.nama
-                                "
+                                v-if="getImageUrl(selectedItem.logo)"
+                                :src="getImageUrl(selectedItem.logo)!"
+                                :alt="selectedItem.nama"
                                 class="size-full object-contain p-3"
                             />
 
-                            <ImagePlus
-                                v-else
-                                class="size-8"
-                            />
+                            <ImagePlus v-else class="size-8" />
                         </div>
                     </div>
 
                     <!-- NAMA -->
 
-                    <div
-                        class="text-center"
-                    >
+                    <div class="text-center">
                         <h3
                             class="text-lg font-semibold text-slate-900 dark:text-white"
                         >
-                            {{
-                                selectedItem.nama
-                            }}
+                            {{ selectedItem.nama }}
                         </h3>
                     </div>
 
                     <!-- WEBSITE -->
 
                     <div
-                        v-if="
-                            selectedItem.website
-                        "
+                        v-if="selectedItem.website"
                         class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60"
                     >
                         <p
@@ -1771,29 +1369,21 @@ const moveItem = (
                         </p>
 
                         <a
-                            :href="
-                                selectedItem.website
-                            "
+                            :href="selectedItem.website"
                             target="_blank"
                             rel="noopener noreferrer"
                             class="mt-2 inline-flex items-center gap-2 break-all text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
                         >
-                            {{
-                                selectedItem.website
-                            }}
+                            {{ selectedItem.website }}
 
-                            <ExternalLink
-                                class="size-4 shrink-0"
-                            />
+                            <ExternalLink class="size-4 shrink-0" />
                         </a>
                     </div>
 
                     <!-- DESKRIPSI -->
 
                     <div
-                        v-if="
-                            selectedItem.deskripsi
-                        "
+                        v-if="selectedItem.deskripsi"
                         class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60"
                     >
                         <p
@@ -1805,17 +1395,13 @@ const moveItem = (
                         <p
                             class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
                         >
-                            {{
-                                selectedItem.deskripsi
-                            }}
+                            {{ selectedItem.deskripsi }}
                         </p>
                     </div>
 
                     <!-- INFO -->
 
-                    <div
-                        class="grid grid-cols-2 gap-3"
-                    >
+                    <div class="grid grid-cols-2 gap-3">
                         <div
                             class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60"
                         >
@@ -1828,9 +1414,7 @@ const moveItem = (
                             <p
                                 class="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
                             >
-                                Ke-{{
-                                    selectedItem.urutan
-                                }}
+                                Ke-{{ selectedItem.urutan }}
                             </p>
                         </div>
 
@@ -1851,11 +1435,7 @@ const moveItem = (
                                         : 'text-slate-500'
                                 "
                             >
-                                {{
-                                    selectedItem.aktif
-                                        ? "Aktif"
-                                        : "Nonaktif"
-                                }}
+                                {{ selectedItem.aktif ? "Aktif" : "Nonaktif" }}
                             </p>
                         </div>
                     </div>
@@ -1868,14 +1448,9 @@ const moveItem = (
         <!-- ========================================================= -->
 
         <div
-            v-if="
-                showDeleteModal &&
-                selectedItem
-            "
+            v-if="showDeleteModal && selectedItem"
             class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
-            @click.self="
-                closeDelete
-            "
+            @click.self="closeDelete"
         >
             <div
                 class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"
@@ -1883,14 +1458,10 @@ const moveItem = (
                 <div
                     class="mx-auto flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
                 >
-                    <Trash2
-                        class="size-5"
-                    />
+                    <Trash2 class="size-5" />
                 </div>
 
-                <div
-                    class="mt-4 text-center"
-                >
+                <div class="mt-4 text-center">
                     <h2
                         class="text-lg font-semibold text-slate-900 dark:text-white"
                     >
@@ -1904,9 +1475,7 @@ const moveItem = (
                         <span
                             class="font-semibold text-slate-700 dark:text-slate-200"
                         >
-                            {{
-                                selectedItem.nama
-                            }}
+                            {{ selectedItem.nama }}
                         </span>
                         ? Data yang sudah dihapus tidak dapat dikembalikan.
                     </p>
@@ -1917,44 +1486,28 @@ const moveItem = (
                         <p
                             class="text-sm font-medium text-slate-700 dark:text-slate-200"
                         >
-                            Urutan ke-{{
-                                selectedItem.urutan
-                            }}
+                            Urutan ke-{{ selectedItem.urutan }}
                         </p>
                     </div>
                 </div>
 
-                <div
-                    class="mt-6 flex justify-end gap-3"
-                >
+                <div class="mt-6 flex justify-end gap-3">
                     <button
                         type="button"
-                        :disabled="
-                            processingDelete
-                        "
+                        :disabled="processingDelete"
                         class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
-                        @click="
-                            closeDelete
-                        "
+                        @click="closeDelete"
                     >
                         Batal
                     </button>
 
                     <button
                         type="button"
-                        :disabled="
-                            processingDelete
-                        "
+                        :disabled="processingDelete"
                         class="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                        @click="
-                            deleteItem
-                        "
+                        @click="deleteItem"
                     >
-                        {{
-                            processingDelete
-                                ? "Menghapus..."
-                                : "Ya, Hapus"
-                        }}
+                        {{ processingDelete ? "Menghapus..." : "Ya, Hapus" }}
                     </button>
                 </div>
             </div>
@@ -1974,5 +1527,40 @@ const moveItem = (
 .page-fade-leave-to {
     opacity: 0;
     transform: translateY(6px);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Blob decoration
+| Satu gerakan halus saat halaman dimuat, lalu diam.
+| Menghormati preferensi pengguna yang mematikan animasi.
+|--------------------------------------------------------------------------
+*/
+
+.blob-shape {
+    animation: blob-drift-in 1.4s ease-out both;
+}
+
+.blob-shape-delayed {
+    animation: blob-drift-in 1.4s ease-out 0.15s both;
+}
+
+@keyframes blob-drift-in {
+    from {
+        opacity: 0;
+        transform: scale(0.85) translateY(-12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .blob-shape,
+    .blob-shape-delayed {
+        animation: none;
+    }
 }
 </style>

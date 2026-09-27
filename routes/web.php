@@ -1,9 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\AnakUsahaController;
+use App\Http\Controllers\Admin\ProfilKawasanController;
 use App\Http\Controllers\Admin\ProfilPerusahaanController;
-use App\Http\Controllers\Admin\VisiMisiController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
+use App\Http\Controllers\Admin\VisiMisiController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -21,7 +22,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::inertia('dashboard', 'Dashboard')
         ->name('dashboard');
-
 
     /*
     |--------------------------------------------------------------------------
@@ -49,7 +49,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         [ProfilPerusahaanController::class, 'destroy']
     )->name('profil-perusahaan.tentang-kami.destroy');
 
-
     /*
     |--------------------------------------------------------------------------
     | Profil Perusahaan - Visi & Misi
@@ -62,8 +61,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     )->name('profil-perusahaan.visi-misi');
 
     /*
-     * Visi
-     */
+    |--------------------------------------------------------------------------
+    | Visi
+    |--------------------------------------------------------------------------
+    */
 
     Route::post(
         '/profil-perusahaan/visi-misi/visi',
@@ -76,8 +77,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     )->name('profil-perusahaan.visi-misi.visi.update');
 
     /*
-     * Misi
-     */
+    |--------------------------------------------------------------------------
+    | Misi
+    |--------------------------------------------------------------------------
+    */
 
     Route::post(
         '/profil-perusahaan/visi-misi/{visi}/misi',
@@ -98,6 +101,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         '/profil-perusahaan/visi-misi/{visi}/misi/{misi}/move',
         [VisiMisiController::class, 'moveMisi']
     )->name('profil-perusahaan.visi-misi.misi.move');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Profil Perusahaan - Struktur Perusahaan
+    |--------------------------------------------------------------------------
+    */
 
     Route::get(
         '/profil-perusahaan/struktur-perusahaan',
@@ -130,10 +139,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     )->name('profil-perusahaan.struktur-perusahaan.move');
 
     /*
-|--------------------------------------------------------------------------
-| Profil Perusahaan - Anak Usaha
-|--------------------------------------------------------------------------
-*/
+    |--------------------------------------------------------------------------
+    | Profil Perusahaan - Anak Usaha
+    |--------------------------------------------------------------------------
+    */
 
     Route::get(
         '/profil-perusahaan/anak-usaha',
@@ -164,6 +173,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
         '/profil-perusahaan/anak-usaha/{anakUsaha}/move',
         [AnakUsahaController::class, 'move']
     )->name('profil-perusahaan.anak-usaha.move');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kawasan - Profil Kawasan
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/kawasan/profil-kawasan',
+        [ProfilKawasanController::class, 'index']
+    )->name('kawasan.profil-kawasan');
+
+    Route::post(
+        '/kawasan/profil-kawasan',
+        [ProfilKawasanController::class, 'store']
+    )->name('kawasan.profil-kawasan.store');
+
+    Route::put(
+        '/kawasan/profil-kawasan/{profilKawasan}',
+        [ProfilKawasanController::class, 'update']
+    )->name('kawasan.profil-kawasan.update');
+
+    Route::delete(
+        '/kawasan/profil-kawasan/{profilKawasan}',
+        [ProfilKawasanController::class, 'destroy']
+    )->name('kawasan.profil-kawasan.destroy');
+
+    Route::patch(
+        '/kawasan/profil-kawasan/{profilKawasan}/toggle-aktif',
+        [ProfilKawasanController::class, 'toggleAktif']
+    )->name('kawasan.profil-kawasan.toggle-aktif');
 });
 
 require __DIR__ . '/settings.php';

@@ -13,6 +13,9 @@ use Inertia\Response;
 
 class StrukturPerusahaanController extends Controller
 {
+    /**
+     * Display a listing of struktur perusahaan.
+     */
     public function index(Request $request): Response
     {
         $struktur = StrukturPerusahaan::query()
@@ -29,6 +32,9 @@ class StrukturPerusahaanController extends Controller
         );
     }
 
+    /**
+     * Store a newly created struktur perusahaan.
+     */
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateStruktur($request);
@@ -42,7 +48,7 @@ class StrukturPerusahaanController extends Controller
                 &$gambarPath
             ) {
                 /*
-                 * Upload gambar terlebih dahulu.
+                 * Upload gambar.
                  */
                 if ($request->hasFile('gambar')) {
                     $gambarPath = $request
@@ -59,7 +65,7 @@ class StrukturPerusahaanController extends Controller
                 ) + 1;
 
                 /*
-                 * Simpan data ke database.
+                 * Simpan data.
                  */
                 StrukturPerusahaan::create([
                     'nama' => $validated['nama'],
@@ -71,8 +77,8 @@ class StrukturPerusahaanController extends Controller
             });
         } catch (\Throwable $e) {
             /*
-             * Jika database gagal, hapus gambar
-             * yang sudah terlanjur di-upload.
+             * Jika database gagal,
+             * hapus gambar yang sudah ter-upload.
              */
             if ($gambarPath) {
                 Storage::disk('public')->delete($gambarPath);
@@ -87,6 +93,9 @@ class StrukturPerusahaanController extends Controller
         ]);
     }
 
+    /**
+     * Update the specified struktur perusahaan.
+     */
     public function update(
         Request $request,
         StrukturPerusahaan $strukturPerusahaan
@@ -111,8 +120,7 @@ class StrukturPerusahaanController extends Controller
                 &$newGambar
             ) {
                 /*
-                 * Jika user upload gambar baru,
-                 * upload gambar baru terlebih dahulu.
+                 * Upload gambar baru jika ada.
                  */
                 if ($request->hasFile('gambar')) {
                     $newGambar = $request
@@ -123,11 +131,8 @@ class StrukturPerusahaanController extends Controller
                 /*
                  * Update database.
                  *
-                 * Jika tidak ada gambar baru:
+                 * Jika tidak ada gambar baru,
                  * gunakan gambar lama.
-                 *
-                 * Jika ada gambar baru:
-                 * gunakan gambar baru.
                  */
                 $strukturPerusahaan->update([
                     'nama' => $validated['nama'],
@@ -140,7 +145,7 @@ class StrukturPerusahaanController extends Controller
             });
         } catch (\Throwable $e) {
             /*
-             * Jika update database gagal,
+             * Jika database gagal,
              * hapus gambar baru agar tidak menjadi
              * file yang tidak terpakai.
              */
@@ -152,7 +157,7 @@ class StrukturPerusahaanController extends Controller
         }
 
         /*
-         * DATABASE SUDAH BERHASIL DIUPDATE.
+         * Database sudah berhasil di-update.
          *
          * Baru hapus gambar lama.
          */
@@ -166,6 +171,9 @@ class StrukturPerusahaanController extends Controller
         ]);
     }
 
+    /**
+     * Remove the specified struktur perusahaan.
+     */
     public function destroy(
         StrukturPerusahaan $strukturPerusahaan
     ): RedirectResponse {
@@ -173,6 +181,11 @@ class StrukturPerusahaanController extends Controller
          * Simpan path gambar sebelum data dihapus.
          */
         $gambar = $strukturPerusahaan->gambar;
+
+        /*
+         * Simpan urutan sebelum data dihapus.
+         */
+        $deletedOrder = $strukturPerusahaan->urutan;
 
         DB::transaction(function () use ($strukturPerusahaan) {
             $strukturPerusahaan->delete();
@@ -186,7 +199,14 @@ class StrukturPerusahaanController extends Controller
         }
 
         /*
-         * Rapikan kembali nomor urutan.
+         * Kurangi urutan setelah data yang bersangkutan.
+         */
+        StrukturPerusahaan::query()
+            ->where('urutan', '>', $deletedOrder)
+            ->decrement('urutan');
+
+        /*
+         * Pastikan urutan tetap rapi.
          */
         $this->normalizeOrder();
 
@@ -196,6 +216,9 @@ class StrukturPerusahaanController extends Controller
         ]);
     }
 
+    /**
+     * Toggle active status.
+     */
     public function toggleAktif(
         StrukturPerusahaan $strukturPerusahaan
     ): RedirectResponse {
@@ -211,6 +234,9 @@ class StrukturPerusahaanController extends Controller
         ]);
     }
 
+    /**
+     * Move struktur perusahaan order.
+     */
     public function move(
         Request $request,
         StrukturPerusahaan $strukturPerusahaan
@@ -222,50 +248,57 @@ class StrukturPerusahaanController extends Controller
             ],
         ]);
 
-        DB::transaction(function () use (
-            $strukturPerusahaan,
-            $validated
-        ) {
-            $items = StrukturPerusahaan::query()
+        $direction = $validated['direction'];
+
+        /*
+         * Cari item tetangga.
+         */
+        if ($direction === 'up') {
+            $neighbor = StrukturPerusahaan::query()
+                ->where('urutan', '<', $strukturPerusahaan->urutan)
+                ->orderByDesc('urutan')
+                ->orderByDesc('id')
+                ->first();
+        } else {
+            $neighbor = StrukturPerusahaan::query()
+                ->where('urutan', '>', $strukturPerusahaan->urutan)
                 ->orderBy('urutan')
                 ->orderBy('id')
-                ->get()
-                ->values();
+                ->first();
+        }
 
-            $currentIndex = $items->search(
-                fn(StrukturPerusahaan $item): bool =>
-                $item->id === $strukturPerusahaan->id
-            );
+        /*
+         * Jika tidak ada tetangga.
+         */
+        if (! $neighbor) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => $direction === 'up'
+                    ? 'Struktur perusahaan sudah berada di urutan paling atas.'
+                    : 'Struktur perusahaan sudah berada di urutan paling bawah.',
+            ]);
+        }
 
-            if ($currentIndex === false) {
-                return;
-            }
+        /*
+         * Tukar urutan.
+         */
+        DB::transaction(function () use (
+            $strukturPerusahaan,
+            $neighbor
+        ) {
+            $currentOrder = $strukturPerusahaan->urutan;
 
-            $targetIndex = $validated['direction'] === 'up'
-                ? $currentIndex - 1
-                : $currentIndex + 1;
-
-            if (
-                $targetIndex < 0 ||
-                $targetIndex >= $items->count()
-            ) {
-                return;
-            }
-
-            $current = $items[$currentIndex];
-            $target = $items[$targetIndex];
-
-            $currentUrutan = $current->urutan;
-            $targetUrutan = $target->urutan;
-
-            $current->update([
-                'urutan' => $targetUrutan,
+            $strukturPerusahaan->update([
+                'urutan' => $neighbor->urutan,
             ]);
 
-            $target->update([
-                'urutan' => $currentUrutan,
+            $neighbor->update([
+                'urutan' => $currentOrder,
             ]);
 
+            /*
+             * Pastikan urutan tetap 1, 2, 3, dst.
+             */
             $this->normalizeOrder();
         });
 
@@ -275,6 +308,9 @@ class StrukturPerusahaanController extends Controller
         ]);
     }
 
+    /**
+     * Normalize struktur perusahaan order.
+     */
     private function normalizeOrder(): void
     {
         $items = StrukturPerusahaan::query()
@@ -293,6 +329,9 @@ class StrukturPerusahaanController extends Controller
         }
     }
 
+    /**
+     * Validate struktur perusahaan request.
+     */
     private function validateStruktur(Request $request): array
     {
         return $request->validate([

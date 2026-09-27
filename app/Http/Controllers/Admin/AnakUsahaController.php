@@ -89,10 +89,10 @@ class AnakUsahaController extends Controller
 
         AnakUsaha::create($validated);
 
-        return back()->with(
-            'success',
-            'Anak usaha berhasil ditambahkan.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Anak usaha berhasil ditambahkan.',
+        ]);
     }
 
     /**
@@ -164,10 +164,10 @@ class AnakUsahaController extends Controller
 
         $anakUsaha->update($validated);
 
-        return back()->with(
-            'success',
-            'Anak usaha berhasil diperbarui.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Anak usaha berhasil diperbarui.',
+        ]);
     }
 
     /**
@@ -208,10 +208,10 @@ class AnakUsahaController extends Controller
             $deletedOrder
         )->decrement('urutan');
 
-        return back()->with(
-            'success',
-            'Anak usaha berhasil dihapus.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Anak usaha berhasil dihapus.',
+        ]);
     }
 
     /**
@@ -228,10 +228,10 @@ class AnakUsahaController extends Controller
             ? 'Anak usaha berhasil diaktifkan.'
             : 'Anak usaha berhasil dinonaktifkan.';
 
-        return back()->with(
-            'success',
-            $message
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => $message,
+        ]);
     }
 
     /**
@@ -281,12 +281,12 @@ class AnakUsahaController extends Controller
         */
 
         if (!$neighbor) {
-            return back()->with(
-                'error',
-                $direction === 'up'
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => $direction === 'up'
                     ? 'Anak usaha sudah berada di urutan paling atas.'
-                    : 'Anak usaha sudah berada di urutan paling bawah.'
-            );
+                    : 'Anak usaha sudah berada di urutan paling bawah.',
+            ]);
         }
 
         /*
@@ -305,9 +305,9 @@ class AnakUsahaController extends Controller
             'urutan' => $currentOrder,
         ]);
 
-        return back()->with(
-            'success',
-            'Urutan anak usaha berhasil diperbarui.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Urutan anak usaha berhasil diperbarui.',
+        ]);
     }
 }
