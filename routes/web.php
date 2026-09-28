@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Admin\AnakUsahaController;
+use App\Http\Controllers\Admin\Kawasan\FasilitasController;
+use App\Http\Controllers\Admin\Kawasan\InfrastrukturController;
+use App\Http\Controllers\Admin\PetaKawasanController;
 use App\Http\Controllers\Admin\ProfilKawasanController;
 use App\Http\Controllers\Admin\ProfilPerusahaanController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
@@ -19,7 +22,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Dashboard
     |--------------------------------------------------------------------------
     */
-
     Route::inertia('dashboard', 'Dashboard')
         ->name('dashboard');
 
@@ -28,7 +30,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Profil Perusahaan - Tentang Kami
     |--------------------------------------------------------------------------
     */
-
     Route::get(
         '/profil-perusahaan/tentang-kami',
         [ProfilPerusahaanController::class, 'tentangKami']
@@ -54,7 +55,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Profil Perusahaan - Visi & Misi
     |--------------------------------------------------------------------------
     */
-
     Route::get(
         '/profil-perusahaan/visi-misi',
         [VisiMisiController::class, 'index']
@@ -65,7 +65,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Visi
     |--------------------------------------------------------------------------
     */
-
     Route::post(
         '/profil-perusahaan/visi-misi/visi',
         [VisiMisiController::class, 'storeVisi']
@@ -81,7 +80,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Misi
     |--------------------------------------------------------------------------
     */
-
     Route::post(
         '/profil-perusahaan/visi-misi/{visi}/misi',
         [VisiMisiController::class, 'storeMisi']
@@ -107,7 +105,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Profil Perusahaan - Struktur Perusahaan
     |--------------------------------------------------------------------------
     */
-
     Route::get(
         '/profil-perusahaan/struktur-perusahaan',
         [StrukturPerusahaanController::class, 'index']
@@ -143,7 +140,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Profil Perusahaan - Anak Usaha
     |--------------------------------------------------------------------------
     */
-
     Route::get(
         '/profil-perusahaan/anak-usaha',
         [AnakUsahaController::class, 'index']
@@ -179,7 +175,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Kawasan - Profil Kawasan
     |--------------------------------------------------------------------------
     */
-
     Route::get(
         '/kawasan/profil-kawasan',
         [ProfilKawasanController::class, 'index']
@@ -204,6 +199,121 @@ Route::middleware(['auth', 'verified'])->group(function () {
         '/kawasan/profil-kawasan/{profilKawasan}/toggle-aktif',
         [ProfilKawasanController::class, 'toggleAktif']
     )->name('kawasan.profil-kawasan.toggle-aktif');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kawasan - Infrastruktur
+    |--------------------------------------------------------------------------
+    */
+    Route::get(
+        '/kawasan/infrastruktur',
+        [InfrastrukturController::class, 'index']
+    )->name('kawasan.infrastruktur');
+
+    Route::post(
+        '/kawasan/infrastruktur',
+        [InfrastrukturController::class, 'store']
+    )->name('kawasan.infrastruktur.store');
+
+    Route::put(
+        '/kawasan/infrastruktur/{infrastruktur}',
+        [InfrastrukturController::class, 'update']
+    )->name('kawasan.infrastruktur.update');
+
+    Route::delete(
+        '/kawasan/infrastruktur/{infrastruktur}',
+        [InfrastrukturController::class, 'destroy']
+    )->name('kawasan.infrastruktur.destroy');
+
+    Route::patch(
+        '/kawasan/infrastruktur/{infrastruktur}/toggle-aktif',
+        [InfrastrukturController::class, 'toggleAktif']
+    )->name('kawasan.infrastruktur.toggle-aktif');
+
+    Route::patch(
+        '/kawasan/infrastruktur/{infrastruktur}/move-up',
+        [InfrastrukturController::class, 'moveUp']
+    )->name('kawasan.infrastruktur.move-up');
+
+    Route::patch(
+        '/kawasan/infrastruktur/{infrastruktur}/move-down',
+        [InfrastrukturController::class, 'moveDown']
+    )->name('kawasan.infrastruktur.move-down');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kawasan - Fasilitas
+    |--------------------------------------------------------------------------
+    */
+    Route::get(
+        '/kawasan/fasilitas',
+        [FasilitasController::class, 'index']
+    )->name('kawasan.fasilitas');
+
+    Route::post(
+        '/kawasan/fasilitas',
+        [FasilitasController::class, 'store']
+    )->name('kawasan.fasilitas.store');
+
+    Route::put(
+        '/kawasan/fasilitas/{fasilitas}',
+        [FasilitasController::class, 'update']
+    )->name('kawasan.fasilitas.update');
+
+    Route::delete(
+        '/kawasan/fasilitas/{fasilitas}',
+        [FasilitasController::class, 'destroy']
+    )->name('kawasan.fasilitas.destroy');
+
+    Route::patch(
+        '/kawasan/fasilitas/{fasilitas}/toggle-aktif',
+        [FasilitasController::class, 'toggleAktif']
+    )->name('kawasan.fasilitas.toggle-aktif');
+
+    Route::patch(
+        '/kawasan/fasilitas/{fasilitas}/move-up',
+        [FasilitasController::class, 'moveUp']
+    )->name('kawasan.fasilitas.move-up');
+
+    Route::patch(
+        '/kawasan/fasilitas/{fasilitas}/move-down',
+        [FasilitasController::class, 'moveDown']
+    )->name('kawasan.fasilitas.move-down');
+
+    Route::get(
+        '/kawasan/peta-kawasan',
+        [PetaKawasanController::class, 'index']
+    )->name('kawasan.peta-kawasan');
+
+    Route::post(
+        '/kawasan/peta-kawasan',
+        [PetaKawasanController::class, 'store']
+    )->name('kawasan.peta-kawasan.store');
+
+    Route::put(
+        '/kawasan/peta-kawasan/{petaKawasan}',
+        [PetaKawasanController::class, 'update']
+    )->name('kawasan.peta-kawasan.update');
+
+    Route::delete(
+        '/kawasan/peta-kawasan/{petaKawasan}',
+        [PetaKawasanController::class, 'destroy']
+    )->name('kawasan.peta-kawasan.destroy');
+
+    Route::patch(
+        '/kawasan/peta-kawasan/{petaKawasan}/toggle-aktif',
+        [PetaKawasanController::class, 'toggleAktif']
+    )->name('kawasan.peta-kawasan.toggle-aktif');
+
+    Route::patch(
+        '/kawasan/peta-kawasan/{petaKawasan}/move-up',
+        [PetaKawasanController::class, 'moveUp']
+    )->name('kawasan.peta-kawasan.move-up');
+
+    Route::patch(
+        '/kawasan/peta-kawasan/{petaKawasan}/move-down',
+        [PetaKawasanController::class, 'moveDown']
+    )->name('kawasan.peta-kawasan.move-down');
 });
 
 require __DIR__ . '/settings.php';

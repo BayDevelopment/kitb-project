@@ -15,12 +15,10 @@ import {
     Users,
 } from "lucide-vue-next";
 import { computed } from "vue";
-
 import AppLogo from "@/components/AppLogo.vue";
 import NavFooter from "@/components/NavFooter.vue";
 import NavMain from "@/components/NavMain.vue";
 import NavUser from "@/components/NavUser.vue";
-
 import {
     Sidebar,
     SidebarContent,
@@ -30,18 +28,9 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
 import { dashboard } from "@/routes";
 import type { NavItem } from "@/types";
 
-/**
- * =========================================================
- * AUTH / VERIFICATION STATE
- * =========================================================
- * `auth.user` selalu ada begitu user login (di-share lewat
- * HandleInertiaRequests), jadi hanya field opsional yang perlu
- * di-guard dengan `?.`.
- */
 interface AuthUser {
     name?: string;
     email?: string;
@@ -54,21 +43,12 @@ const isEmailVerified = computed(
     () => !!page.props.auth?.user?.email_verified_at,
 );
 
-/**
- * =========================================================
- * MAIN NAVIGATION
- * =========================================================
- */
 const mainNavItems: NavItem[] = [
     {
         title: "Dashboard",
         href: dashboard(),
         icon: LayoutGrid,
     },
-
-    // =====================================================
-    // PROFIL PERUSAHAAN
-    // =====================================================
     {
         title: "Profil Perusahaan",
         icon: Building2,
@@ -95,10 +75,6 @@ const mainNavItems: NavItem[] = [
             },
         ],
     },
-
-    // =====================================================
-    // KAWASAN
-    // =====================================================
     {
         title: "Kawasan",
         icon: Map,
@@ -127,13 +103,6 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-/**
- * =========================================================
- * FOOTER NAVIGATION
- * =========================================================
- * TODO: ganti ke repo & docs milik proyek ini sebelum rilis —
- * link di bawah masih menunjuk ke starter kit resmi Laravel.
- */
 const footerNavItems: NavItem[] = [
     {
         title: "Repository",
@@ -147,29 +116,13 @@ const footerNavItems: NavItem[] = [
     },
 ];
 
-/**
- * =========================================================
- * ACTIVE-GROUP DETECTION
- * =========================================================
- * Dipakai supaya grup dropdown yang memuat rute aktif tetap
- * terbuka (tidak collapse) saat navigasi. NavMain menerima
- * daftar title grup yang harus default terbuka lewat prop
- * `default-open-groups`.
- *
- * PENTING: state buka/tutup collapsible-nya sendiri berada di
- * dalam NavMain.vue. Prop di bawah ini hanya memberi tahu grup
- * mana yang harus dianggap "terbuka secara default" — NavMain
- * perlu membaca prop ini (mis. lewat Collapsible `:default-open`
- * atau `v-model:open` per grup) agar perilakunya benar-benar
- * berlaku. Kirimkan isi NavMain.vue jika ingin kami sambungkan
- * langsung.
- */
 function resolveHref(href: NavItem["href"]): string {
     return typeof href === "string" ? href : (href?.url ?? "");
 }
 
 function isActiveHref(href: string, currentUrl: string): boolean {
     if (!href) return false;
+
     return currentUrl === href || currentUrl.startsWith(`${href}/`);
 }
 
@@ -185,13 +138,6 @@ const activeGroupTitles = computed<string[]>(() => {
         .map((item) => item.title);
 });
 
-/**
- * =========================================================
- * NAV SKELETON CONFIG
- * =========================================================
- * Dibangun otomatis dari `mainNavItems` supaya skeleton tetap
- * sinkron kalau menu berubah, tanpa perlu tulis ulang markup.
- */
 const skeletonWidths = ["100%", "92%", "96%", "88%", "94%", "90%"];
 
 const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
@@ -208,11 +154,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 <template>
     <Sidebar collapsible="icon" variant="inset">
-        <!-- =====================================================
-             HEADER
-             `sidebar-blobs` = dekorasi gradient blur di belakang
-             logo, murni visual (aria-hidden, tidak ganggu layout).
-        ====================================================== -->
         <SidebarHeader class="relative overflow-hidden">
             <div class="sidebar-blobs" aria-hidden="true">
                 <span class="sidebar-blob sidebar-blob--one" />
@@ -230,18 +171,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
             </SidebarMenu>
         </SidebarHeader>
 
-        <!-- =====================================================
-             MAIN NAVIGATION
-             Hanya bagian ini yang dapat melakukan scrolling.
-        ====================================================== -->
         <SidebarContent class="flex min-h-0 flex-1 flex-col overflow-y-auto">
             <Transition name="nav-fade" mode="out-in">
-                <!-- =================================================
-                     NAVIGATION SKELETON
-                     Dibangun dari `navSkeletonGroups`, bukan markup
-                     statis, jadi otomatis ikut berubah kalau
-                     `mainNavItems` berubah.
-                ================================================== -->
                 <div
                     v-if="!isEmailVerified"
                     key="navigation-skeleton"
@@ -252,7 +183,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                 >
                     <span class="sr-only">Memuat navigasi…</span>
 
-                    <!-- Dashboard (item tanpa children) -->
                     <div class="flex h-9 items-center gap-3 rounded-lg px-3">
                         <div
                             class="size-4 shrink-0 animate-pulse rounded-md bg-muted"
@@ -268,7 +198,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                         )"
                         :key="group.title"
                     >
-                        <!-- Group header -->
                         <div
                             class="mt-3 flex h-9 items-center gap-3 rounded-lg px-3"
                         >
@@ -281,7 +210,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                             />
                         </div>
 
-                        <!-- Group children -->
                         <div class="space-y-2 pl-5">
                             <div
                                 v-for="(child, index) in group.children"
@@ -293,9 +221,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                     </template>
                 </div>
 
-                <!-- =================================================
-                     ACTUAL NAVIGATION
-                ================================================== -->
                 <NavMain
                     v-else
                     key="navigation"
@@ -305,22 +230,14 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
             </Transition>
         </SidebarContent>
 
-        <!-- =====================================================
-             FOOTER
-             Footer tidak ikut scroll.
-        ====================================================== -->
         <SidebarFooter>
             <Transition name="nav-fade" mode="out-in">
-                <!-- =================================================
-                     FOOTER SKELETON
-                ================================================== -->
                 <div
                     v-if="!isEmailVerified"
                     key="footer-skeleton"
                     class="space-y-2 px-2 pb-2"
                     aria-hidden="true"
                 >
-                    <!-- Repository -->
                     <div class="flex h-8 items-center gap-3 px-3">
                         <div class="size-4 animate-pulse rounded-md bg-muted" />
                         <div
@@ -328,7 +245,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                         />
                     </div>
 
-                    <!-- Documentation -->
                     <div class="flex h-8 items-center gap-3 px-3">
                         <div class="size-4 animate-pulse rounded-md bg-muted" />
                         <div
@@ -336,14 +252,12 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                         />
                     </div>
 
-                    <!-- User -->
                     <div
                         class="mt-2 flex h-11 items-center gap-3 rounded-lg border border-border/50 px-3"
                     >
                         <div
                             class="size-7 animate-pulse rounded-full bg-muted"
                         />
-
                         <div class="flex-1 space-y-1.5">
                             <div
                                 class="h-3 w-20 animate-pulse rounded-md bg-muted"
@@ -355,15 +269,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                     </div>
                 </div>
 
-                <!-- =================================================
-                     ACTUAL FOOTER
-                ================================================== -->
                 <div v-else key="footer-navigation">
                     <NavFooter :items="footerNavItems" />
-
-                    <!-- Logout sudah tersedia lewat dropdown NavUser,
-                         jadi tombol "Keluar" terpisah di sini dihapus
-                         supaya tidak dobel. -->
                     <NavUser />
                 </div>
             </Transition>
@@ -404,13 +311,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     }
 }
 
-/* =========================================================
-   DECORATIVE BLOBS
-   Blur gradien halus di belakang header, memakai CSS var tema
-   sidebar (--sidebar-primary / --sidebar-accent) yang sudah
-   disediakan oleh komponen ui/sidebar, jadi otomatis mengikuti
-   light/dark mode tanpa warna hardcode.
-========================================================= */
 .sidebar-blobs {
     position: absolute;
     inset: 0;
@@ -424,9 +324,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     border-radius: 9999px;
     filter: blur(28px);
     animation: sidebar-blob-drift 12s ease-in-out infinite;
-
-    /* Light mode: latar terang, blob perlu redup + multiply
-       supaya tidak jadi "noda" putih pucat di atas background. */
     opacity: 0.22;
     mix-blend-mode: multiply;
 }
@@ -456,12 +353,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     animation-delay: -6s;
 }
 
-/* Dark mode (termasuk "system" saat resolve ke dark): latar
-   gelap butuh blend "screen" + opacity lebih tinggi supaya blob
-   tetap kelihatan sebagai cahaya lembut, bukan hilang ditelan
-   background gelap. Asumsi: mode gelap di-toggle lewat class
-   `.dark` di <html> (konvensi default starter kit Laravel/shadcn).
-   Kalau proyekmu pakai mekanisme lain, kasih tahu saya. */
 :global(.dark) .sidebar-blob {
     opacity: 0.4;
     mix-blend-mode: screen;
@@ -472,6 +363,7 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     100% {
         transform: translate(0, 0) scale(1);
     }
+
     50% {
         transform: translate(6px, 8px) scale(1.08);
     }
