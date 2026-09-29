@@ -2,6 +2,7 @@
 import { Link, usePage } from "@inertiajs/vue3";
 import {
     BookOpen,
+    BriefcaseBusiness,
     Building,
     Building2,
     Construction,
@@ -20,7 +21,6 @@ import AppLogo from "@/components/AppLogo.vue";
 import NavFooter from "@/components/NavFooter.vue";
 import NavMain from "@/components/NavMain.vue";
 import NavUser from "@/components/NavUser.vue";
-
 import {
     Sidebar,
     SidebarContent,
@@ -30,7 +30,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
 import { dashboard } from "@/routes";
 import type { NavItem } from "@/types";
 
@@ -52,6 +51,7 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
+
     {
         title: "Profil Perusahaan",
         icon: Building2,
@@ -78,6 +78,7 @@ const mainNavItems: NavItem[] = [
             },
         ],
     },
+
     {
         title: "Kawasan",
         icon: Map,
@@ -101,6 +102,18 @@ const mainNavItems: NavItem[] = [
                 title: "Peta Kawasan",
                 href: "/kawasan/peta-kawasan",
                 icon: MapPinned,
+            },
+        ],
+    },
+
+    {
+        title: "Hubungan Investor",
+        icon: BriefcaseBusiness,
+        items: [
+            {
+                title: "Peluang Investasi",
+                href: "/hubungan-investor/peluang-investasi",
+                icon: BriefcaseBusiness,
             },
         ],
     },
@@ -343,10 +356,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     --kitb-navy: #0b1f3a;
     --kitb-navy-light: #163b68;
     --kitb-blue: #2563eb;
-
     --kitb-light-hover: rgba(22, 59, 104, 0.08);
     --kitb-light-active: rgba(22, 59, 104, 0.12);
-
     --kitb-dark-hover: rgba(255, 255, 255, 0.075);
     --kitb-dark-active: rgba(255, 255, 255, 0.11);
 }
@@ -385,11 +396,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     position: relative;
     min-width: 0;
     overflow: hidden;
-
     border: 1px solid transparent;
-
     color: #475569;
-
     transition:
         background-color 160ms ease,
         border-color 160ms ease,
@@ -403,11 +411,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 :deep(.kitb-sidebar [data-sidebar="menu-button"]:hover) {
     border-color: rgba(22, 59, 104, 0.1);
-
     background: var(--kitb-light-hover);
-
     color: var(--kitb-navy-light);
-
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.8),
         0 2px 8px rgba(15, 23, 42, 0.035);
@@ -419,11 +424,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 :deep(.kitb-sidebar [data-sidebar="menu-button"][data-active="true"]) {
     border-color: rgba(22, 59, 104, 0.13);
-
     background: var(--kitb-light-active);
-
     color: var(--kitb-navy);
-
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.7),
         0 3px 10px rgba(11, 31, 58, 0.055);
@@ -435,16 +437,11 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     position: absolute;
     top: 50%;
     left: 0;
-
     width: 3px;
     height: 20px;
-
     content: "";
-
     border-radius: 0 999px 999px 0;
-
     background: var(--kitb-navy);
-
     transform: translateY(-50%);
 }
 
@@ -454,7 +451,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 :deep(.kitb-sidebar [data-sidebar="menu-button"] svg) {
     flex-shrink: 0;
-
     transition:
         color 160ms ease,
         opacity 160ms ease;
@@ -483,11 +479,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 :deep(.dark .kitb-sidebar [data-sidebar="menu-button"]:hover) {
     border-color: rgba(255, 255, 255, 0.1);
-
     background: var(--kitb-dark-hover);
-
     color: #ffffff;
-
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.045),
         0 2px 8px rgba(0, 0, 0, 0.12);
@@ -499,11 +492,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 :deep(.dark .kitb-sidebar [data-sidebar="menu-button"][data-active="true"]) {
     border-color: rgba(255, 255, 255, 0.14);
-
     background: var(--kitb-dark-active);
-
     color: #ffffff;
-
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.06),
         0 3px 12px rgba(0, 0, 0, 0.16);
@@ -538,11 +528,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 :deep(.kitb-sidebar [data-sidebar="menu-sub-button"]) {
     position: relative;
     min-width: 0;
-
     border: 1px solid transparent;
-
     color: #64748b;
-
     transition:
         background-color 160ms ease,
         border-color 160ms ease,
@@ -553,9 +540,7 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 :deep(.kitb-sidebar [data-sidebar="menu-sub-button"]:hover) {
     border-color: rgba(22, 59, 104, 0.08);
-
     background: rgba(22, 59, 104, 0.055);
-
     color: var(--kitb-navy-light);
 }
 
@@ -563,11 +548,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 :deep(.kitb-sidebar [data-sidebar="menu-sub-button"][data-active="true"]) {
     border-color: rgba(22, 59, 104, 0.1);
-
     background: rgba(22, 59, 104, 0.09);
-
     color: var(--kitb-navy);
-
     font-weight: 500;
 }
 
@@ -579,16 +561,11 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     position: absolute;
     top: 50%;
     left: 0;
-
     width: 2px;
     height: 16px;
-
     content: "";
-
     border-radius: 0 999px 999px 0;
-
     background: var(--kitb-navy);
-
     transform: translateY(-50%);
 }
 
@@ -596,9 +573,7 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 :deep(.dark .kitb-sidebar [data-sidebar="menu-sub-button"]:hover) {
     border-color: rgba(255, 255, 255, 0.08);
-
     background: rgba(255, 255, 255, 0.06);
-
     color: #ffffff;
 }
 
@@ -606,11 +581,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     .dark .kitb-sidebar [data-sidebar="menu-sub-button"][data-active="true"]
 ) {
     border-color: rgba(255, 255, 255, 0.11);
-
     background: rgba(255, 255, 255, 0.085);
-
     color: #ffffff;
-
     font-weight: 500;
 }
 
@@ -630,9 +602,7 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     .kitb-sidebar [data-sidebar="footer"] [data-sidebar="menu-button"]:hover
 ) {
     border-color: rgba(22, 59, 104, 0.08);
-
     background: rgba(22, 59, 104, 0.055);
-
     color: var(--kitb-navy-light);
 }
 
@@ -643,9 +613,7 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
         [data-sidebar="menu-button"]:hover
 ) {
     border-color: rgba(255, 255, 255, 0.08);
-
     background: rgba(255, 255, 255, 0.06);
-
     color: #ffffff;
 }
 

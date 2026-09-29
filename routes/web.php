@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\AnakUsahaController;
+use App\Http\Controllers\Admin\HubunganInvestor\PeluangInvestasiController;
 use App\Http\Controllers\Admin\Kawasan\FasilitasController;
 use App\Http\Controllers\Admin\Kawasan\InfrastrukturController;
+use App\Http\Controllers\Admin\PeluangInvestasiController as AdminPeluangInvestasiController;
 use App\Http\Controllers\Admin\PetaKawasanController;
 use App\Http\Controllers\Admin\ProfilKawasanController;
 use App\Http\Controllers\Admin\ProfilPerusahaanController;
@@ -16,12 +18,12 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-
     /*
     |--------------------------------------------------------------------------
     | Dashboard
     |--------------------------------------------------------------------------
     */
+
     Route::inertia('dashboard', 'Dashboard')
         ->name('dashboard');
 
@@ -30,6 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Profil Perusahaan - Tentang Kami
     |--------------------------------------------------------------------------
     */
+
     Route::get(
         '/profil-perusahaan/tentang-kami',
         [ProfilPerusahaanController::class, 'tentangKami']
@@ -55,6 +58,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Profil Perusahaan - Visi & Misi
     |--------------------------------------------------------------------------
     */
+
     Route::get(
         '/profil-perusahaan/visi-misi',
         [VisiMisiController::class, 'index']
@@ -65,6 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Visi
     |--------------------------------------------------------------------------
     */
+
     Route::post(
         '/profil-perusahaan/visi-misi/visi',
         [VisiMisiController::class, 'storeVisi']
@@ -80,6 +85,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Misi
     |--------------------------------------------------------------------------
     */
+
     Route::post(
         '/profil-perusahaan/visi-misi/{visi}/misi',
         [VisiMisiController::class, 'storeMisi']
@@ -105,6 +111,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Profil Perusahaan - Struktur Perusahaan
     |--------------------------------------------------------------------------
     */
+
     Route::get(
         '/profil-perusahaan/struktur-perusahaan',
         [StrukturPerusahaanController::class, 'index']
@@ -140,6 +147,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Profil Perusahaan - Anak Usaha
     |--------------------------------------------------------------------------
     */
+
     Route::get(
         '/profil-perusahaan/anak-usaha',
         [AnakUsahaController::class, 'index']
@@ -172,9 +180,46 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Hubungan Investor - Peluang Investasi
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/hubungan-investor/peluang-investasi',
+        [AdminPeluangInvestasiController::class, 'index']
+    )->name('hubungan-investor.peluang-investasi');
+
+    Route::post(
+        '/hubungan-investor/peluang-investasi',
+        [AdminPeluangInvestasiController::class, 'store']
+    )->name('hubungan-investor.peluang-investasi.store');
+
+    Route::put(
+        '/hubungan-investor/peluang-investasi/{peluangInvestasi}',
+        [AdminPeluangInvestasiController::class, 'update']
+    )->name('hubungan-investor.peluang-investasi.update');
+
+    Route::delete(
+        '/hubungan-investor/peluang-investasi/{peluangInvestasi}',
+        [AdminPeluangInvestasiController::class, 'destroy']
+    )->name('hubungan-investor.peluang-investasi.destroy');
+
+    Route::patch(
+        '/hubungan-investor/peluang-investasi/{peluangInvestasi}/toggle-aktif',
+        [AdminPeluangInvestasiController::class, 'toggleAktif']
+    )->name('hubungan-investor.peluang-investasi.toggle-aktif');
+
+    Route::patch(
+        '/hubungan-investor/peluang-investasi/{peluangInvestasi}/move',
+        [AdminPeluangInvestasiController::class, 'move']
+    )->name('hubungan-investor.peluang-investasi.move');
+
+    /*
+    |--------------------------------------------------------------------------
     | Kawasan - Profil Kawasan
     |--------------------------------------------------------------------------
     */
+
     Route::get(
         '/kawasan/profil-kawasan',
         [ProfilKawasanController::class, 'index']
@@ -205,6 +250,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Kawasan - Infrastruktur
     |--------------------------------------------------------------------------
     */
+
     Route::get(
         '/kawasan/infrastruktur',
         [InfrastrukturController::class, 'index']
@@ -245,6 +291,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | Kawasan - Fasilitas
     |--------------------------------------------------------------------------
     */
+
     Route::get(
         '/kawasan/fasilitas',
         [FasilitasController::class, 'index']
@@ -279,6 +326,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         '/kawasan/fasilitas/{fasilitas}/move-down',
         [FasilitasController::class, 'moveDown']
     )->name('kawasan.fasilitas.move-down');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kawasan - Peta Kawasan
+    |--------------------------------------------------------------------------
+    */
 
     Route::get(
         '/kawasan/peta-kawasan',
