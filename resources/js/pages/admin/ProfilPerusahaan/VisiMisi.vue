@@ -675,52 +675,46 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
 
 <template>
     <div
-        class="relative min-h-full overflow-hidden bg-slate-50/50 p-4 sm:p-6 dark:bg-slate-950/50"
+        class="relative min-h-full overflow-hidden bg-slate-50 transition-colors duration-300 dark:bg-[#07111f]"
+        :aria-busy="isPageLoading ? 'true' : 'false'"
     >
-        <!-- =========================================================
-             DECORATIVE BACKGROUND
-        ========================================================== -->
-
+        <!-- Decorative Background -->
         <div
             class="pointer-events-none absolute inset-0 z-0 overflow-hidden"
             aria-hidden="true"
         >
             <div
-                class="blob-shape absolute -left-24 -top-32 h-96 w-96 rounded-full bg-gradient-to-br from-blue-400/30 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/25 dark:via-indigo-500/15 dark:to-transparent"
+                class="blob-shape absolute -left-24 -top-32 h-96 w-96 rounded-full bg-gradient-to-br from-blue-400/25 via-indigo-400/15 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/10 dark:to-transparent"
             ></div>
 
             <div
-                class="blob-shape-delayed absolute -right-20 top-0 h-80 w-80 rounded-full bg-gradient-to-tr from-sky-300/30 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/20 dark:via-blue-500/10 dark:to-transparent"
+                class="blob-shape-delayed absolute -right-20 top-0 h-80 w-80 rounded-full bg-gradient-to-tr from-sky-300/25 via-blue-400/15 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10 dark:to-transparent"
             ></div>
 
             <div
-                class="blob-shape-slow absolute left-[30%] -top-40 h-72 w-72 rounded-full bg-gradient-to-br from-indigo-300/25 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/15 dark:via-blue-500/10 dark:to-transparent"
+                class="blob-shape-slow absolute left-[30%] -top-40 h-72 w-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/10 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/5 dark:to-transparent"
             ></div>
 
             <div
-                class="blob-shape absolute -bottom-40 right-[20%] h-72 w-72 rounded-full bg-gradient-to-br from-cyan-300/20 via-blue-300/10 to-transparent blur-3xl dark:from-cyan-500/10 dark:via-blue-500/10 dark:to-transparent"
+                class="blob-shape absolute -bottom-40 right-[20%] h-72 w-72 rounded-full bg-gradient-to-br from-cyan-300/15 via-blue-300/10 to-transparent blur-3xl dark:from-cyan-500/10 dark:via-blue-500/5 dark:to-transparent"
             ></div>
 
-            <div class="absolute inset-0 opacity-40 dark:opacity-20">
+            <div class="absolute inset-0 opacity-[0.32] dark:opacity-[0.12]">
                 <div
                     class="h-full w-full bg-[linear-gradient(to_right,#64748b12_1px,transparent_1px),linear-gradient(to_bottom,#64748b12_1px,transparent_1px)] bg-[size:32px_32px]"
                 ></div>
             </div>
 
             <div
-                class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent via-slate-50/40 to-slate-50/90 dark:via-slate-950/40 dark:to-slate-950/90"
+                class="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent via-slate-50/50 to-slate-50 dark:via-slate-950/30 dark:to-[#07111f]"
             ></div>
         </div>
 
-        <!-- =========================================================
-             MAIN CONTENT
-        ========================================================== -->
-
-        <div class="relative z-10">
-            <!-- =====================================================
-                 PAGE SKELETON
-            ====================================================== -->
-
+        <!-- Main Content -->
+        <main
+            class="relative z-10 mx-auto w-full max-w-[1600px] p-4 sm:p-5 lg:p-6 xl:p-8"
+        >
+            <!-- Page Skeleton -->
             <div v-if="isPageLoading" class="animate-pulse">
                 <!-- Header Skeleton -->
                 <div
@@ -728,7 +722,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                 >
                     <div class="flex items-center gap-3">
                         <div
-                            class="size-10 shrink-0 rounded-xl bg-slate-200 dark:bg-slate-800"
+                            class="size-11 shrink-0 rounded-2xl bg-slate-200 dark:bg-slate-800"
                         ></div>
 
                         <div class="space-y-2">
@@ -744,21 +738,21 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
 
                     <div class="flex flex-col gap-2 sm:flex-row">
                         <div
-                            class="h-10 w-full rounded-xl bg-slate-200 dark:bg-slate-800 sm:w-28"
+                            class="h-11 w-full rounded-xl bg-slate-200 dark:bg-slate-800 sm:w-28"
                         ></div>
 
                         <div
-                            class="h-10 w-full rounded-xl bg-slate-200 dark:bg-slate-800 sm:w-32"
+                            class="h-11 w-full rounded-xl bg-slate-200 dark:bg-slate-800 sm:w-32"
                         ></div>
                     </div>
                 </div>
 
                 <!-- Visi Skeleton -->
                 <div
-                    class="mb-5 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    class="mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div class="flex items-center gap-3">
                             <div
@@ -777,11 +771,11 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         </div>
 
                         <div
-                            class="size-9 rounded-lg bg-slate-200 dark:bg-slate-800"
+                            class="size-9 rounded-xl bg-slate-200 dark:bg-slate-800"
                         ></div>
                     </div>
 
-                    <div class="p-6">
+                    <div class="p-5 sm:p-6">
                         <div
                             class="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-800/50"
                         >
@@ -814,10 +808,10 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
 
                 <!-- Misi Skeleton -->
                 <div
-                    class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
-                        class="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                        class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
                     >
                         <div class="flex items-center gap-3">
                             <div
@@ -836,7 +830,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         </div>
 
                         <div
-                            class="h-10 w-full rounded-xl bg-slate-200 dark:bg-slate-800 sm:w-32"
+                            class="h-11 w-full rounded-xl bg-slate-200 dark:bg-slate-800 sm:w-32"
                         ></div>
                     </div>
 
@@ -922,7 +916,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
 
                     <!-- Pagination Skeleton -->
                     <div
-                        class="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                        class="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
                     >
                         <div
                             class="h-4 w-48 rounded bg-slate-200 dark:bg-slate-800"
@@ -930,22 +924,8 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
 
                         <div class="flex gap-1">
                             <div
-                                class="size-9 rounded-lg bg-slate-200 dark:bg-slate-800"
-                            ></div>
-
-                            <div
-                                class="size-9 rounded-lg bg-slate-200 dark:bg-slate-800"
-                            ></div>
-
-                            <div
-                                class="size-9 rounded-lg bg-slate-200 dark:bg-slate-800"
-                            ></div>
-
-                            <div
-                                class="size-9 rounded-lg bg-slate-200 dark:bg-slate-800"
-                            ></div>
-
-                            <div
+                                v-for="item in 5"
+                                :key="item"
                                 class="size-9 rounded-lg bg-slate-200 dark:bg-slate-800"
                             ></div>
                         </div>
@@ -953,31 +933,28 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                 </div>
             </div>
 
-            <!-- =====================================================
-                 ACTUAL CONTENT
-            ====================================================== -->
-
+            <!-- Actual Content -->
             <template v-else>
-                <!-- HEADER -->
+                <!-- Header -->
                 <div
                     class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-start gap-3 sm:items-center">
                         <div
-                            class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600/10 text-blue-600 shadow-sm dark:bg-blue-400/10 dark:text-blue-400"
+                            class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm shadow-blue-600/20"
                         >
                             <Target class="size-5" />
                         </div>
 
                         <div>
                             <h1
-                                class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white"
+                                class="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl dark:text-white"
                             >
                                 Visi & Misi
                             </h1>
 
                             <p
-                                class="text-sm text-slate-500 dark:text-slate-400"
+                                class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
                             >
                                 Kelola visi dan misi perusahaan.
                             </p>
@@ -988,7 +965,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         <button
                             v-if="props.visi"
                             type="button"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                             @click="openEditVisi"
                         >
                             <Pencil class="size-4" />
@@ -998,7 +975,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         <button
                             v-if="props.visi"
                             type="button"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                             @click="openCreateMisi"
                         >
                             <Plus class="size-4" />
@@ -1008,7 +985,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         <button
                             v-else
                             type="button"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                             @click="openCreateVisi"
                         >
                             <Plus class="size-4" />
@@ -1017,12 +994,12 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                     </div>
                 </div>
 
-                <!-- VISI CARD -->
-                <div
-                    class="mb-5 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95"
+                <!-- Visi Card -->
+                <section
+                    class="mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl transition-shadow duration-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/95"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div class="flex items-center gap-3">
                             <div
@@ -1049,7 +1026,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         <button
                             v-if="props.visi"
                             type="button"
-                            class="rounded-lg p-2 text-slate-500 transition hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
+                            class="rounded-xl p-2 text-slate-500 transition-all duration-200 hover:bg-amber-50 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
                             title="Edit visi"
                             @click="openEditVisi"
                         >
@@ -1057,10 +1034,10 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         </button>
                     </div>
 
-                    <div class="p-6">
+                    <div class="p-5 sm:p-6">
                         <div
                             v-if="props.visi"
-                            class="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-white p-5 dark:border-blue-900/40 dark:from-blue-950/30 dark:via-indigo-950/20 dark:to-slate-900"
+                            class="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-white p-5 shadow-sm dark:border-blue-900/40 dark:from-blue-950/30 dark:via-indigo-950/20 dark:to-slate-900"
                         >
                             <div class="flex gap-4">
                                 <div
@@ -1077,10 +1054,14 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                             </div>
                         </div>
 
-                        <div v-else class="py-8 text-center">
-                            <Target
-                                class="mx-auto mb-3 size-10 text-slate-300 dark:text-slate-700"
-                            />
+                        <div v-else class="py-10 text-center">
+                            <div
+                                class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800"
+                            >
+                                <Target
+                                    class="size-6 text-slate-400 dark:text-slate-600"
+                                />
+                            </div>
 
                             <p
                                 class="font-medium text-slate-700 dark:text-slate-300"
@@ -1096,7 +1077,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
 
                             <button
                                 type="button"
-                                class="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                                class="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-all hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md"
                                 @click="openCreateVisi"
                             >
                                 <Plus class="size-4" />
@@ -1104,14 +1085,14 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <!-- MISI CARD -->
-                <div
-                    class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95"
+                <!-- Misi Card -->
+                <section
+                    class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl transition-shadow duration-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/95"
                 >
                     <div
-                        class="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                        class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
                     >
                         <div class="flex items-center gap-3">
                             <div
@@ -1138,7 +1119,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         <button
                             v-if="props.visi"
                             type="button"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-all hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md"
                             @click="openCreateMisi"
                         >
                             <Plus class="size-4" />
@@ -1146,7 +1127,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         </button>
                     </div>
 
-                    <!-- TABLE -->
+                    <!-- Table -->
                     <div
                         v-if="
                             props.visi && (props.misis?.data?.length ?? 0) > 0
@@ -1193,7 +1174,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                         v-for="(misi, index) in props.misis
                                             ?.data ?? []"
                                         :key="misi.id"
-                                        class="transition-colors hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
+                                        class="transition-colors duration-200 hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
                                     >
                                         <td class="px-6 py-4 text-center">
                                             <span
@@ -1222,7 +1203,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                                         isFirstMisi(misi) ||
                                                         movingMisiId === misi.id
                                                     "
-                                                    class="rounded-lg p-2 transition"
+                                                    class="rounded-lg p-2 transition-all duration-200"
                                                     :class="
                                                         isFirstMisi(misi) ||
                                                         movingMisiId === misi.id
@@ -1249,7 +1230,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                                         isLastMisi(misi) ||
                                                         movingMisiId === misi.id
                                                     "
-                                                    class="rounded-lg p-2 transition"
+                                                    class="rounded-lg p-2 transition-all duration-200"
                                                     :class="
                                                         isLastMisi(misi) ||
                                                         movingMisiId === misi.id
@@ -1270,7 +1251,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                                 <button
                                                     type="button"
                                                     title="Lihat detail"
-                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                                                    class="rounded-lg p-2 text-slate-500 transition-all duration-200 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                                                     @click="openDetail(misi)"
                                                 >
                                                     <Eye class="size-4" />
@@ -1279,7 +1260,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                                 <button
                                                     type="button"
                                                     title="Edit misi"
-                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
+                                                    class="rounded-lg p-2 text-slate-500 transition-all duration-200 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
                                                     @click="openEditMisi(misi)"
                                                 >
                                                     <Pencil class="size-4" />
@@ -1288,7 +1269,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                                 <button
                                                     type="button"
                                                     title="Hapus misi"
-                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                                                    class="rounded-lg p-2 text-slate-500 transition-all duration-200 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                                                     @click="openDelete(misi)"
                                                 >
                                                     <Trash2 class="size-4" />
@@ -1300,10 +1281,10 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                             </table>
                         </div>
 
-                        <!-- PAGINATION -->
+                        <!-- Pagination -->
                         <div
                             v-if="props.misis && getMisiLastPage() > 1"
-                            class="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                            class="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
                         >
                             <p
                                 class="text-sm text-slate-500 dark:text-slate-400"
@@ -1334,7 +1315,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                     type="button"
                                     title="Halaman pertama"
                                     :disabled="!firstPageUrl()"
-                                    class="rounded-lg p-2 transition"
+                                    class="rounded-lg p-2 transition-all duration-200"
                                     :class="
                                         firstPageUrl()
                                             ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
@@ -1349,7 +1330,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                     type="button"
                                     title="Halaman sebelumnya"
                                     :disabled="!previousPageUrl()"
-                                    class="rounded-lg p-2 transition"
+                                    class="rounded-lg p-2 transition-all duration-200"
                                     :class="
                                         previousPageUrl()
                                             ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
@@ -1367,10 +1348,10 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                     :key="`${link.label}-${index}`"
                                     type="button"
                                     :disabled="!link.url"
-                                    class="min-w-9 rounded-lg px-3 py-2 text-sm transition"
+                                    class="min-w-9 rounded-lg px-3 py-2 text-sm transition-all duration-200"
                                     :class="
                                         link.active
-                                            ? 'bg-blue-600 text-white shadow-sm'
+                                            ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
                                             : link.url
                                               ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
                                               : 'cursor-not-allowed text-slate-300 dark:text-slate-700'
@@ -1384,7 +1365,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                     type="button"
                                     title="Halaman berikutnya"
                                     :disabled="!nextPageUrl()"
-                                    class="rounded-lg p-2 transition"
+                                    class="rounded-lg p-2 transition-all duration-200"
                                     :class="
                                         nextPageUrl()
                                             ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
@@ -1399,7 +1380,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                     type="button"
                                     title="Halaman terakhir"
                                     :disabled="!lastPageUrl()"
-                                    class="rounded-lg p-2 transition"
+                                    class="rounded-lg p-2 transition-all duration-200"
                                     :class="
                                         lastPageUrl()
                                             ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
@@ -1413,11 +1394,15 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         </div>
                     </div>
 
-                    <!-- EMPTY -->
+                    <!-- Empty -->
                     <div v-else class="px-6 py-14 text-center">
-                        <FileText
-                            class="mx-auto mb-3 size-10 text-slate-300 dark:text-slate-700"
-                        />
+                        <div
+                            class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800"
+                        >
+                            <FileText
+                                class="size-6 text-slate-400 dark:text-slate-600"
+                            />
+                        </div>
 
                         <p
                             class="font-medium text-slate-700 dark:text-slate-300"
@@ -1442,21 +1427,18 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         <button
                             v-if="props.visi"
                             type="button"
-                            class="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                            class="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-all hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md"
                             @click="openCreateMisi"
                         >
                             <Plus class="size-4" />
                             Tambah Misi
                         </button>
                     </div>
-                </div>
+                </section>
             </template>
-        </div>
+        </main>
 
-        <!-- =========================================================
-             MODAL VISI
-        ========================================================== -->
-
+        <!-- Modal Visi -->
         <Transition name="modal">
             <div
                 v-if="showVisiModal"
@@ -1464,10 +1446,10 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                 @click.self="closeVisiModal"
             >
                 <div
-                    class="my-auto w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+                    class="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl dark:bg-slate-900"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div class="min-w-0">
                             <h2
@@ -1490,14 +1472,14 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         <button
                             type="button"
                             :disabled="processingVisi"
-                            class="ml-4 shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
+                            class="ml-4 shrink-0 rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
                             @click="closeVisiModal"
                         >
                             <X class="size-5" />
                         </button>
                     </div>
 
-                    <form class="p-6" @submit.prevent="submitVisi">
+                    <form class="p-5 sm:p-6" @submit.prevent="submitVisi">
                         <div>
                             <label
                                 class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1512,7 +1494,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                 required
                                 maxlength="5000"
                                 placeholder="Tuliskan visi perusahaan..."
-                                class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-900"
+                                class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-900"
                             ></textarea>
 
                             <p
@@ -1540,7 +1522,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                 :disabled="
                                     processingVisi || !visiForm.isi.trim()
                                 "
-                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <span
                                     v-if="processingVisi"
@@ -1561,10 +1543,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
             </div>
         </Transition>
 
-        <!-- =========================================================
-             MODAL MISI
-        ========================================================== -->
-
+        <!-- Modal Misi -->
         <Transition name="modal">
             <div
                 v-if="showMisiModal"
@@ -1572,10 +1551,10 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                 @click.self="closeMisiModal"
             >
                 <div
-                    class="my-auto w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+                    class="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl dark:bg-slate-900"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div class="min-w-0">
                             <h2
@@ -1598,14 +1577,14 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         <button
                             type="button"
                             :disabled="processingMisi"
-                            class="ml-4 shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
+                            class="ml-4 shrink-0 rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
                             @click="closeMisiModal"
                         >
                             <X class="size-5" />
                         </button>
                     </div>
 
-                    <form class="p-6" @submit.prevent="submitMisi">
+                    <form class="p-5 sm:p-6" @submit.prevent="submitMisi">
                         <div>
                             <label
                                 class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1620,7 +1599,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                 required
                                 maxlength="5000"
                                 placeholder="Tuliskan misi perusahaan..."
-                                class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-900"
+                                class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-900"
                             ></textarea>
 
                             <p
@@ -1648,7 +1627,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                 :disabled="
                                     processingMisi || !misiForm.isi.trim()
                                 "
-                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <span
                                     v-if="processingMisi"
@@ -1669,10 +1648,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
             </div>
         </Transition>
 
-        <!-- =========================================================
-             MODAL DETAIL MISI
-        ========================================================== -->
-
+        <!-- Modal Detail Misi -->
         <Transition name="modal">
             <div
                 v-if="showDetailModal && selectedMisi"
@@ -1680,10 +1656,10 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                 @click.self="closeDetail"
             >
                 <div
-                    class="my-auto w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+                    class="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl dark:bg-slate-900"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div>
                             <h2
@@ -1701,14 +1677,14 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
 
                         <button
                             type="button"
-                            class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+                            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
                             @click="closeDetail"
                         >
                             <X class="size-5" />
                         </button>
                     </div>
 
-                    <div class="p-6">
+                    <div class="p-5 sm:p-6">
                         <div
                             class="mb-5 flex items-center gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20"
                         >
@@ -1747,10 +1723,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
             </div>
         </Transition>
 
-        <!-- =========================================================
-             MODAL DELETE
-        ========================================================== -->
-
+        <!-- Modal Delete -->
         <Transition name="modal">
             <div
                 v-if="showDeleteModal && selectedMisi"
@@ -1758,10 +1731,10 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                 @click.self="closeDelete"
             >
                 <div
-                    class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"
+                    class="w-full max-w-md rounded-3xl border border-white/10 bg-white p-6 shadow-2xl dark:bg-slate-900"
                 >
                     <div
-                        class="mx-auto flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
+                        class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
                     >
                         <Trash2 class="size-5" />
                     </div>
@@ -1798,7 +1771,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         <button
                             type="button"
                             :disabled="processingDelete"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-600/20 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                             @click="deleteMisi"
                         >
                             <span
@@ -1815,10 +1788,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
             </div>
         </Transition>
 
-        <!-- =========================================================
-             PAGE LOADING BAR
-        ========================================================== -->
-
+        <!-- Page Loading Bar -->
         <Transition name="loading">
             <div
                 v-if="isPageLoading"
@@ -1837,12 +1807,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
 </template>
 
 <style scoped>
-/*
-|--------------------------------------------------------------------------
-| Modal Transition
-|--------------------------------------------------------------------------
-*/
-
+/* Modal Transition */
 .modal-enter-active,
 .modal-leave-active {
     transition:
@@ -1860,12 +1825,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
     transform: translateY(8px) scale(0.985);
 }
 
-/*
-|--------------------------------------------------------------------------
-| Loading Transition
-|--------------------------------------------------------------------------
-*/
-
+/* Loading Transition */
 .loading-enter-active,
 .loading-leave-active {
     transition: opacity 0.15s ease;
@@ -1876,12 +1836,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
     opacity: 0;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Decorative Blobs
-|--------------------------------------------------------------------------
-*/
-
+/* Decorative Blobs */
 .blob-shape {
     animation: blob-float 12s ease-in-out infinite;
     transform-origin: center;
@@ -1900,12 +1855,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
     will-change: transform;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Blob Animations
-|--------------------------------------------------------------------------
-*/
-
+/* Blob Animations */
 @keyframes blob-float {
     0%,
     100% {
@@ -1947,12 +1897,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Loading Bar
-|--------------------------------------------------------------------------
-*/
-
+/* Loading Bar */
 @keyframes loading-bar {
     0% {
         transform: translateX(-100%);
@@ -1967,12 +1912,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
     animation: loading-bar 1.1s ease-in-out infinite;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Accessibility
-|--------------------------------------------------------------------------
-*/
-
+/* Accessibility */
 @media (prefers-reduced-motion: reduce) {
     .blob-shape,
     .blob-shape-delayed,
@@ -1987,12 +1927,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Mobile
-|--------------------------------------------------------------------------
-*/
-
+/* Mobile */
 @media (max-width: 640px) {
     .blob-shape {
         left: -10rem;

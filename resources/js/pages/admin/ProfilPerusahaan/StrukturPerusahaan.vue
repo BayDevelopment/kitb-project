@@ -522,23 +522,53 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 
 <template>
     <div
-        class="relative min-h-full overflow-hidden bg-slate-50/50 p-6 dark:bg-slate-950/50"
+        class="relative min-h-full overflow-hidden bg-slate-50 transition-colors duration-300 dark:bg-[#07111f]"
     >
         <!-- ===================================================== -->
-        <!-- BLOBS -->
+        <!-- DECORATIVE BACKGROUND -->
         <!-- ===================================================== -->
 
         <div
-            class="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-gradient-to-br from-blue-400/30 to-indigo-500/20 blur-3xl dark:from-blue-500/20 dark:to-indigo-600/10"
+            class="pointer-events-none absolute -left-24 -top-24 z-0 size-72 rounded-full bg-gradient-to-br from-blue-400/25 to-indigo-500/15 blur-3xl dark:from-blue-500/15 dark:to-indigo-600/10"
+            aria-hidden="true"
         ></div>
 
         <div
-            class="pointer-events-none absolute -right-28 top-40 size-80 rounded-full bg-gradient-to-br from-sky-400/20 to-blue-500/10 blur-3xl dark:from-sky-500/10 dark:to-blue-600/10"
+            class="pointer-events-none absolute -right-28 top-40 z-0 size-80 rounded-full bg-gradient-to-br from-sky-400/20 to-blue-500/10 blur-3xl dark:from-sky-500/10 dark:to-blue-600/10"
+            aria-hidden="true"
         ></div>
 
         <div
-            class="pointer-events-none absolute -bottom-40 left-1/3 size-96 rounded-full bg-gradient-to-br from-indigo-400/10 to-cyan-400/10 blur-3xl dark:from-indigo-500/10 dark:to-cyan-500/5"
+            class="pointer-events-none absolute -bottom-40 left-1/3 z-0 size-96 rounded-full bg-gradient-to-br from-indigo-400/10 to-cyan-400/10 blur-3xl dark:from-indigo-500/10 dark:to-cyan-500/5"
+            aria-hidden="true"
         ></div>
+
+        <div
+            class="pointer-events-none absolute inset-0 z-0 opacity-[0.35] dark:opacity-[0.08]"
+            aria-hidden="true"
+        >
+            <div
+                class="absolute inset-0"
+                style="
+                    background-image:
+                        linear-gradient(
+                            rgba(100, 116, 139, 0.08) 1px,
+                            transparent 1px
+                        ),
+                        linear-gradient(
+                            90deg,
+                            rgba(100, 116, 139, 0.08) 1px,
+                            transparent 1px
+                        );
+                    background-size: 32px 32px;
+                    mask-image: linear-gradient(
+                        to bottom,
+                        black,
+                        transparent 75%
+                    );
+                "
+            ></div>
+        </div>
 
         <div class="relative z-10">
             <Transition name="page-fade" mode="out-in">
@@ -549,69 +579,85 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                 <div
                     v-if="isPageLoading"
                     key="skeleton"
-                    class="animate-pulse space-y-5"
+                    class="mx-auto w-full max-w-[1600px] animate-pulse space-y-5 p-4 sm:p-5 lg:p-6 xl:p-8"
                 >
                     <div
-                        class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div class="flex items-center gap-3">
                             <div
-                                class="size-10 rounded-xl bg-slate-200 dark:bg-slate-800"
+                                class="size-11 rounded-2xl bg-slate-200 dark:bg-slate-800"
                             ></div>
 
                             <div class="space-y-2">
                                 <div
-                                    class="h-5 w-48 rounded bg-slate-200 dark:bg-slate-800"
+                                    class="h-5 w-48 rounded-lg bg-slate-200 dark:bg-slate-800"
                                 ></div>
 
                                 <div
-                                    class="h-4 w-72 rounded bg-slate-200 dark:bg-slate-800"
+                                    class="h-4 w-72 max-w-[70vw] rounded-lg bg-slate-200 dark:bg-slate-800"
                                 ></div>
                             </div>
                         </div>
 
                         <div
-                            class="h-10 w-36 rounded-xl bg-slate-200 dark:bg-slate-800"
+                            class="h-10 w-full rounded-xl bg-slate-200 sm:w-36 dark:bg-slate-800"
                         ></div>
                     </div>
 
                     <div
-                        class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                        class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                     >
                         <div
-                            class="border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                            class="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:px-6 dark:border-slate-800"
                         >
-                            <div
-                                class="h-5 w-44 rounded bg-slate-200 dark:bg-slate-800"
-                            ></div>
+                            <div class="space-y-2">
+                                <div
+                                    class="h-5 w-44 rounded-lg bg-slate-200 dark:bg-slate-800"
+                                ></div>
+
+                                <div
+                                    class="h-4 w-64 max-w-full rounded-lg bg-slate-200 dark:bg-slate-800"
+                                ></div>
+                            </div>
+
+                            <div class="flex flex-col gap-2 sm:flex-row">
+                                <div
+                                    class="h-10 w-full rounded-xl bg-slate-200 sm:w-56 dark:bg-slate-800"
+                                ></div>
+
+                                <div
+                                    class="h-10 w-full rounded-xl bg-slate-200 sm:w-32 dark:bg-slate-800"
+                                ></div>
+                            </div>
                         </div>
 
-                        <div class="space-y-4 p-6">
+                        <div class="space-y-4 p-5 sm:p-6">
                             <div
                                 v-for="i in 6"
                                 :key="i"
                                 class="flex items-center gap-4"
                             >
                                 <div
-                                    class="size-12 rounded-xl bg-slate-200 dark:bg-slate-800"
+                                    class="size-12 shrink-0 rounded-xl bg-slate-200 dark:bg-slate-800"
                                 ></div>
 
-                                <div class="flex-1 space-y-2">
+                                <div class="min-w-0 flex-1 space-y-2">
                                     <div
-                                        class="h-4 w-48 rounded bg-slate-200 dark:bg-slate-800"
+                                        class="h-4 w-48 max-w-full rounded-lg bg-slate-200 dark:bg-slate-800"
                                     ></div>
 
                                     <div
-                                        class="h-3 w-32 rounded bg-slate-200 dark:bg-slate-800"
+                                        class="h-3 w-32 rounded-lg bg-slate-200 dark:bg-slate-800"
                                     ></div>
                                 </div>
 
                                 <div
-                                    class="h-8 w-20 rounded-full bg-slate-200 dark:bg-slate-800"
+                                    class="hidden h-8 w-20 rounded-full bg-slate-200 sm:block dark:bg-slate-800"
                                 ></div>
 
                                 <div
-                                    class="h-8 w-28 rounded-lg bg-slate-200 dark:bg-slate-800"
+                                    class="hidden h-8 w-28 rounded-lg bg-slate-200 sm:block dark:bg-slate-800"
                                 ></div>
                             </div>
                         </div>
@@ -622,28 +668,34 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                 <!-- CONTENT -->
                 <!-- ===================================================== -->
 
-                <div v-else key="content" class="space-y-5">
+                <div
+                    v-else
+                    key="content"
+                    class="mx-auto w-full max-w-[1600px] space-y-5 p-4 sm:p-5 lg:p-6 xl:p-8"
+                >
+                    <!-- ===================================================== -->
                     <!-- HEADER -->
+                    <!-- ===================================================== -->
 
                     <div
-                        class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                     >
-                        <div class="flex items-center gap-3">
+                        <div class="flex min-w-0 items-center gap-3">
                             <div
-                                class="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-500/20"
                             >
                                 <Users class="size-5" />
                             </div>
 
-                            <div>
+                            <div class="min-w-0">
                                 <h1
-                                    class="text-xl font-semibold text-slate-900 dark:text-white"
+                                    class="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl dark:text-white"
                                 >
                                     Struktur Perusahaan
                                 </h1>
 
                                 <p
-                                    class="text-sm text-slate-500 dark:text-slate-400"
+                                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                                 >
                                     Kelola struktur organisasi dan jabatan
                                     perusahaan.
@@ -653,7 +705,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-500/10 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:focus-visible:ring-offset-slate-950"
                             @click="openCreate"
                         >
                             <Plus class="size-4" />
@@ -661,17 +713,19 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                         </button>
                     </div>
 
-                    <!-- CARD -->
+                    <!-- ===================================================== -->
+                    <!-- MAIN CARD -->
+                    <!-- ===================================================== -->
 
                     <div
-                        class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                        class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
                     >
                         <!-- CARD HEADER -->
 
                         <div
-                            class="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between"
+                            class="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between dark:border-slate-800"
                         >
-                            <div>
+                            <div class="min-w-0">
                                 <h2
                                     class="font-semibold text-slate-900 dark:text-white"
                                 >
@@ -686,10 +740,12 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                 </p>
                             </div>
 
-                            <div class="flex flex-col gap-2 sm:flex-row">
+                            <div
+                                class="flex w-full flex-col gap-2 sm:flex-row lg:w-auto"
+                            >
                                 <!-- SEARCH -->
 
-                                <div class="relative">
+                                <div class="relative w-full sm:w-56">
                                     <Search
                                         class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
                                     />
@@ -698,7 +754,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                         v-model="search"
                                         type="text"
                                         placeholder="Cari nama/jabatan..."
-                                        class="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white sm:w-56"
+                                        class="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
                                     />
                                 </div>
 
@@ -706,25 +762,25 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 
                                 <select
                                     v-model="statusFilter"
-                                    class="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                                 >
                                     <option value="all">Semua Status</option>
-
                                     <option value="active">Aktif</option>
-
                                     <option value="inactive">Nonaktif</option>
                                 </select>
                             </div>
                         </div>
 
+                        <!-- ===================================================== -->
                         <!-- EMPTY -->
+                        <!-- ===================================================== -->
 
                         <div
                             v-if="filteredStruktur.length === 0"
-                            class="px-6 py-16 text-center"
+                            class="px-5 py-16 text-center sm:px-6"
                         >
                             <div
-                                class="mx-auto flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800"
+                                class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800"
                             >
                                 <Users class="size-5" />
                             </div>
@@ -736,7 +792,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             </h3>
 
                             <p
-                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                                class="mx-auto mt-1 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                             >
                                 {{
                                     search || statusFilter !== "all"
@@ -746,7 +802,9 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             </p>
                         </div>
 
+                        <!-- ===================================================== -->
                         <!-- TABLE -->
+                        <!-- ===================================================== -->
 
                         <div v-else class="overflow-x-auto">
                             <table class="w-full min-w-[850px] text-left">
@@ -755,31 +813,31 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                 >
                                     <tr>
                                         <th
-                                            class="px-6 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                            class="whitespace-nowrap px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-400"
                                         >
                                             Urutan
                                         </th>
 
                                         <th
-                                            class="px-6 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                            class="whitespace-nowrap px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-400"
                                         >
                                             Nama
                                         </th>
 
                                         <th
-                                            class="px-6 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                            class="whitespace-nowrap px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-400"
                                         >
                                             Jabatan
                                         </th>
 
                                         <th
-                                            class="px-6 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                            class="whitespace-nowrap px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-400"
                                         >
                                             Status
                                         </th>
 
                                         <th
-                                            class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                            class="whitespace-nowrap px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-400"
                                         >
                                             Aksi
                                         </th>
@@ -792,7 +850,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                     <tr
                                         v-for="item in filteredStruktur"
                                         :key="item.id"
-                                        class="transition hover:bg-blue-50/40 dark:hover:bg-blue-950/10"
+                                        class="transition-colors hover:bg-blue-50/40 dark:hover:bg-blue-950/10"
                                     >
                                         <!-- URUTAN -->
 
@@ -801,7 +859,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                                 class="flex items-center gap-1"
                                             >
                                                 <span
-                                                    class="inline-flex size-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                                                    class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                                 >
                                                     {{ item.urutan }}
                                                 </span>
@@ -813,7 +871,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                                             item.urutan <= 1 ||
                                                             movingId !== null
                                                         "
-                                                        class="rounded p-1 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-blue-950/40"
+                                                        class="rounded-lg p-1 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-blue-950/40"
                                                         @click="
                                                             moveItem(item, 'up')
                                                         "
@@ -831,7 +889,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                                                     .total ||
                                                             movingId !== null
                                                         "
-                                                        class="rounded p-1 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-blue-950/40"
+                                                        class="rounded-lg p-1 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-blue-950/40"
                                                         @click="
                                                             moveItem(
                                                                 item,
@@ -924,7 +982,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                             <div class="flex justify-end gap-1">
                                                 <button
                                                     type="button"
-                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                                                     title="Lihat detail"
                                                     @click="openDetail(item)"
                                                 >
@@ -933,7 +991,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 
                                                 <button
                                                     type="button"
-                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
+                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-amber-50 hover:text-amber-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
                                                     title="Edit"
                                                     @click="openEdit(item)"
                                                 >
@@ -942,7 +1000,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 
                                                 <button
                                                     type="button"
-                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                                                     title="Hapus"
                                                     @click="openDelete(item)"
                                                 >
@@ -955,11 +1013,13 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             </table>
                         </div>
 
+                        <!-- ===================================================== -->
                         <!-- PAGINATION -->
+                        <!-- ===================================================== -->
 
                         <div
                             v-if="props.struktur.last_page > 1"
-                            class="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between"
+                            class="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 sm:px-6 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
                         >
                             <p
                                 class="text-sm text-slate-500 dark:text-slate-400"
@@ -1053,14 +1113,14 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                 @click.self="closeForm"
             >
                 <div
-                    class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+                    class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <!-- HEADER -->
 
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
                     >
-                        <div>
+                        <div class="min-w-0">
                             <h2
                                 class="font-semibold text-slate-900 dark:text-white"
                             >
@@ -1077,7 +1137,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                         <button
                             type="button"
                             :disabled="processingForm"
-                            class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
+                            class="shrink-0 rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
                             @click="closeForm"
                         >
                             <X class="size-5" />
@@ -1086,7 +1146,10 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 
                     <!-- FORM -->
 
-                    <form class="space-y-5 p-6" @submit.prevent="submitForm">
+                    <form
+                        class="space-y-5 p-5 sm:p-6"
+                        @submit.prevent="submitForm"
+                    >
                         <!-- NAMA -->
 
                         <div>
@@ -1100,7 +1163,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                 v-model="form.nama"
                                 type="text"
                                 placeholder="Contoh: Budi Santoso"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             />
                         </div>
 
@@ -1117,7 +1180,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                 v-model="form.jabatan"
                                 type="text"
                                 placeholder="Contoh: Direktur Utama"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             />
                         </div>
 
@@ -1131,7 +1194,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             </label>
 
                             <label
-                                class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-5 py-7 transition hover:border-blue-400 hover:bg-blue-50/30 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-blue-500"
+                                class="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-5 py-8 transition hover:border-blue-400 hover:bg-blue-50/30 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-blue-500"
                             >
                                 <Upload class="size-6 text-slate-400" />
 
@@ -1155,17 +1218,17 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 
                             <div
                                 v-if="previewUrl"
-                                class="mt-4 flex items-center gap-4 rounded-xl border border-slate-200 p-3 dark:border-slate-700"
+                                class="mt-4 flex items-center gap-4 rounded-2xl border border-slate-200 p-3 dark:border-slate-700"
                             >
                                 <img
                                     :src="previewUrl"
                                     alt="Preview"
-                                    class="size-16 rounded-xl object-cover"
+                                    class="size-16 shrink-0 rounded-xl object-cover"
                                 />
 
-                                <div>
+                                <div class="min-w-0">
                                     <p
-                                        class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                                        class="truncate text-sm font-medium text-slate-700 dark:text-slate-200"
                                     >
                                         {{
                                             form.gambar?.name ??
@@ -1183,7 +1246,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                         <!-- STATUS -->
 
                         <label
-                            class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
+                            class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 p-4 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
                         >
                             <input
                                 v-model="form.aktif"
@@ -1207,7 +1270,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                         <!-- BUTTON -->
 
                         <div
-                            class="flex justify-end gap-3 border-t border-slate-200 pt-5 dark:border-slate-800"
+                            class="flex flex-col-reverse gap-2 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end sm:gap-3 dark:border-slate-800"
                         >
                             <button
                                 type="button"
@@ -1250,12 +1313,12 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                 @click.self="closeDetail"
             >
                 <div
-                    class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+                    class="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
                     >
-                        <div>
+                        <div class="min-w-0">
                             <h2
                                 class="font-semibold text-slate-900 dark:text-white"
                             >
@@ -1271,17 +1334,17 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 
                         <button
                             type="button"
-                            class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+                            class="shrink-0 rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800"
                             @click="closeDetail"
                         >
                             <X class="size-5" />
                         </button>
                     </div>
 
-                    <div class="space-y-5 p-6">
+                    <div class="space-y-5 p-5 sm:p-6">
                         <div class="flex justify-center">
                             <div
-                                class="flex size-28 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800"
+                                class="flex size-28 items-center justify-center overflow-hidden rounded-3xl bg-slate-100 text-slate-400 shadow-inner dark:bg-slate-800"
                             >
                                 <img
                                     v-if="getImageUrl(selectedItem.gambar)"
@@ -1310,7 +1373,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 
                         <div class="grid grid-cols-2 gap-3">
                             <div
-                                class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60"
+                                class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60"
                             >
                                 <p
                                     class="text-xs font-medium uppercase tracking-wide text-slate-400"
@@ -1326,7 +1389,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             </div>
 
                             <div
-                                class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60"
+                                class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60"
                             >
                                 <p
                                     class="text-xs font-medium uppercase tracking-wide text-slate-400"
@@ -1364,10 +1427,10 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                 @click.self="closeDelete"
             >
                 <div
-                    class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"
+                    class="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-5 shadow-2xl sm:p-6 dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
-                        class="mx-auto flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
+                        class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
                     >
                         <Trash2 class="size-5" />
                     </div>
@@ -1392,7 +1455,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                         </p>
 
                         <div
-                            class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-left dark:border-slate-700 dark:bg-slate-800"
+                            class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left dark:border-slate-700 dark:bg-slate-800"
                         >
                             <p
                                 class="text-sm font-medium text-slate-700 dark:text-slate-200"
@@ -1402,7 +1465,9 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                         </div>
                     </div>
 
-                    <div class="mt-6 flex justify-end gap-3">
+                    <div
+                        class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3"
+                    >
                         <button
                             type="button"
                             :disabled="processingDelete"
@@ -1441,5 +1506,12 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
 .page-fade-leave-to {
     opacity: 0;
     transform: translateY(6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-fade-enter-active,
+    .page-fade-leave-active {
+        transition: none;
+    }
 }
 </style>

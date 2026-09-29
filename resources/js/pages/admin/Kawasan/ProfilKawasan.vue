@@ -923,7 +923,8 @@ onBeforeUnmount(() => {
 
 <template>
     <div
-        class="relative min-h-full overflow-hidden bg-slate-50/50 p-4 sm:p-6 dark:bg-slate-950/50"
+        class="relative min-h-full overflow-hidden bg-slate-50 transition-colors duration-300 dark:bg-[#07111f]"
+        :aria-busy="isPageLoading ? 'true' : 'false'"
     >
         <!-- =========================================================
              DECORATIVE BACKGROUND
@@ -964,7 +965,9 @@ onBeforeUnmount(() => {
              CONTENT
         ========================================================== -->
 
-        <div class="relative z-10">
+        <div
+            class="relative z-10 mx-auto w-full max-w-[1600px] p-4 sm:p-5 lg:p-6 xl:p-8"
+        >
             <!-- =====================================================
                  SKELETON
             ====================================================== -->
@@ -973,12 +976,12 @@ onBeforeUnmount(() => {
                 <div
                     class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <div class="flex items-center gap-3">
+                    <div class="flex min-w-0 items-center gap-3">
                         <div
                             class="size-10 shrink-0 rounded-xl bg-slate-200 dark:bg-slate-800"
                         ></div>
 
-                        <div class="space-y-2">
+                        <div class="min-w-0 space-y-2">
                             <div
                                 class="h-5 w-40 rounded-md bg-slate-200 dark:bg-slate-800"
                             ></div>
@@ -995,7 +998,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div
-                    class="mb-5 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    class="mb-5 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20"
                 >
                     <div
                         class="h-10 w-full rounded-xl bg-slate-200 dark:bg-slate-800"
@@ -1003,9 +1006,9 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div
-                    class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                    class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20"
                 >
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto overscroll-x-contain">
                         <table class="w-full min-w-[1050px] text-left text-sm">
                             <thead
                                 class="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-800/50"
@@ -1075,7 +1078,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div
-                        class="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                        class="flex flex-col gap-4 border-t border-slate-200 px-4 py-4 sm:px-6 sm:py-4 dark:border-slate-800"
                     >
                         <div
                             class="h-4 w-48 rounded bg-slate-200 dark:bg-slate-800"
@@ -1102,22 +1105,22 @@ onBeforeUnmount(() => {
                 <div
                     class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <div class="flex items-center gap-3">
+                    <div class="flex min-w-0 items-center gap-3">
                         <div
                             class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600/10 text-blue-600 shadow-sm dark:bg-blue-400/10 dark:text-blue-400"
                         >
                             <Building2 class="size-5" />
                         </div>
 
-                        <div>
+                        <div class="min-w-0">
                             <h1
-                                class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white"
+                                class="truncate text-xl font-semibold tracking-tight text-slate-900 dark:text-white"
                             >
                                 Profil Kawasan
                             </h1>
 
                             <p
-                                class="text-sm text-slate-500 dark:text-slate-400"
+                                class="truncate text-sm text-slate-500 dark:text-slate-400"
                             >
                                 Kelola informasi profil kawasan perusahaan.
                             </p>
@@ -1126,7 +1129,7 @@ onBeforeUnmount(() => {
 
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                         @click="openCreate"
                     >
                         <Plus class="size-4" />
@@ -1137,7 +1140,7 @@ onBeforeUnmount(() => {
                 <!-- SEARCH -->
 
                 <div
-                    class="mb-5 rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95"
+                    class="mb-5 rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/20"
                 >
                     <div class="relative">
                         <Search
@@ -1156,7 +1159,8 @@ onBeforeUnmount(() => {
                             v-if="search"
                             type="button"
                             title="Hapus pencarian"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700"
+                            aria-label="Hapus pencarian"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:hover:bg-slate-700"
                             @click="clearSearch"
                         >
                             <X class="size-4" />
@@ -1167,27 +1171,27 @@ onBeforeUnmount(() => {
                 <!-- TABLE CARD -->
 
                 <div
-                    class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95"
+                    class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/20"
                 >
                     <div
-                        class="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                        class="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
                     >
-                        <div class="flex items-center gap-3">
+                        <div class="flex min-w-0 items-center gap-3">
                             <div
-                                class="flex size-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400"
+                                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400"
                             >
                                 <FileText class="size-5" />
                             </div>
 
-                            <div>
+                            <div class="min-w-0">
                                 <h2
-                                    class="font-semibold text-slate-900 dark:text-white"
+                                    class="truncate font-semibold text-slate-900 dark:text-white"
                                 >
                                     Data Profil Kawasan
                                 </h2>
 
                                 <p
-                                    class="text-xs text-slate-500 dark:text-slate-400"
+                                    class="truncate text-xs text-slate-500 dark:text-slate-400"
                                 >
                                     Informasi kawasan yang dikelola perusahaan.
                                 </p>
@@ -1195,7 +1199,7 @@ onBeforeUnmount(() => {
                         </div>
 
                         <span
-                            class="text-sm text-slate-500 dark:text-slate-400"
+                            class="shrink-0 text-sm text-slate-500 dark:text-slate-400"
                         >
                             {{ getTotal() }} data
                         </span>
@@ -1204,7 +1208,7 @@ onBeforeUnmount(() => {
                     <!-- DATA -->
 
                     <div v-if="(props.profilKawasans?.data?.length ?? 0) > 0">
-                        <div class="overflow-x-auto">
+                        <div class="overflow-x-auto overscroll-x-contain">
                             <table
                                 class="w-full min-w-[1100px] text-left text-sm"
                             >
@@ -1275,7 +1279,7 @@ onBeforeUnmount(() => {
 
                                         <td class="px-6 py-4">
                                             <div
-                                                class="flex items-center gap-3"
+                                                class="flex min-w-0 items-center gap-3"
                                             >
                                                 <div
                                                     class="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
@@ -1388,7 +1392,7 @@ onBeforeUnmount(() => {
                                                     processingToggleId ===
                                                     item.id
                                                 "
-                                                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50"
+                                                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50"
                                                 :class="
                                                     item.status
                                                         ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:hover:bg-emerald-950/60'
@@ -1427,7 +1431,8 @@ onBeforeUnmount(() => {
                                                 <button
                                                     type="button"
                                                     title="Lihat detail"
-                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                                                    aria-label="Lihat detail"
+                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                                                     @click="openDetail(item)"
                                                 >
                                                     <Eye class="size-4" />
@@ -1436,7 +1441,8 @@ onBeforeUnmount(() => {
                                                 <button
                                                     type="button"
                                                     title="Edit profil"
-                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
+                                                    aria-label="Edit profil"
+                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-amber-50 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500/30 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
                                                     @click="openEdit(item)"
                                                 >
                                                     <Pencil class="size-4" />
@@ -1445,7 +1451,8 @@ onBeforeUnmount(() => {
                                                 <button
                                                     type="button"
                                                     title="Hapus profil"
-                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                                                    aria-label="Hapus profil"
+                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/30 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                                                     @click="openDelete(item)"
                                                 >
                                                     <Trash2 class="size-4" />
@@ -1461,7 +1468,7 @@ onBeforeUnmount(() => {
 
                         <div
                             v-if="getLastPage() > 1"
-                            class="flex flex-col gap-4 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                            class="flex flex-col gap-4 border-t border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
                         >
                             <p
                                 class="text-sm text-slate-500 dark:text-slate-400"
@@ -1487,12 +1494,15 @@ onBeforeUnmount(() => {
                                 profil
                             </p>
 
-                            <div class="flex flex-wrap items-center gap-1">
+                            <div
+                                class="flex max-w-full flex-wrap items-center gap-1"
+                            >
                                 <button
                                     type="button"
                                     title="Halaman pertama"
+                                    aria-label="Halaman pertama"
                                     :disabled="!firstPageUrl()"
-                                    class="rounded-lg p-2 transition"
+                                    class="rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                                     :class="
                                         firstPageUrl()
                                             ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
@@ -1506,8 +1516,9 @@ onBeforeUnmount(() => {
                                 <button
                                     type="button"
                                     title="Halaman sebelumnya"
+                                    aria-label="Halaman sebelumnya"
                                     :disabled="!previousPageUrl()"
-                                    class="rounded-lg p-2 transition"
+                                    class="rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                                     :class="
                                         previousPageUrl()
                                             ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
@@ -1525,7 +1536,7 @@ onBeforeUnmount(() => {
                                     :key="`${link.label}-${index}`"
                                     type="button"
                                     :disabled="!link.url"
-                                    class="min-w-9 rounded-lg px-3 py-2 text-sm transition"
+                                    class="min-w-9 rounded-lg px-3 py-2 text-sm transition focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                                     :class="
                                         link.active
                                             ? 'bg-blue-600 text-white shadow-sm'
@@ -1541,8 +1552,9 @@ onBeforeUnmount(() => {
                                 <button
                                     type="button"
                                     title="Halaman berikutnya"
+                                    aria-label="Halaman berikutnya"
                                     :disabled="!nextPageUrl()"
-                                    class="rounded-lg p-2 transition"
+                                    class="rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                                     :class="
                                         nextPageUrl()
                                             ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
@@ -1556,8 +1568,9 @@ onBeforeUnmount(() => {
                                 <button
                                     type="button"
                                     title="Halaman terakhir"
+                                    aria-label="Halaman terakhir"
                                     :disabled="!lastPageUrl()"
-                                    class="rounded-lg p-2 transition"
+                                    class="rounded-lg p-2 transition focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                                     :class="
                                         lastPageUrl()
                                             ? 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
@@ -1573,7 +1586,7 @@ onBeforeUnmount(() => {
 
                     <!-- EMPTY -->
 
-                    <div v-else class="px-6 py-16 text-center">
+                    <div v-else class="px-4 py-16 text-center sm:px-6">
                         <div
                             class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-500 dark:bg-blue-950/30 dark:text-blue-400"
                         >
@@ -1591,7 +1604,7 @@ onBeforeUnmount(() => {
                         </p>
 
                         <p
-                            class="mx-auto mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400"
+                            class="mx-auto mt-1 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                         >
                             {{
                                 search
@@ -1603,7 +1616,7 @@ onBeforeUnmount(() => {
                         <button
                             v-if="!search"
                             type="button"
-                            class="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                            class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-auto"
                             @click="openCreate"
                         >
                             <Plus class="size-4" />
@@ -1613,7 +1626,7 @@ onBeforeUnmount(() => {
                         <button
                             v-else
                             type="button"
-                            class="mt-5 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                            class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:w-auto"
                             @click="clearSearch"
                         >
                             <X class="size-4" />
@@ -1631,18 +1644,18 @@ onBeforeUnmount(() => {
         <Transition name="modal">
             <div
                 v-if="showFormModal"
-                class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+                class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 backdrop-blur-sm sm:p-4"
                 @click.self="closeForm"
             >
                 <div
-                    class="my-auto w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+                    class="my-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div class="min-w-0">
                             <h2
-                                class="text-lg font-semibold text-slate-900 dark:text-white"
+                                class="truncate text-lg font-semibold text-slate-900 dark:text-white"
                             >
                                 {{
                                     modalMode === "create"
@@ -1665,7 +1678,8 @@ onBeforeUnmount(() => {
                         <button
                             type="button"
                             :disabled="processing"
-                            class="ml-4 shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
+                            aria-label="Tutup modal"
+                            class="ml-2 shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
                             @click="closeForm"
                         >
                             <X class="size-5" />
@@ -1673,10 +1687,10 @@ onBeforeUnmount(() => {
                     </div>
 
                     <form
-                        class="max-h-[calc(100vh-10rem)] overflow-y-auto"
+                        class="max-h-[calc(100vh-8rem)] overflow-y-auto"
                         @submit.prevent="submit"
                     >
-                        <div class="grid gap-5 p-6 md:grid-cols-2">
+                        <div class="grid gap-5 p-4 sm:p-6 md:grid-cols-2">
                             <!-- JUDUL -->
 
                             <div class="md:col-span-2">
@@ -1783,7 +1797,7 @@ onBeforeUnmount(() => {
 
                                 <button
                                     type="button"
-                                    class="flex w-full items-center justify-between rounded-xl border px-4 py-2.5 text-sm transition"
+                                    class="flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                                     :class="
                                         form.status
                                             ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400'
@@ -1794,10 +1808,13 @@ onBeforeUnmount(() => {
                                     <span class="flex items-center gap-2">
                                         <ToggleRight
                                             v-if="form.status"
-                                            class="size-5"
+                                            class="size-5 shrink-0"
                                         />
 
-                                        <ToggleLeft v-else class="size-5" />
+                                        <ToggleLeft
+                                            v-else
+                                            class="size-5 shrink-0"
+                                        />
 
                                         {{
                                             form.status
@@ -1806,7 +1823,9 @@ onBeforeUnmount(() => {
                                         }}
                                     </span>
 
-                                    <span class="text-xs opacity-70">
+                                    <span
+                                        class="hidden text-xs opacity-70 sm:inline"
+                                    >
                                         Klik untuk ubah
                                     </span>
                                 </button>
@@ -1947,7 +1966,7 @@ onBeforeUnmount(() => {
                                 </label>
 
                                 <div
-                                    class="grid gap-4 sm:grid-cols-[180px_1fr]"
+                                    class="grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)]"
                                 >
                                     <div
                                         class="flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800"
@@ -1965,7 +1984,7 @@ onBeforeUnmount(() => {
                                             class="size-full object-cover"
                                         />
 
-                                        <div v-else class="text-center">
+                                        <div v-else class="px-3 text-center">
                                             <ImageIcon
                                                 class="mx-auto size-8 text-slate-300 dark:text-slate-600"
                                             />
@@ -1978,7 +1997,7 @@ onBeforeUnmount(() => {
                                         </div>
                                     </div>
 
-                                    <div>
+                                    <div class="min-w-0">
                                         <label
                                             class="flex min-h-[126px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-center transition hover:border-blue-400 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-blue-500 dark:hover:bg-blue-950/20"
                                         >
@@ -1993,7 +2012,7 @@ onBeforeUnmount(() => {
                                             </span>
 
                                             <span
-                                                class="mt-1 text-xs text-slate-400 dark:text-slate-500"
+                                                class="mt-1 max-w-xs text-xs leading-5 text-slate-400 dark:text-slate-500"
                                             >
                                                 JPG, JPEG, PNG atau WEBP · Maks.
                                                 1 MB
@@ -2007,11 +2026,13 @@ onBeforeUnmount(() => {
                                             />
                                         </label>
 
-                                        <div class="mt-2 flex flex-wrap gap-3">
+                                        <div
+                                            class="mt-2 flex flex-wrap gap-x-4 gap-y-2"
+                                        >
                                             <button
                                                 v-if="previewUrl"
                                                 type="button"
-                                                class="text-xs font-medium text-red-500 hover:text-red-600"
+                                                class="text-xs font-medium text-red-500 transition hover:text-red-600 focus:outline-none focus:underline"
                                                 @click="removeSelectedImage"
                                             >
                                                 Hapus gambar baru
@@ -2024,7 +2045,7 @@ onBeforeUnmount(() => {
                                                     !previewUrl
                                                 "
                                                 type="button"
-                                                class="text-xs font-medium text-red-500 hover:text-red-600"
+                                                class="text-xs font-medium text-red-500 transition hover:text-red-600 focus:outline-none focus:underline"
                                                 @click="removeExistingImage"
                                             >
                                                 Hapus gambar lama
@@ -2033,7 +2054,7 @@ onBeforeUnmount(() => {
 
                                         <p
                                             v-if="form.remove_gambar"
-                                            class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+                                            class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
                                         >
                                             Gambar lama akan dihapus saat
                                             disimpan.
@@ -2060,12 +2081,12 @@ onBeforeUnmount(() => {
                         <!-- FOOTER -->
 
                         <div
-                            class="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:justify-end dark:border-slate-800"
+                            class="flex flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5 dark:border-slate-800"
                         >
                             <button
                                 type="button"
                                 :disabled="processing"
-                                class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 sm:w-auto"
                                 @click="closeForm"
                             >
                                 Batal
@@ -2074,7 +2095,7 @@ onBeforeUnmount(() => {
                             <button
                                 type="submit"
                                 :disabled="processing"
-                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                             >
                                 <span
                                     v-if="processing"
@@ -2102,18 +2123,18 @@ onBeforeUnmount(() => {
         <Transition name="modal">
             <div
                 v-if="showDetailModal && selectedKawasan"
-                class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+                class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 backdrop-blur-sm sm:p-4"
                 @click.self="closeDetail"
             >
                 <div
-                    class="my-auto w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+                    class="my-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 dark:border-slate-800"
                     >
-                        <div>
+                        <div class="min-w-0">
                             <h2
-                                class="text-lg font-semibold text-slate-900 dark:text-white"
+                                class="truncate text-lg font-semibold text-slate-900 dark:text-white"
                             >
                                 Detail Profil Kawasan
                             </h2>
@@ -2127,20 +2148,25 @@ onBeforeUnmount(() => {
 
                         <button
                             type="button"
-                            class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+                            aria-label="Tutup detail"
+                            class="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:hover:bg-slate-800"
                             @click="closeDetail"
                         >
                             <X class="size-5" />
                         </button>
                     </div>
 
-                    <div class="max-h-[calc(100vh-10rem)] overflow-y-auto p-6">
+                    <div
+                        class="max-h-[calc(100vh-8rem)] overflow-y-auto p-4 sm:p-6"
+                    >
                         <!-- HERO -->
 
                         <div
                             class="overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white dark:border-blue-900/40 dark:from-blue-950/30 dark:via-indigo-950/20 dark:to-slate-900"
                         >
-                            <div class="grid md:grid-cols-[240px_1fr]">
+                            <div
+                                class="grid md:grid-cols-[240px_minmax(0,1fr)]"
+                            >
                                 <div
                                     class="aspect-video overflow-hidden bg-slate-100 md:aspect-auto dark:bg-slate-800"
                                 >
@@ -2165,13 +2191,13 @@ onBeforeUnmount(() => {
                                     </div>
                                 </div>
 
-                                <div class="p-5">
+                                <div class="min-w-0 p-5">
                                     <div
                                         class="flex flex-wrap items-start justify-between gap-3"
                                     >
                                         <div class="min-w-0">
                                             <h3
-                                                class="text-xl font-semibold text-slate-900 dark:text-white"
+                                                class="break-words text-xl font-semibold text-slate-900 dark:text-white"
                                             >
                                                 {{ selectedKawasan.judul }}
                                             </h3>
@@ -2333,11 +2359,11 @@ onBeforeUnmount(() => {
                     <!-- FOOTER -->
 
                     <div
-                        class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 dark:border-slate-800"
                     >
                         <button
                             type="button"
-                            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                            class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 sm:w-auto"
                             @click="closeDetail"
                         >
                             Tutup
@@ -2345,7 +2371,7 @@ onBeforeUnmount(() => {
 
                         <button
                             type="button"
-                            class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-auto"
                             @click="openEdit(selectedKawasan)"
                         >
                             <Pencil class="size-4" />
@@ -2363,11 +2389,11 @@ onBeforeUnmount(() => {
         <Transition name="modal">
             <div
                 v-if="showDeleteModal && selectedKawasan"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+                class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 backdrop-blur-sm sm:p-4"
                 @click.self="closeDelete"
             >
                 <div
-                    class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900"
+                    class="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:p-6"
                 >
                     <div
                         class="mx-auto flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
@@ -2401,7 +2427,7 @@ onBeforeUnmount(() => {
                         <button
                             type="button"
                             :disabled="processingDelete"
-                            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                            class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 sm:w-auto"
                             @click="closeDelete"
                         >
                             Batal
@@ -2410,7 +2436,7 @@ onBeforeUnmount(() => {
                         <button
                             type="button"
                             :disabled="processingDelete"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                             @click="deleteKawasan"
                         >
                             <span
