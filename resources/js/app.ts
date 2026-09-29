@@ -1,14 +1,14 @@
-import { createInertiaApp } from '@inertiajs/vue3';
-import type { DefineComponent } from 'vue';
+import { createInertiaApp } from "@inertiajs/vue3";
+import type { DefineComponent } from "vue";
 
-import { initializeTheme } from '@/composables/useAppearance';
-import AppLayout from '@/layouts/AppLayout.vue';
-import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { initializeFlashToast } from '@/lib/flashToast';
+import { initializeTheme } from "@/composables/useAppearance";
+import AppLayout from "@/layouts/AppLayout.vue";
+import SettingsLayout from "@/layouts/settings/Layout.vue";
+import { initializeFlashToast } from "@/lib/flashToast";
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || "Laravel";
 
-const pages = import.meta.glob('./pages/**/*.vue') as Record<
+const pages = import.meta.glob("./pages/**/*.vue") as Record<
     string,
     () => Promise<{ default: DefineComponent }>
 >;
@@ -32,17 +32,17 @@ void createInertiaApp({
     layout: (name) => {
         switch (true) {
             // Halaman publik tanpa layout
-            case name === 'Welcome':
-            case name === 'Index':
-            case name === 'auth/Login':
+            case name === "Welcome":
+            case name === "Index":
+            case name === "auth/Login":
                 return null;
 
             // Halaman settings
-            case name.startsWith('settings/'):
+            case name.startsWith("settings/"):
                 return [AppLayout, SettingsLayout];
 
             // Halaman admin
-            case name.startsWith('Admin/'):
+            case name.startsWith("admin/"):
                 return AppLayout;
 
             // Default
@@ -52,7 +52,7 @@ void createInertiaApp({
     },
 
     withApp: (app) => {
-        app.directive('focus', {
+        app.directive("focus", {
             mounted: (el: HTMLElement, shouldFocus) => {
                 if (shouldFocus.value !== false) {
                     el.focus();
@@ -62,7 +62,7 @@ void createInertiaApp({
     },
 
     progress: {
-        color: '#4B5563',
+        color: "#4B5563",
     },
 });
 

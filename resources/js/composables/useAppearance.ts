@@ -1,6 +1,6 @@
-import type { ComputedRef, Ref } from 'vue';
-import { computed, onMounted, ref } from 'vue';
-import type { Appearance, ResolvedAppearance } from '@/types';
+import type { ComputedRef, Ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import type { Appearance, ResolvedAppearance } from "@/types";
 
 export type { Appearance, ResolvedAppearance };
 
@@ -11,27 +11,27 @@ export type UseAppearanceReturn = {
 };
 
 export function updateTheme(value: Appearance): void {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
         return;
     }
 
-    if (value === 'system') {
+    if (value === "system") {
         const mediaQueryList = window.matchMedia(
-            '(prefers-color-scheme: dark)',
+            "(prefers-color-scheme: dark)",
         );
-        const systemTheme = mediaQueryList.matches ? 'dark' : 'light';
+        const systemTheme = mediaQueryList.matches ? "dark" : "light";
 
         document.documentElement.classList.toggle(
-            'dark',
-            systemTheme === 'dark',
+            "dark",
+            systemTheme === "dark",
         );
     } else {
-        document.documentElement.classList.toggle('dark', value === 'dark');
+        document.documentElement.classList.toggle("dark", value === "dark");
     }
 }
 
 const setCookie = (name: string, value: string, days = 365) => {
-    if (typeof document === 'undefined') {
+    if (typeof document === "undefined") {
         return;
     }
 
@@ -41,54 +41,54 @@ const setCookie = (name: string, value: string, days = 365) => {
 };
 
 const mediaQuery = () => {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
         return null;
     }
 
-    return window.matchMedia('(prefers-color-scheme: dark)');
+    return window.matchMedia("(prefers-color-scheme: dark)");
 };
 
 const getStoredAppearance = () => {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
         return null;
     }
 
-    return localStorage.getItem('appearance') as Appearance | null;
+    return localStorage.getItem("appearance") as Appearance | null;
 };
 
 const prefersDark = (): boolean => {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
         return false;
     }
 
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
 };
 
 const handleSystemThemeChange = () => {
     const currentAppearance = getStoredAppearance();
 
-    updateTheme(currentAppearance || 'system');
+    updateTheme(currentAppearance || "system");
 };
 
 export function initializeTheme(): void {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
         return;
     }
 
     // Initialize theme from saved preference or default to system...
     const savedAppearance = getStoredAppearance();
-    updateTheme(savedAppearance || 'system');
+    updateTheme(savedAppearance || "system");
 
     // Set up system theme change listener...
-    mediaQuery()?.addEventListener('change', handleSystemThemeChange);
+    mediaQuery()?.addEventListener("change", handleSystemThemeChange);
 }
 
-const appearance = ref<Appearance>('system');
+const appearance = ref<Appearance>("system");
 
 export function useAppearance(): UseAppearanceReturn {
     onMounted(() => {
         const savedAppearance = localStorage.getItem(
-            'appearance',
+            "appearance",
         ) as Appearance | null;
 
         if (savedAppearance) {
@@ -97,8 +97,8 @@ export function useAppearance(): UseAppearanceReturn {
     });
 
     const resolvedAppearance = computed<ResolvedAppearance>(() => {
-        if (appearance.value === 'system') {
-            return prefersDark() ? 'dark' : 'light';
+        if (appearance.value === "system") {
+            return prefersDark() ? "dark" : "light";
         }
 
         return appearance.value;
@@ -108,10 +108,10 @@ export function useAppearance(): UseAppearanceReturn {
         appearance.value = value;
 
         // Store in localStorage for client-side persistence...
-        localStorage.setItem('appearance', value);
+        localStorage.setItem("appearance", value);
 
         // Store in cookie for SSR...
-        setCookie('appearance', value);
+        setCookie("appearance", value);
 
         updateTheme(value);
     }

@@ -15,6 +15,7 @@ import {
     Users,
 } from "lucide-vue-next";
 import { computed } from "vue";
+
 import AppLogo from "@/components/AppLogo.vue";
 import NavFooter from "@/components/NavFooter.vue";
 import NavMain from "@/components/NavMain.vue";
@@ -42,6 +43,14 @@ const page = usePage<{ auth?: { user?: AuthUser } }>();
 const isEmailVerified = computed(
     () => !!page.props.auth?.user?.email_verified_at,
 );
+
+const isDarkMode = computed(() => {
+    if (typeof document === "undefined") {
+        return false;
+    }
+
+    return document.documentElement.classList.contains("dark");
+});
 
 const mainNavItems: NavItem[] = [
     {
@@ -121,7 +130,9 @@ function resolveHref(href: NavItem["href"]): string {
 }
 
 function isActiveHref(href: string, currentUrl: string): boolean {
-    if (!href) return false;
+    if (!href) {
+        return false;
+    }
 
     return currentUrl === href || currentUrl.startsWith(`${href}/`);
 }
@@ -155,7 +166,11 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 <template>
     <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader class="relative overflow-hidden">
-            <div class="sidebar-blobs" aria-hidden="true">
+            <div
+                class="sidebar-blobs"
+                :class="{ 'sidebar-blobs--dark': isDarkMode }"
+                aria-hidden="true"
+            >
                 <span class="sidebar-blob sidebar-blob--one" />
                 <span class="sidebar-blob sidebar-blob--two" />
             </div>
@@ -353,7 +368,13 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     animation-delay: -6s;
 }
 
-:global(.dark) .sidebar-blob {
+/*
+ * Jangan gunakan :global(.dark) di scoped style.
+ * Pada konfigurasi/compiler saat ini selector tersebut
+ * dikompilasi menjadi `.dark` global dan dapat mengenai
+ * elemen <html>.
+ */
+.sidebar-blobs--dark .sidebar-blob {
     opacity: 0.4;
     mix-blend-mode: screen;
 }
