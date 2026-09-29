@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AnakUsahaController;
+use App\Http\Controllers\Admin\EaseOfDoingBusinessController;
 use App\Http\Controllers\Admin\HubunganInvestor\PeluangInvestasiController;
 use App\Http\Controllers\Admin\Kawasan\FasilitasController;
 use App\Http\Controllers\Admin\Kawasan\InfrastrukturController;
@@ -367,6 +368,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
         '/kawasan/peta-kawasan/{petaKawasan}/move-down',
         [PetaKawasanController::class, 'moveDown']
     )->name('kawasan.peta-kawasan.move-down');
+
+    Route::get(
+        '/hubungan-investor/ease-of-doing-business',
+        [EaseOfDoingBusinessController::class, 'index']
+    )->name('hubungan-investor.ease-of-doing-business');
+
+    Route::post(
+        '/hubungan-investor/ease-of-doing-business',
+        [EaseOfDoingBusinessController::class, 'store']
+    )->name('hubungan-investor.ease-of-doing-business.store');
+
+    Route::put(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}',
+        [EaseOfDoingBusinessController::class, 'update']
+    )->name('hubungan-investor.ease-of-doing-business.update');
+
+    Route::delete(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}',
+        [EaseOfDoingBusinessController::class, 'destroy']
+    )->name('hubungan-investor.ease-of-doing-business.destroy');
+
+    Route::patch(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}/toggle-aktif',
+        [EaseOfDoingBusinessController::class, 'toggleAktif']
+    )->name('hubungan-investor.ease-of-doing-business.toggle-aktif');
+
+    Route::patch(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}/move-up',
+        [EaseOfDoingBusinessController::class, 'moveUp']
+    )->name('hubungan-investor.ease-of-doing-business.move-up');
+
+    Route::patch(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}/move-down',
+        [EaseOfDoingBusinessController::class, 'moveDown']
+    )->name('hubungan-investor.ease-of-doing-business.move-down');
 });
 
 require __DIR__ . '/settings.php';

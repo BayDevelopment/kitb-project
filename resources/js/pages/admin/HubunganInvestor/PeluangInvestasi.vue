@@ -40,6 +40,13 @@ defineOptions({
  * Interfaces
  * ---------------------------------------------------------------------- */
 
+interface StatusObject {
+    value?: unknown;
+    key?: unknown;
+    status?: unknown;
+    label?: unknown;
+}
+
 interface PeluangInvestasi {
     id: number;
     judul: string;
@@ -49,8 +56,17 @@ interface PeluangInvestasi {
     luas_lahan: string | number | null;
     satuan_luas: string;
     lokasi: string | null;
-    status: string;
+
+    /**
+     * Laravel bisa mengirim:
+     * - string biasa
+     * - number
+     * - object/enum yang sudah di-serialize
+     */
+    status: string | number | StatusObject;
+
     status_label?: string;
+
     nilai_investasi: string | number | null;
     mata_uang: string;
     gambar: string | null;
@@ -100,12 +116,21 @@ interface FormErrors {
     nilai_investasi?: string;
     mata_uang?: string;
     gambar?: string;
+    hapus_gambar?: string;
     aktif?: string;
 }
 
 interface StatusOption {
     value: string;
     label: string;
+}
+
+interface ImageInfo {
+    name: string;
+    size: number;
+    originalSize: number;
+    width: number;
+    height: number;
 }
 
 /* -------------------------------------------------------------------------
@@ -122,7 +147,12 @@ const props = defineProps<{
 }>();
 
 const BASE_URL = "/hubungan-investor/peluang-investasi";
-const MAX_IMAGE_SIZE = 1024 * 1024; // 1 MB
+
+const MAX_IMAGE_SIZE = 1024 * 1024; // 1 MB (hasil akhir yang diupload)
+const MAX_INPUT_SIZE = 15 * 1024 * 1024; // 15 MB (file mentah sebelum kompres)
+const MAX_DIMENSION = 1600; // sisi terpanjang setelah resize
+const MIN_DIMENSION = 300; // gambar terlalu kecil ditolak
+
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const defaultStatuses: Record<string, string> = {
@@ -132,44 +162,92 @@ const defaultStatuses: Record<string, string> = {
     ditutup: "Ditutup",
 };
 
-/* Shared class names (menghindari duplikasi di template) */
+/* -------------------------------------------------------------------------
+ * Shared class names
+ * ---------------------------------------------------------------------- */
+
 const inputClass =
     "min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900";
+
 const inputErrorClass = "border-red-400 focus:border-red-500";
+
 const smallInputClass =
     "min-h-11 w-24 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-center text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900";
+
 const labelClass =
     "mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300";
+
 const errorClass = "mt-1.5 text-xs text-red-500";
+
 const cardClass =
     "rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/20";
+
 const modalBackdropClass =
-    "fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-3 backdrop-blur-sm sm:p-4";
+    "fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-3 sm:p-4";
+
 const modalCardClass =
-    "my-auto w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-2xl shadow-slate-900/10 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/40";
+    "my-auto flex max-h-[calc(100dvh-1.5rem)] w-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40";
+
 const closeBtnClass =
     "shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200";
+
 const secondaryBtnClass =
     "min-h-11 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800";
+
 const primaryBtnClass =
     "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto";
+
 const rowIconBtnClass =
     "rounded-lg p-2 text-slate-500 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-30 dark:text-slate-400";
+
 const thClass =
     "px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400";
+
 const infoCardClass =
     "rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/50";
 
 const columns = [
     { label: "No.", width: "w-16", align: "text-center" },
-    { label: "Peluang Investasi", width: "w-[340px]", align: "text-left" },
-    { label: "Sektor", width: "w-48", align: "text-left" },
-    { label: "Lahan", width: "w-48", align: "text-left" },
-    { label: "Nilai Investasi", width: "w-52", align: "text-left" },
-    { label: "Status", width: "w-44", align: "text-left" },
-    { label: "Urutan", width: "w-40", align: "text-center" },
-    { label: "Aktif", width: "w-44", align: "text-center" },
-    { label: "Aksi", width: "w-44", align: "text-right" },
+    {
+        label: "Peluang Investasi",
+        width: "w-[340px]",
+        align: "text-left",
+    },
+    {
+        label: "Sektor",
+        width: "w-48",
+        align: "text-left",
+    },
+    {
+        label: "Lahan",
+        width: "w-48",
+        align: "text-left",
+    },
+    {
+        label: "Nilai Investasi",
+        width: "w-52",
+        align: "text-left",
+    },
+    {
+        label: "Status",
+        width: "w-44",
+        align: "text-left",
+    },
+    {
+        label: "Urutan",
+        width: "w-40",
+        align: "text-center",
+    },
+    {
+        label: "Aktif",
+        width: "w-44",
+        align: "text-center",
+    },
+    {
+        label: "Aksi",
+        width: "w-44",
+        align: "text-right",
+    },
 ];
 
 /* -------------------------------------------------------------------------
@@ -220,12 +298,12 @@ const toRow = computed(
 const getRowNumber = (index: number): number =>
     (currentPage.value - 1) * perPage.value + index + 1;
 
-/* Pengurutan hanya valid jika daftar tidak sedang difilter */
 const isFiltered = computed(() =>
     Boolean(props.filters?.search || props.filters?.status),
 );
 
 const isFirstItem = (index: number): boolean => getRowNumber(index) <= 1;
+
 const isLastItem = (index: number): boolean =>
     getRowNumber(index) >= total.value;
 
@@ -236,22 +314,43 @@ const isLastItem = (index: number): boolean =>
 const isPageLoading = ref(false);
 
 let removeRouterStartListener: (() => void) | null = null;
+
 let removeRouterFinishListener: (() => void) | null = null;
 
 /* -------------------------------------------------------------------------
  * Status helpers
  * ---------------------------------------------------------------------- */
 
+/**
+ * Normalisasi status dari berbagai kemungkinan bentuk response Laravel.
+ *
+ * Contoh:
+ * "tersedia"
+ * { value: "tersedia" }
+ * { key: "tersedia" }
+ * { status: "tersedia" }
+ */
 const normalizeStatusValue = (value: unknown): string => {
-    if (typeof value === "string") return value;
-    if (typeof value === "number") return String(value);
+    if (typeof value === "string") {
+        return value.trim().toLowerCase();
+    }
+
+    if (typeof value === "number") {
+        return String(value);
+    }
 
     if (value && typeof value === "object") {
         const obj = value as Record<string, unknown>;
 
-        for (const key of ["value", "key", "status", "label"]) {
-            if (typeof obj[key] === "string") {
-                return obj[key] as string;
+        for (const key of ["value", "key", "status"]) {
+            const candidate = obj[key];
+
+            if (typeof candidate === "string") {
+                return candidate.trim().toLowerCase();
+            }
+
+            if (typeof candidate === "number") {
+                return String(candidate);
             }
         }
     }
@@ -261,14 +360,14 @@ const normalizeStatusValue = (value: unknown): string => {
 
 const normalizeStatusLabel = (label: unknown, fallback: string): string => {
     if (typeof label === "string" && label.trim()) {
-        return label;
+        return label.trim();
     }
 
-    const normalized = fallback.trim();
+    const normalized = fallback.trim().toLowerCase();
 
     return (
-        defaultStatuses[normalized] ||
-        normalized.replace(/_/g, " ") ||
+        defaultStatuses[normalized] ??
+        normalized.replace(/_/g, " ") ??
         "Tidak diketahui"
     );
 };
@@ -279,21 +378,30 @@ const statusOptions = computed<StatusOption[]>(() => {
             .map((status): StatusOption | null => {
                 const value = normalizeStatusValue(status);
 
-                if (!value) return null;
+                if (!value) {
+                    return null;
+                }
 
                 const label =
                     status && typeof status === "object"
-                        ? (status as { label?: unknown }).label
+                        ? (
+                              status as {
+                                  label?: unknown;
+                              }
+                          ).label
                         : undefined;
 
-                return { value, label: normalizeStatusLabel(label, value) };
+                return {
+                    value,
+                    label: normalizeStatusLabel(label, value),
+                };
             })
-            .filter((s): s is StatusOption => s !== null);
+            .filter((status): status is StatusOption => status !== null);
     }
 
     if (props.statuses && typeof props.statuses === "object") {
         return Object.entries(props.statuses).map(([value, label]) => ({
-            value,
+            value: value.trim().toLowerCase(),
             label: normalizeStatusLabel(label, value),
         }));
     }
@@ -305,27 +413,44 @@ const statusOptions = computed<StatusOption[]>(() => {
 });
 
 const getStatusLabel = (item: PeluangInvestasi): string => {
-    if (item.status_label) return item.status_label;
+    if (typeof item.status_label === "string" && item.status_label.trim()) {
+        return item.status_label.trim();
+    }
 
     const value = normalizeStatusValue(item.status);
 
-    if (!value) return "-";
+    if (!value) {
+        return "-";
+    }
 
     return (
-        statusOptions.value.find((s) => s.value === value)?.label ??
+        statusOptions.value.find((status) => status.value === value)?.label ??
         defaultStatuses[value] ??
         value.replace(/_/g, " ")
     );
 };
 
-const statusClass = (status: string): string => {
-    switch (status) {
+/**
+ * IMPORTANT:
+ * Jangan pernah switch langsung terhadap item.status.
+ * Laravel bisa mengirim enum/object sehingga render bisa crash.
+ */
+const statusClass = (status: unknown): string => {
+    const normalized = normalizeStatusValue(status);
+
+    switch (normalized) {
         case "tersedia":
             return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400";
+
         case "proses":
             return "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400";
+
         case "terisi":
             return "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400";
+
+        case "ditutup":
+            return "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400";
+
         default:
             return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
     }
@@ -335,8 +460,21 @@ const statusClass = (status: string): string => {
  * Generic helpers
  * ---------------------------------------------------------------------- */
 
-const toStringValue = (value: string | number | null | undefined): string =>
-    value === null || value === undefined ? "" : String(value).trim();
+const toStringValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    if (typeof value === "string") {
+        return value.trim();
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+        return String(value).trim();
+    }
+
+    return "";
+};
 
 const slugify = (value: string): string =>
     String(value ?? "")
@@ -349,26 +487,63 @@ const slugify = (value: string): string =>
         .replace(/-+/g, "-")
         .replace(/^-+|-+$/g, "");
 
-const getImageUrl = (image: string | null): string | null => {
-    if (!image) return null;
-
-    if (/^(https?:)?\/\//.test(image) || image.startsWith("/")) {
-        return image;
+const getImageUrl = (image: unknown): string | null => {
+    if (typeof image !== "string") {
+        return null;
     }
 
-    return `/storage/${image}`;
+    const value = image.trim();
+
+    if (!value) {
+        return null;
+    }
+
+    if (/^(https?:)?\/\//i.test(value) || value.startsWith("/")) {
+        return value;
+    }
+
+    return `/storage/${value}`;
+};
+
+/**
+ * URL gambar yang gagal dimuat (404, file hilang, dll).
+ * Disimpan supaya template otomatis jatuh ke ikon placeholder
+ * dan tidak menampilkan ikon "broken image" milik browser.
+ */
+const failedImages = ref<Record<string, true>>({});
+
+const resolveImage = (image: unknown): string | null => {
+    const url = getImageUrl(image);
+
+    if (!url || failedImages.value[url]) {
+        return null;
+    }
+
+    return url;
+};
+
+const handleImageError = (event: Event): void => {
+    const src = (event.target as HTMLImageElement | null)?.getAttribute("src");
+
+    if (src) {
+        failedImages.value = { ...failedImages.value, [src]: true };
+    }
 };
 
 const formatNumber = (value: string | number | null | undefined): string => {
-    if (value === null || value === undefined || value === "") return "-";
+    if (value === null || value === undefined || value === "") {
+        return "-";
+    }
 
     const number = Number(value);
 
-    if (!Number.isFinite(number)) return String(value);
+    if (!Number.isFinite(number)) {
+        return String(value);
+    }
 
-    return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(
-        number,
-    );
+    return new Intl.NumberFormat("id-ID", {
+        maximumFractionDigits: 2,
+    }).format(number);
 };
 
 const formatInvestment = (
@@ -377,7 +552,199 @@ const formatInvestment = (
 ): string => {
     const formatted = formatNumber(value);
 
-    return formatted === "-" ? "-" : `${currency} ${formatted}`;
+    if (formatted === "-") {
+        return "-";
+    }
+
+    return `${currency} ${formatted}`;
+};
+
+const formatBytes = (bytes: number): string => {
+    if (bytes < 1024) {
+        return `${bytes} B`;
+    }
+
+    if (bytes < 1024 * 1024) {
+        return `${(bytes / 1024).toFixed(0)} KB`;
+    }
+
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+};
+
+/* -------------------------------------------------------------------------
+ * Image processing helpers
+ * ---------------------------------------------------------------------- */
+
+/** Deteksi tipe asli file lewat magic bytes, bukan dari ekstensi/MIME. */
+const detectImageType = async (file: File): Promise<string | null> => {
+    const b = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+
+    if (b.length < 12) {
+        return null;
+    }
+
+    if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) {
+        return "image/jpeg";
+    }
+
+    if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) {
+        return "image/png";
+    }
+
+    const riff = String.fromCharCode(...b.slice(0, 4));
+    const webp = String.fromCharCode(...b.slice(8, 12));
+
+    if (riff === "RIFF" && webp === "WEBP") {
+        return "image/webp";
+    }
+
+    return null;
+};
+
+interface LoadedImage {
+    source: CanvasImageSource;
+    width: number;
+    height: number;
+    dispose: () => void;
+}
+
+const loadImage = async (file: File): Promise<LoadedImage> => {
+    if (typeof createImageBitmap === "function") {
+        try {
+            // Hormati orientasi EXIF (foto HP sering miring tanpa ini)
+            const bitmap = await createImageBitmap(file, {
+                imageOrientation: "from-image",
+            });
+
+            return {
+                source: bitmap,
+                width: bitmap.width,
+                height: bitmap.height,
+                dispose: () => bitmap.close(),
+            };
+        } catch {
+            // lanjut ke fallback <img>
+        }
+    }
+
+    const url = URL.createObjectURL(file);
+
+    try {
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const el = new Image();
+
+            el.onload = () => resolve(el);
+            el.onerror = () => reject(new Error("Gagal membaca gambar."));
+            el.src = url;
+        });
+
+        return {
+            source: img,
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+            // URL baru dilepas setelah selesai digambar ke canvas.
+            dispose: () => URL.revokeObjectURL(url),
+        };
+    } catch (error) {
+        URL.revokeObjectURL(url);
+
+        throw error;
+    }
+};
+
+const canvasToBlob = (
+    canvas: HTMLCanvasElement,
+    type: string,
+    quality: number,
+): Promise<Blob | null> =>
+    new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+
+/**
+ * Resize + kompres sampai <= MAX_IMAGE_SIZE.
+ * Jika file sudah memenuhi syarat, file asli dipakai apa adanya.
+ */
+const optimizeImage = async (
+    file: File,
+): Promise<{ file: File; width: number; height: number }> => {
+    const { source, width, height, dispose } = await loadImage(file);
+
+    try {
+        if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
+            throw new Error(
+                `Resolusi gambar terlalu kecil (minimal ${MIN_DIMENSION}×${MIN_DIMENSION}px).`,
+            );
+        }
+
+        const needsResize = Math.max(width, height) > MAX_DIMENSION;
+
+        if (!needsResize && file.size <= MAX_IMAGE_SIZE) {
+            return { file, width, height };
+        }
+
+        let scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
+        let quality = 0.85;
+
+        for (let attempt = 0; attempt < 8; attempt++) {
+            const w = Math.max(1, Math.round(width * scale));
+            const h = Math.max(1, Math.round(height * scale));
+
+            // Hasil akhir tidak boleh lebih kecil dari batas minimal.
+            if (w < MIN_DIMENSION || h < MIN_DIMENSION) {
+                break;
+            }
+
+            const canvas = document.createElement("canvas");
+
+            canvas.width = w;
+            canvas.height = h;
+
+            const ctx = canvas.getContext("2d");
+
+            if (!ctx) {
+                throw new Error("Browser tidak mendukung pemrosesan gambar.");
+            }
+
+            // Latar putih supaya PNG transparan tidak jadi hitam saat jadi JPEG
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(source, 0, 0, w, h);
+
+            let blob = await canvasToBlob(canvas, "image/webp", quality);
+
+            // Safari lama tidak support encode WEBP -> fallback ke JPEG
+            if (!blob || blob.type !== "image/webp") {
+                blob = await canvasToBlob(canvas, "image/jpeg", quality);
+            }
+
+            if (blob && blob.size <= MAX_IMAGE_SIZE) {
+                const ext = blob.type === "image/webp" ? "webp" : "jpg";
+                const baseName =
+                    file.name.replace(/\.[^.]+$/, "").slice(0, 80) || "gambar";
+
+                return {
+                    file: new File([blob], `${baseName}.${ext}`, {
+                        type: blob.type,
+                        lastModified: Date.now(),
+                    }),
+                    width: w,
+                    height: h,
+                };
+            }
+
+            // Turunkan kualitas dulu, lalu perkecil dimensi
+            if (quality > 0.55) {
+                quality -= 0.1;
+            } else {
+                scale *= 0.85;
+            }
+        }
+
+        throw new Error(
+            "Gambar tidak dapat dikompres hingga di bawah 1 MB. Gunakan gambar lain.",
+        );
+    } finally {
+        dispose();
+    }
 };
 
 /* -------------------------------------------------------------------------
@@ -385,6 +752,7 @@ const formatInvestment = (
  * ---------------------------------------------------------------------- */
 
 const search = ref(props.filters?.search ?? "");
+
 const selectedStatus = ref(props.filters?.status ?? "");
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -403,12 +771,17 @@ const visitList = (): void => {
             search: search.value.trim() || undefined,
             status: selectedStatus.value || undefined,
         },
-        { preserveState: true, preserveScroll: true, replace: true },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
     );
 };
 
 const submitSearch = (): void => {
     clearSearchTimer();
+
     searchTimer = setTimeout(visitList, 350);
 };
 
@@ -424,16 +797,18 @@ const clearSearchInput = (): void => {
 
 const clearFilters = (): void => {
     clearSearchTimer();
+
     search.value = "";
     selectedStatus.value = "";
+
     visitList();
 };
 
-/* Sinkronkan input dengan server (mis. tombol back browser) */
 watch(
     () => props.filters,
     (filters) => {
         search.value = filters?.search ?? "";
+
         selectedStatus.value = filters?.status ?? "";
     },
 );
@@ -458,17 +833,25 @@ const paginationPageLabel = (label: string): string =>
         .trim();
 
 const goToPage = (url: string | null): void => {
-    if (!url) return;
+    if (!url) {
+        return;
+    }
 
     router.get(
         url,
         {},
-        { preserveState: true, preserveScroll: true, replace: true },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
     );
 };
 
 const firstPageUrl = computed<string | null>(() => {
-    if (currentPage.value <= 1) return null;
+    if (currentPage.value <= 1) {
+        return null;
+    }
 
     return paginationLinks.value.length > 2
         ? (paginationLinks.value[1]?.url ?? null)
@@ -476,7 +859,9 @@ const firstPageUrl = computed<string | null>(() => {
 });
 
 const lastPageUrl = computed<string | null>(() => {
-    if (currentPage.value >= lastPage.value) return null;
+    if (currentPage.value >= lastPage.value) {
+        return null;
+    }
 
     return paginationLinks.value.length > 2
         ? (paginationLinks.value[paginationLinks.value.length - 2]?.url ?? null)
@@ -507,6 +892,7 @@ const showDetailModal = ref(false);
 const showDeleteModal = ref(false);
 
 const modalMode = ref<"create" | "edit">("create");
+
 const selectedPeluangInvestasi = ref<PeluangInvestasi | null>(null);
 
 const emptyForm = () => ({
@@ -524,22 +910,47 @@ const emptyForm = () => ({
     aktif: true,
 });
 
-const form = ref(emptyForm());
+type FormState = ReturnType<typeof emptyForm>;
 
+const form = ref<FormState>(emptyForm());
+
+/** Path gambar yang saat ini tersimpan di server (mode edit). */
 const existingImage = ref<string | null>(null);
+
+/** True jika user menandai gambar lama untuk dihapus saat simpan. */
 const removedExistingImage = ref(false);
+
 const previewUrl = ref<string | null>(null);
+
 const fileInput = ref<HTMLInputElement | null>(null);
 
 const processing = ref(false);
+
+const uploadProgress = ref<number | null>(null);
+
 const processingDelete = ref(false);
+
 const processingToggleId = ref<number | null>(null);
+
 const processingMoveId = ref<number | null>(null);
 
 const errors = ref<FormErrors>({});
 
+/* Image state */
+
+const isProcessingImage = ref(false);
+
+const isDragging = ref(false);
+
+const imageInfo = ref<ImageInfo | null>(null);
+
+/** Penanda job terbaru; hasil job lama diabaikan (mencegah race condition). */
+let imageJobId = 0;
+
 const displayImage = computed(
-    () => previewUrl.value || getImageUrl(existingImage.value),
+    () =>
+        previewUrl.value ||
+        (removedExistingImage.value ? null : resolveImage(existingImage.value)),
 );
 
 const isHydratingForm = ref(false);
@@ -547,21 +958,53 @@ const isHydratingForm = ref(false);
 watch(
     () => form.value.judul,
     (value) => {
-        if (isHydratingForm.value) return;
+        if (isHydratingForm.value) {
+            return;
+        }
+
+        // Slug yang sudah terbit tidak boleh berubah saat edit.
+        if (modalMode.value === "edit") {
+            return;
+        }
 
         form.value.slug = slugify(value);
     },
 );
 
 const revokePreview = (): void => {
-    if (previewUrl.value) {
-        URL.revokeObjectURL(previewUrl.value);
-        previewUrl.value = null;
+    const url = previewUrl.value;
+
+    previewUrl.value = null;
+
+    if (!url) {
+        return;
+    }
+
+    try {
+        URL.revokeObjectURL(url);
+    } catch {
+        // Object URL sudah tidak valid.
     }
 };
 
-const hydrateForm = (data: ReturnType<typeof emptyForm>): void => {
+const clearFileInput = (): void => {
+    // Wajib direset agar memilih file yang sama lagi tetap memicu @change
+    if (fileInput.value) {
+        fileInput.value.value = "";
+    }
+};
+
+const resetImageState = (): void => {
+    imageJobId++;
+
+    isProcessingImage.value = false;
+    isDragging.value = false;
+    imageInfo.value = null;
+};
+
+const hydrateForm = (data: FormState): void => {
     isHydratingForm.value = true;
+
     form.value = data;
 
     requestAnimationFrame(() => {
@@ -570,15 +1013,23 @@ const hydrateForm = (data: ReturnType<typeof emptyForm>): void => {
 };
 
 const resetForm = (): void => {
-    hydrateForm(emptyForm());
+    revokePreview();
+    resetImageState();
+
+    isHydratingForm.value = true;
+
+    form.value = emptyForm();
+
+    isHydratingForm.value = false;
 
     existingImage.value = null;
     removedExistingImage.value = false;
+
+    uploadProgress.value = null;
+
     errors.value = {};
 
-    revokePreview();
-
-    if (fileInput.value) fileInput.value.value = "";
+    clearFileInput();
 };
 
 const closeAllModals = (): void => {
@@ -592,49 +1043,81 @@ const closeAllModals = (): void => {
  * ---------------------------------------------------------------------- */
 
 const openCreate = (): void => {
-    if (processing.value) return;
+    if (processing.value) {
+        return;
+    }
 
     modalMode.value = "create";
+
     selectedPeluangInvestasi.value = null;
 
     resetForm();
+
     closeAllModals();
+
     showFormModal.value = true;
 };
 
 const openEdit = (item: PeluangInvestasi): void => {
-    if (processing.value) return;
+    if (processing.value) {
+        return;
+    }
 
     modalMode.value = "edit";
+
     selectedPeluangInvestasi.value = item;
 
-    resetForm();
+    revokePreview();
+    resetImageState();
+
+    errors.value = {};
+
+    uploadProgress.value = null;
+
+    removedExistingImage.value = false;
+
+    clearFileInput();
 
     hydrateForm({
         judul: toStringValue(item.judul),
+
         slug: toStringValue(item.slug),
+
         sektor_industri: toStringValue(item.sektor_industri),
+
         deskripsi: toStringValue(item.deskripsi),
+
         luas_lahan: toStringValue(item.luas_lahan),
+
         satuan_luas: toStringValue(item.satuan_luas) || "Ha",
+
         lokasi: toStringValue(item.lokasi),
-        status: toStringValue(item.status) || "tersedia",
+
+        status: normalizeStatusValue(item.status) || "tersedia",
+
         nilai_investasi: toStringValue(item.nilai_investasi),
-        mata_uang: toStringValue(item.mata_uang) || "IDR",
+
+        mata_uang: toStringValue(item.mata_uang).toUpperCase() || "IDR",
+
         gambar: null,
+
         aktif: Boolean(item.aktif),
     });
 
-    existingImage.value = item.gambar;
+    existingImage.value = typeof item.gambar === "string" ? item.gambar : null;
 
     closeAllModals();
+
     showFormModal.value = true;
 };
 
 const closeForm = (): void => {
-    if (processing.value) return;
+    if (processing.value) {
+        return;
+    }
 
     showFormModal.value = false;
+
     selectedPeluangInvestasi.value = null;
 
     resetForm();
@@ -642,6 +1125,7 @@ const closeForm = (): void => {
 
 const forceCloseForm = (): void => {
     showFormModal.value = false;
+
     selectedPeluangInvestasi.value = null;
 
     resetForm();
@@ -651,52 +1135,116 @@ const forceCloseForm = (): void => {
  * Image upload
  * ---------------------------------------------------------------------- */
 
-const handleImageChange = (event: Event): void => {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0] ?? null;
-
+const processImageFile = async (file: File | null): Promise<void> => {
     errors.value.gambar = undefined;
 
+    const jobId = ++imageJobId;
+
     if (!file) {
-        form.value.gambar = null;
+        isProcessingImage.value = false;
+
+        return;
+    }
+
+    if (file.size > MAX_INPUT_SIZE) {
+        errors.value.gambar = `Ukuran file terlalu besar (maksimal ${formatBytes(MAX_INPUT_SIZE)}).`;
+
+        isProcessingImage.value = false;
+
+        clearFileInput();
+
+        return;
+    }
+
+    isProcessingImage.value = true;
+
+    try {
+        const realType = await detectImageType(file);
+
+        if (!realType || !ALLOWED_IMAGE_TYPES.includes(realType)) {
+            throw new Error(
+                "File bukan gambar valid. Gunakan JPG, JPEG, PNG, atau WEBP.",
+            );
+        }
+
+        const result = await optimizeImage(file);
+
+        // Ada pilihan file yang lebih baru -> abaikan hasil ini
+        if (jobId !== imageJobId) {
+            return;
+        }
+
         revokePreview();
 
-        return;
-    }
+        form.value.gambar = result.file;
+        previewUrl.value = URL.createObjectURL(result.file);
 
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        imageInfo.value = {
+            name: result.file.name,
+            size: result.file.size,
+            originalSize: file.size,
+            width: result.width,
+            height: result.height,
+        };
+    } catch (error) {
+        if (jobId !== imageJobId) {
+            return;
+        }
+
         errors.value.gambar =
-            "Gambar harus berformat JPG, JPEG, PNG, atau WEBP.";
-        target.value = "";
-        form.value.gambar = null;
+            error instanceof Error ? error.message : "Gagal memproses gambar.";
+    } finally {
+        if (jobId === imageJobId) {
+            isProcessingImage.value = false;
+        }
 
-        return;
+        clearFileInput();
     }
-
-    if (file.size > MAX_IMAGE_SIZE) {
-        errors.value.gambar = "Ukuran gambar maksimal 1 MB.";
-        target.value = "";
-        form.value.gambar = null;
-
-        return;
-    }
-
-    form.value.gambar = file;
-
-    revokePreview();
-    previewUrl.value = URL.createObjectURL(file);
 };
 
+const handleImageChange = (event: Event): void => {
+    const target = event.target as HTMLInputElement;
+
+    void processImageFile(target.files?.[0] ?? null);
+};
+
+const handleDrop = (event: DragEvent): void => {
+    isDragging.value = false;
+
+    if (processing.value || isProcessingImage.value) {
+        return;
+    }
+
+    const file = event.dataTransfer?.files?.[0] ?? null;
+
+    void processImageFile(file);
+};
+
+/** Hapus gambar BARU yang belum tersimpan. Gambar lama (edit) muncul kembali. */
 const removeSelectedImage = (): void => {
-    form.value.gambar = null;
-    revokePreview();
+    imageJobId++;
 
-    if (fileInput.value) fileInput.value.value = "";
+    isProcessingImage.value = false;
+
+    form.value.gambar = null;
+    imageInfo.value = null;
+    errors.value.gambar = undefined;
+
+    revokePreview();
+    clearFileInput();
 };
 
+/** Tandai gambar lama untuk dihapus saat disimpan. */
 const removeExistingImage = (): void => {
-    existingImage.value = null;
+    if (!existingImage.value) {
+        return;
+    }
+
     removedExistingImage.value = true;
+};
+
+const restoreExistingImage = (): void => {
+    removedExistingImage.value = false;
 };
 
 /* -------------------------------------------------------------------------
@@ -704,16 +1252,29 @@ const removeExistingImage = (): void => {
  * ---------------------------------------------------------------------- */
 
 const submit = (): void => {
-    if (processing.value) return;
+    if (processing.value || isProcessingImage.value) {
+        return;
+    }
 
     errors.value = {};
 
+    uploadProgress.value = null;
+
     const judul = toStringValue(form.value.judul);
+
     const luasLahan = toStringValue(form.value.luas_lahan);
+
     const nilaiInvestasi = toStringValue(form.value.nilai_investasi);
+
     const satuanLuas = toStringValue(form.value.satuan_luas) || "Ha";
+
     const mataUang = toStringValue(form.value.mata_uang).toUpperCase() || "IDR";
-    const status = toStringValue(form.value.status) || "tersedia";
+
+    const status = normalizeStatusValue(form.value.status) || "tersedia";
+
+    /* ---------------------------------
+     * Client-side validation
+     * -------------------------------- */
 
     if (!judul) {
         errors.value.judul = "Judul peluang investasi wajib diisi.";
@@ -751,57 +1312,110 @@ const submit = (): void => {
     const isEdit =
         modalMode.value === "edit" && selectedPeluangInvestasi.value !== null;
 
+    /* ---------------------------------
+     * FormData
+     * -------------------------------- */
+
     const formData = new FormData();
 
     formData.append("judul", judul);
+
     formData.append(
         "sektor_industri",
         toStringValue(form.value.sektor_industri),
     );
+
     formData.append("deskripsi", toStringValue(form.value.deskripsi));
+
     formData.append("luas_lahan", luasLahan);
+
     formData.append("satuan_luas", satuanLuas);
+
     formData.append("lokasi", toStringValue(form.value.lokasi));
+
     formData.append("status", status);
+
     formData.append("nilai_investasi", nilaiInvestasi);
+
     formData.append("mata_uang", mataUang);
+
     formData.append("aktif", form.value.aktif ? "1" : "0");
 
-    if (form.value.gambar instanceof File) {
-        formData.append("gambar", form.value.gambar);
+    /* ---------------------------------
+     * Image
+     * -------------------------------- */
+
+    const hasNewImage = form.value.gambar instanceof File;
+
+    if (hasNewImage) {
+        formData.append("gambar", form.value.gambar as File);
     }
+
+    /* ---------------------------------
+     * Edit method spoofing
+     * -------------------------------- */
 
     if (isEdit) {
         formData.append("_method", "PUT");
 
-        // Backend harus membaca flag ini untuk menghapus gambar lama.
-        if (removedExistingImage.value && !form.value.gambar) {
+        /**
+         * Hanya hapus gambar lama jika user memang menandainya
+         * dan tidak menggantinya dengan gambar baru.
+         */
+        if (removedExistingImage.value && !hasNewImage) {
             formData.append("hapus_gambar", "1");
         }
     }
 
-    const url = isEdit
-        ? `${BASE_URL}/${selectedPeluangInvestasi.value!.id}`
-        : BASE_URL;
+    const id = selectedPeluangInvestasi.value?.id;
+
+    const url = isEdit && id ? `${BASE_URL}/${id}` : BASE_URL;
+
+    /* ---------------------------------
+     * Submit Inertia
+     * -------------------------------- */
 
     processing.value = true;
 
     router.post(url, formData, {
         forceFormData: true,
+
         preserveScroll: true,
-        preserveState: true,
+
+        onStart: () => {
+            processing.value = true;
+            uploadProgress.value = 0;
+        },
+
+        onProgress: (progress) => {
+            if (progress?.percentage != null) {
+                uploadProgress.value = progress.percentage;
+            }
+        },
 
         onSuccess: () => {
             forceCloseForm();
-            closeAllModals();
         },
 
         onError: (serverErrors) => {
+            console.error("Gagal menyimpan peluang investasi:", serverErrors);
+
             errors.value = serverErrors as FormErrors;
+
+            // Modal tetap terbuka supaya user dapat memperbaiki.
+            showFormModal.value = true;
+        },
+
+        onCancel: () => {
+            processing.value = false;
+
+            uploadProgress.value = null;
         },
 
         onFinish: () => {
             processing.value = false;
+
+            uploadProgress.value = null;
         },
     });
 };
@@ -814,11 +1428,13 @@ const openDetail = (item: PeluangInvestasi): void => {
     selectedPeluangInvestasi.value = item;
 
     closeAllModals();
+
     showDetailModal.value = true;
 };
 
 const closeDetail = (): void => {
     showDetailModal.value = false;
+
     selectedPeluangInvestasi.value = null;
 };
 
@@ -832,25 +1448,50 @@ interface DetailField {
 const detailFields = computed<DetailField[]>(() => {
     const item = selectedPeluangInvestasi.value;
 
-    if (!item) return [];
+    if (!item) {
+        return [];
+    }
 
     return [
-        { label: "Slug", value: `/ ${item.slug}`, icon: FileText, mono: true },
+        {
+            label: "Slug",
+            value: `/${toStringValue(item.slug)}`,
+            icon: FileText,
+            mono: true,
+        },
+
         {
             label: "Sektor Industri",
-            value: item.sektor_industri || "-",
+            value: toStringValue(item.sektor_industri) || "-",
             icon: BriefcaseBusiness,
         },
-        { label: "Lokasi", value: item.lokasi || "-", icon: MapPin },
-        { label: "Urutan", value: String(item.urutan), icon: Hash },
+
+        {
+            label: "Lokasi",
+            value: toStringValue(item.lokasi) || "-",
+            icon: MapPin,
+        },
+
+        {
+            label: "Urutan",
+            value: String(item.urutan),
+            icon: Hash,
+        },
+
         {
             label: "Luas Lahan",
-            value: `${formatNumber(item.luas_lahan)} ${item.satuan_luas || "Ha"}`,
+            value: `${formatNumber(item.luas_lahan)} ${
+                toStringValue(item.satuan_luas) || "Ha"
+            }`,
             icon: Ruler,
         },
+
         {
             label: "Nilai Investasi",
-            value: formatInvestment(item.nilai_investasi, item.mata_uang),
+            value: formatInvestment(
+                item.nilai_investasi,
+                toStringValue(item.mata_uang) || "IDR",
+            ),
             icon: BriefcaseBusiness,
         },
     ];
@@ -861,23 +1502,31 @@ const detailFields = computed<DetailField[]>(() => {
  * ---------------------------------------------------------------------- */
 
 const openDelete = (item: PeluangInvestasi): void => {
-    if (processingDelete.value || processing.value) return;
+    if (processingDelete.value || processing.value) {
+        return;
+    }
 
     selectedPeluangInvestasi.value = item;
 
     closeAllModals();
+
     showDeleteModal.value = true;
 };
 
 const closeDelete = (): void => {
-    if (processingDelete.value) return;
+    if (processingDelete.value) {
+        return;
+    }
 
     showDeleteModal.value = false;
+
     selectedPeluangInvestasi.value = null;
 };
 
 const deletePeluangInvestasi = (): void => {
-    if (!selectedPeluangInvestasi.value || processingDelete.value) return;
+    if (!selectedPeluangInvestasi.value || processingDelete.value) {
+        return;
+    }
 
     processingDelete.value = true;
 
@@ -886,6 +1535,7 @@ const deletePeluangInvestasi = (): void => {
 
         onSuccess: () => {
             showDeleteModal.value = false;
+
             selectedPeluangInvestasi.value = null;
         },
 
@@ -904,7 +1554,9 @@ const deletePeluangInvestasi = (): void => {
  * ---------------------------------------------------------------------- */
 
 const toggleAktif = (item: PeluangInvestasi): void => {
-    if (processingToggleId.value !== null) return;
+    if (processingToggleId.value !== null) {
+        return;
+    }
 
     processingToggleId.value = item.id;
 
@@ -914,9 +1566,11 @@ const toggleAktif = (item: PeluangInvestasi): void => {
         {
             preserveScroll: true,
             preserveState: true,
+
             onError: (serverErrors) => {
                 console.error("Gagal mengubah status aktif:", serverErrors);
             },
+
             onFinish: () => {
                 processingToggleId.value = null;
             },
@@ -944,9 +1598,11 @@ const movePeluangInvestasi = (
         {
             preserveScroll: true,
             preserveState: true,
+
             onError: (serverErrors) => {
                 console.error("Gagal mengubah urutan:", serverErrors);
             },
+
             onFinish: () => {
                 processingMoveId.value = null;
             },
@@ -963,11 +1619,17 @@ const isAnyModalOpen = computed(
 );
 
 const handleKeydown = (event: KeyboardEvent): void => {
-    if (event.key !== "Escape") return;
+    if (event.key !== "Escape") {
+        return;
+    }
 
-    if (showDeleteModal.value) closeDelete();
-    else if (showFormModal.value) closeForm();
-    else if (showDetailModal.value) closeDetail();
+    if (showDeleteModal.value) {
+        closeDelete();
+    } else if (showFormModal.value) {
+        closeForm();
+    } else if (showDetailModal.value) {
+        closeDetail();
+    }
 };
 
 watch(isAnyModalOpen, (open) => {
@@ -982,7 +1644,7 @@ onMounted(() => {
     removeRouterStartListener = router.on("start", (event) => {
         const visit = event.detail.visit;
 
-        // Skeleton hanya untuk navigasi GET penuh (bukan aksi form/toggle)
+        // Skeleton hanya untuk navigasi GET penuh.
         if (visit.method === "get" && !visit.preserveState) {
             isPageLoading.value = true;
         }
@@ -1000,9 +1662,13 @@ onBeforeUnmount(() => {
     removeRouterFinishListener?.();
 
     window.removeEventListener("keydown", handleKeydown);
+
     document.body.style.overflow = "";
 
     clearSearchTimer();
+
+    imageJobId++;
+
     revokePreview();
 });
 </script>
@@ -1297,18 +1963,21 @@ onBeforeUnmount(() => {
                                                 >
                                                     <img
                                                         v-if="
-                                                            getImageUrl(
+                                                            resolveImage(
                                                                 item.gambar,
                                                             )
                                                         "
                                                         :src="
-                                                            getImageUrl(
+                                                            resolveImage(
                                                                 item.gambar,
                                                             )!
                                                         "
                                                         :alt="item.judul"
                                                         loading="lazy"
                                                         class="size-full object-cover transition duration-300 group-hover:scale-105"
+                                                        @error="
+                                                            handleImageError
+                                                        "
                                                     />
                                                     <ImageIcon
                                                         v-else
@@ -1725,7 +2394,7 @@ onBeforeUnmount(() => {
                     :class="[modalCardClass, 'max-w-4xl']"
                 >
                     <div
-                        class="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 dark:border-slate-800"
+                        class="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div class="min-w-0">
                             <h2
@@ -1761,11 +2430,13 @@ onBeforeUnmount(() => {
                     </div>
 
                     <form
-                        class="max-h-[calc(100vh-7rem)] overflow-y-auto sm:max-h-[calc(100vh-8rem)]"
+                        class="flex min-h-0 flex-1 flex-col"
                         novalidate
                         @submit.prevent="submit"
                     >
-                        <div class="grid gap-5 p-4 sm:p-6 md:grid-cols-2">
+                        <div
+                            class="grid min-h-0 flex-1 gap-5 overflow-y-auto overscroll-contain p-4 sm:p-6 md:grid-cols-2"
+                        >
                             <!-- JUDUL -->
                             <div class="md:col-span-2">
                                 <label for="f-judul" :class="labelClass">
@@ -1818,9 +2489,11 @@ onBeforeUnmount(() => {
                                         class="mt-1.5 inline-flex size-1.5 shrink-0 rounded-full bg-blue-500"
                                     ></span>
                                     <span>
-                                        Slug dibuat otomatis oleh sistem
-                                        berdasarkan judul. Slug final dapat
-                                        berbeda jika sudah digunakan.
+                                        {{
+                                            modalMode === "edit"
+                                                ? "Slug tidak berubah saat edit agar tautan yang sudah dibagikan tetap berfungsi."
+                                                : "Slug dibuat otomatis oleh sistem berdasarkan judul. Slug final dapat berbeda jika sudah digunakan."
+                                        }}
                                     </span>
                                 </p>
                             </div>
@@ -2060,6 +2733,7 @@ onBeforeUnmount(() => {
                                 <div
                                     class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-3 sm:p-4 dark:border-slate-700 dark:bg-slate-800/50"
                                 >
+                                    <!-- PREVIEW -->
                                     <div v-if="displayImage" class="mb-4">
                                         <div
                                             class="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
@@ -2067,22 +2741,31 @@ onBeforeUnmount(() => {
                                             <img
                                                 :src="displayImage"
                                                 alt="Preview gambar"
-                                                class="max-h-64 w-full object-cover sm:max-h-80"
+                                                class="h-64 w-full bg-slate-100 object-contain sm:h-80 dark:bg-slate-800"
+                                                @error="handleImageError"
                                             />
+
+                                            <span
+                                                v-if="previewUrl"
+                                                class="absolute left-3 top-3 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-medium text-white shadow"
+                                            >
+                                                Gambar baru
+                                            </span>
 
                                             <button
                                                 type="button"
+                                                :disabled="processing"
                                                 :title="
                                                     previewUrl
-                                                        ? 'Hapus gambar baru'
+                                                        ? 'Batalkan gambar baru'
                                                         : 'Hapus gambar'
                                                 "
                                                 :aria-label="
                                                     previewUrl
-                                                        ? 'Hapus gambar baru'
+                                                        ? 'Batalkan gambar baru'
                                                         : 'Hapus gambar'
                                                 "
-                                                class="absolute right-3 top-3 rounded-lg bg-red-600 p-2 text-white shadow-lg transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
+                                                class="absolute right-3 top-3 rounded-lg bg-red-600 p-2 text-white shadow-lg transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 disabled:opacity-50"
                                                 @click="
                                                     previewUrl
                                                         ? removeSelectedImage()
@@ -2092,39 +2775,111 @@ onBeforeUnmount(() => {
                                                 <Trash2 class="size-4" />
                                             </button>
                                         </div>
+
+                                        <p
+                                            v-if="imageInfo"
+                                            class="mt-2 text-xs text-slate-500 dark:text-slate-400"
+                                        >
+                                            {{ imageInfo.width }}×{{
+                                                imageInfo.height
+                                            }}px ·
+                                            {{ formatBytes(imageInfo.size) }}
+                                            <span
+                                                v-if="
+                                                    imageInfo.size <
+                                                    imageInfo.originalSize
+                                                "
+                                            >
+                                                (dikompres dari
+                                                {{
+                                                    formatBytes(
+                                                        imageInfo.originalSize,
+                                                    )
+                                                }})
+                                            </span>
+                                        </p>
                                     </div>
 
-                                    <label
-                                        class="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50/50 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-600 dark:hover:bg-blue-950/20"
+                                    <!-- GAMBAR LAMA DITANDAI HAPUS -->
+                                    <div
+                                        v-else-if="removedExistingImage"
+                                        class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
                                     >
+                                        <span
+                                            >Gambar saat ini akan dihapus saat
+                                            disimpan.</span
+                                        >
+                                        <button
+                                            type="button"
+                                            :disabled="processing"
+                                            class="shrink-0 font-medium underline underline-offset-2 disabled:opacity-50"
+                                            @click="restoreExistingImage"
+                                        >
+                                            Batalkan
+                                        </button>
+                                    </div>
+
+                                    <!-- DROPZONE -->
+                                    <label
+                                        class="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-xl border px-4 py-7 text-center transition focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10"
+                                        :class="[
+                                            isDragging
+                                                ? 'border-blue-500 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/30'
+                                                : 'border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-600 dark:hover:bg-blue-950/20',
+                                            (processing || isProcessingImage) &&
+                                                'pointer-events-none opacity-70',
+                                        ]"
+                                        @dragenter.prevent="isDragging = true"
+                                        @dragover.prevent="isDragging = true"
+                                        @dragleave.prevent="isDragging = false"
+                                        @drop.prevent="handleDrop"
+                                    >
+                                        <span
+                                            v-if="isProcessingImage"
+                                            class="size-8 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-500"
+                                        ></span>
                                         <ImageIcon
+                                            v-else
                                             class="size-8 text-slate-400"
                                         />
+
                                         <span
                                             class="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200"
                                         >
                                             {{
-                                                displayImage
-                                                    ? "Ganti gambar"
-                                                    : "Pilih gambar"
+                                                isProcessingImage
+                                                    ? "Memproses gambar..."
+                                                    : isDragging
+                                                      ? "Lepaskan gambar di sini"
+                                                      : displayImage
+                                                        ? "Ganti gambar"
+                                                        : "Pilih atau seret gambar ke sini"
                                             }}
                                         </span>
                                         <span
                                             class="mt-1 max-w-sm text-xs leading-5 text-slate-400 dark:text-slate-500"
                                         >
-                                            JPG, JPEG, PNG, WEBP — maksimal 1 MB
+                                            JPG, PNG, WEBP — otomatis dikompres
+                                            ke maks. 1 MB
                                         </span>
                                         <input
                                             ref="fileInput"
                                             type="file"
                                             accept="image/jpeg,image/png,image/webp"
                                             class="sr-only"
+                                            :disabled="
+                                                processing || isProcessingImage
+                                            "
                                             @change="handleImageChange"
                                         />
                                     </label>
                                 </div>
 
-                                <p v-if="errors.gambar" :class="errorClass">
+                                <p
+                                    v-if="errors.gambar"
+                                    :class="errorClass"
+                                    role="alert"
+                                >
                                     {{ errors.gambar }}
                                 </p>
                             </div>
@@ -2132,7 +2887,7 @@ onBeforeUnmount(() => {
 
                         <!-- FOOTER -->
                         <div
-                            class="flex flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 dark:border-slate-800"
+                            class="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 dark:border-slate-800"
                         >
                             <button
                                 type="button"
@@ -2145,19 +2900,24 @@ onBeforeUnmount(() => {
 
                             <button
                                 type="submit"
-                                :disabled="processing"
+                                :disabled="processing || isProcessingImage"
                                 :class="primaryBtnClass"
                             >
                                 <span
                                     v-if="processing"
                                     class="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
                                 ></span>
+
                                 {{
                                     processing
-                                        ? "Menyimpan..."
-                                        : modalMode === "create"
-                                          ? "Simpan Peluang Investasi"
-                                          : "Simpan Perubahan"
+                                        ? uploadProgress !== null
+                                            ? `Mengunggah ${Math.round(uploadProgress)}%`
+                                            : "Menyimpan..."
+                                        : isProcessingImage
+                                          ? "Memproses gambar..."
+                                          : modalMode === "create"
+                                            ? "Simpan Peluang Investasi"
+                                            : "Simpan Perubahan"
                                 }}
                             </button>
                         </div>
@@ -2180,7 +2940,7 @@ onBeforeUnmount(() => {
                     :class="[modalCardClass, 'max-w-3xl']"
                 >
                     <div
-                        class="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 dark:border-slate-800"
+                        class="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div class="min-w-0">
                             <h2
@@ -2207,22 +2967,25 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div
-                        class="max-h-[calc(100vh-8rem)] overflow-y-auto p-4 sm:p-6"
+                        class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6"
                     >
                         <div
                             class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm dark:border-slate-700 dark:bg-slate-800"
                         >
                             <img
                                 v-if="
-                                    getImageUrl(selectedPeluangInvestasi.gambar)
+                                    resolveImage(
+                                        selectedPeluangInvestasi.gambar,
+                                    )
                                 "
                                 :src="
-                                    getImageUrl(
+                                    resolveImage(
                                         selectedPeluangInvestasi.gambar,
                                     )!
                                 "
                                 :alt="selectedPeluangInvestasi.judul"
                                 class="max-h-80 w-full object-cover"
+                                @error="handleImageError"
                             />
                             <div
                                 v-else
@@ -2324,7 +3087,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div
-                        class="flex flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 dark:border-slate-800"
+                        class="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 dark:border-slate-800"
                     >
                         <button
                             type="button"
@@ -2433,7 +3196,6 @@ onBeforeUnmount(() => {
         </Transition>
     </div>
 </template>
-
 <style scoped>
 .blob-shape {
     animation: blob-float 12s ease-in-out infinite;

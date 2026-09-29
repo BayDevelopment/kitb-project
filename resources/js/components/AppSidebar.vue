@@ -115,6 +115,11 @@ const mainNavItems: NavItem[] = [
                 href: "/hubungan-investor/peluang-investasi",
                 icon: BriefcaseBusiness,
             },
+            {
+                title: "Ease of Doing Business",
+                href: "/hubungan-investor/ease-of-doing-business",
+                icon: Landmark,
+            },
         ],
     },
 ];

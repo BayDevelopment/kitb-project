@@ -174,10 +174,10 @@ class PeluangInvestasiController extends Controller
 
             PeluangInvestasi::create($data);
 
-            return back()->with(
-                'success',
-                'Peluang investasi berhasil ditambahkan.'
-            );
+            return back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Peluang investasi berhasil ditambahkan.',
+            ]);
         } catch (\Throwable $e) {
             if ($gambarPath !== null) {
                 Storage::disk('public')->delete($gambarPath);
@@ -185,10 +185,10 @@ class PeluangInvestasiController extends Controller
 
             report($e);
 
-            return back()->with(
-                'error',
-                'Peluang investasi gagal ditambahkan.'
-            );
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Peluang investasi gagal ditambahkan.',
+            ]);
         }
     }
 
@@ -314,10 +314,10 @@ class PeluangInvestasiController extends Controller
                 Storage::disk('public')->delete($oldGambarPath);
             }
 
-            return back()->with(
-                'success',
-                'Peluang investasi berhasil diperbarui.'
-            );
+            return back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Peluang investasi berhasil diperbarui.',
+            ]);
         } catch (\Throwable $e) {
             if ($newGambarPath !== null) {
                 Storage::disk('public')->delete($newGambarPath);
@@ -325,10 +325,10 @@ class PeluangInvestasiController extends Controller
 
             report($e);
 
-            return back()->with(
-                'error',
-                'Peluang investasi gagal diperbarui.'
-            );
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Peluang investasi gagal diperbarui.',
+            ]);
         }
     }
 
@@ -347,17 +347,17 @@ class PeluangInvestasiController extends Controller
                 Storage::disk('public')->delete($gambarPath);
             }
 
-            return back()->with(
-                'success',
-                'Peluang investasi berhasil dihapus.'
-            );
+            return back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Peluang investasi berhasil dihapus.',
+            ]);
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->with(
-                'error',
-                'Peluang investasi gagal dihapus.'
-            );
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Peluang investasi gagal dihapus.',
+            ]);
         }
     }
 
@@ -367,16 +367,25 @@ class PeluangInvestasiController extends Controller
     public function toggleAktif(
         PeluangInvestasi $peluangInvestasi
     ): RedirectResponse {
-        $peluangInvestasi->update([
-            'aktif' => ! $peluangInvestasi->aktif,
-        ]);
+        try {
+            $peluangInvestasi->update([
+                'aktif' => ! $peluangInvestasi->aktif,
+            ]);
 
-        return back()->with(
-            'success',
-            $peluangInvestasi->aktif
-                ? 'Peluang investasi berhasil diaktifkan.'
-                : 'Peluang investasi berhasil dinonaktifkan.'
-        );
+            return back()->with('toast', [
+                'type' => 'success',
+                'message' => $peluangInvestasi->aktif
+                    ? 'Peluang investasi berhasil diaktifkan.'
+                    : 'Peluang investasi berhasil dinonaktifkan.',
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Status peluang investasi gagal diperbarui.',
+            ]);
+        }
     }
 
     /**
@@ -395,9 +404,12 @@ class PeluangInvestasiController extends Controller
         ]);
 
         try {
+            $moved = false;
+
             DB::transaction(function () use (
                 $peluangInvestasi,
-                $validated
+                $validated,
+                &$moved
             ) {
                 $currentOrder = $peluangInvestasi->urutan;
 
@@ -428,19 +440,30 @@ class PeluangInvestasiController extends Controller
                 $neighbor->update([
                     'urutan' => $currentOrder,
                 ]);
+
+                $moved = true;
             });
 
-            return back()->with(
-                'success',
-                'Urutan peluang investasi berhasil diperbarui.'
-            );
+            if (! $moved) {
+                return back()->with('toast', [
+                    'type' => 'error',
+                    'message' => $validated['direction'] === 'up'
+                        ? 'Peluang investasi sudah berada di urutan paling atas.'
+                        : 'Peluang investasi sudah berada di urutan paling bawah.',
+                ]);
+            }
+
+            return back()->with('toast', [
+                'type' => 'success',
+                'message' => 'Urutan peluang investasi berhasil diperbarui.',
+            ]);
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->with(
-                'error',
-                'Urutan peluang investasi gagal diperbarui.'
-            );
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Urutan peluang investasi gagal diperbarui.',
+            ]);
         }
     }
 
