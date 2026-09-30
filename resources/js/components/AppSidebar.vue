@@ -12,6 +12,7 @@ import {
     Map,
     MapPinned,
     Network,
+    Route,
     Target,
     Users,
 } from "lucide-vue-next";
@@ -21,6 +22,7 @@ import AppLogo from "@/components/AppLogo.vue";
 import NavFooter from "@/components/NavFooter.vue";
 import NavMain from "@/components/NavMain.vue";
 import NavUser from "@/components/NavUser.vue";
+
 import {
     Sidebar,
     SidebarContent,
@@ -30,6 +32,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
+
 import { dashboard } from "@/routes";
 import type { NavItem } from "@/types";
 
@@ -46,12 +49,18 @@ const isEmailVerified = computed(
 );
 
 const mainNavItems: NavItem[] = [
+    // =========================================================
+    // DASHBOARD
+    // =========================================================
     {
         title: "Dashboard",
         href: dashboard(),
         icon: LayoutGrid,
     },
 
+    // =========================================================
+    // PROFIL PERUSAHAAN
+    // =========================================================
     {
         title: "Profil Perusahaan",
         icon: Building2,
@@ -79,6 +88,9 @@ const mainNavItems: NavItem[] = [
         ],
     },
 
+    // =========================================================
+    // KAWASAN
+    // =========================================================
     {
         title: "Kawasan",
         icon: Map,
@@ -106,6 +118,9 @@ const mainNavItems: NavItem[] = [
         ],
     },
 
+    // =========================================================
+    // HUBUNGAN INVESTOR
+    // =========================================================
     {
         title: "Hubungan Investor",
         icon: BriefcaseBusiness,
@@ -119,6 +134,16 @@ const mainNavItems: NavItem[] = [
                 title: "Ease of Doing Business",
                 href: "/hubungan-investor/ease-of-doing-business",
                 icon: Landmark,
+            },
+            {
+                title: "Kunjungan Lahan",
+                href: "/hubungan-investor/kunjungan-lahan",
+                icon: MapPinned,
+            },
+            {
+                title: "Rute Pelayaran & Lokasi",
+                href: "/hubungan-investor/rute-pelayaran-lokasi",
+                icon: Route,
             },
         ],
     },
@@ -221,7 +246,7 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                 />
             </div>
 
-            <div class="relative z-10 min-w-0">
+            <div class="relative z-10 min-w-0 pb-6">
                 <Transition name="nav-fade" mode="out-in">
                     <!-- Skeleton -->
                     <div

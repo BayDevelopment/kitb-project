@@ -2,13 +2,14 @@
 
 use App\Http\Controllers\Admin\AnakUsahaController;
 use App\Http\Controllers\Admin\EaseOfDoingBusinessController;
-use App\Http\Controllers\Admin\HubunganInvestor\PeluangInvestasiController;
 use App\Http\Controllers\Admin\Kawasan\FasilitasController;
 use App\Http\Controllers\Admin\Kawasan\InfrastrukturController;
+use App\Http\Controllers\Admin\KunjunganLahanController;
 use App\Http\Controllers\Admin\PeluangInvestasiController as AdminPeluangInvestasiController;
 use App\Http\Controllers\Admin\PetaKawasanController;
 use App\Http\Controllers\Admin\ProfilKawasanController;
 use App\Http\Controllers\Admin\ProfilPerusahaanController;
+use App\Http\Controllers\Admin\RuteController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+
     /*
     |--------------------------------------------------------------------------
     | Dashboard
@@ -217,6 +219,93 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Hubungan Investor - Ease of Doing Business
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/hubungan-investor/ease-of-doing-business',
+        [EaseOfDoingBusinessController::class, 'index']
+    )->name('hubungan-investor.ease-of-doing-business');
+
+    Route::post(
+        '/hubungan-investor/ease-of-doing-business',
+        [EaseOfDoingBusinessController::class, 'store']
+    )->name('hubungan-investor.ease-of-doing-business.store');
+
+    Route::put(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}',
+        [EaseOfDoingBusinessController::class, 'update']
+    )->name('hubungan-investor.ease-of-doing-business.update');
+
+    Route::delete(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}',
+        [EaseOfDoingBusinessController::class, 'destroy']
+    )->name('hubungan-investor.ease-of-doing-business.destroy');
+
+    Route::patch(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}/toggle-aktif',
+        [EaseOfDoingBusinessController::class, 'toggleAktif']
+    )->name('hubungan-investor.ease-of-doing-business.toggle-aktif');
+
+    Route::patch(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}/move-up',
+        [EaseOfDoingBusinessController::class, 'moveUp']
+    )->name('hubungan-investor.ease-of-doing-business.move-up');
+
+    Route::patch(
+        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}/move-down',
+        [EaseOfDoingBusinessController::class, 'moveDown']
+    )->name('hubungan-investor.ease-of-doing-business.move-down');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hubungan Investor - Kunjungan Lahan
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/hubungan-investor/kunjungan-lahan',
+        [KunjunganLahanController::class, 'index']
+    )->name('hubungan-investor.kunjungan-lahan');
+
+    Route::post(
+        '/hubungan-investor/kunjungan-lahan',
+        [KunjunganLahanController::class, 'store']
+    )->name('hubungan-investor.kunjungan-lahan.store');
+
+    Route::put(
+        '/hubungan-investor/kunjungan-lahan/{kunjunganLahan}',
+        [KunjunganLahanController::class, 'update']
+    )->name('hubungan-investor.kunjungan-lahan.update');
+
+    Route::delete(
+        '/hubungan-investor/kunjungan-lahan/{kunjunganLahan}',
+        [KunjunganLahanController::class, 'destroy']
+    )->name('hubungan-investor.kunjungan-lahan.destroy');
+
+    Route::patch(
+        '/hubungan-investor/kunjungan-lahan/{kunjunganLahan}/approve',
+        [KunjunganLahanController::class, 'approve']
+    )->name('hubungan-investor.kunjungan-lahan.approve');
+
+    Route::patch(
+        '/hubungan-investor/kunjungan-lahan/{kunjunganLahan}/reject',
+        [KunjunganLahanController::class, 'reject']
+    )->name('hubungan-investor.kunjungan-lahan.reject');
+
+    Route::patch(
+        '/hubungan-investor/kunjungan-lahan/{kunjunganLahan}/complete',
+        [KunjunganLahanController::class, 'complete']
+    )->name('hubungan-investor.kunjungan-lahan.complete');
+
+    Route::patch(
+        '/hubungan-investor/kunjungan-lahan/{kunjunganLahan}/cancel',
+        [KunjunganLahanController::class, 'cancel']
+    )->name('hubungan-investor.kunjungan-lahan.cancel');
+
+    /*
+    |--------------------------------------------------------------------------
     | Kawasan - Profil Kawasan
     |--------------------------------------------------------------------------
     */
@@ -369,40 +458,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
         [PetaKawasanController::class, 'moveDown']
     )->name('kawasan.peta-kawasan.move-down');
 
+    /*
+|--------------------------------------------------------------------------
+| Hubungan Investor - Rute Pelayaran & Lokasi
+|--------------------------------------------------------------------------
+*/
+
     Route::get(
-        '/hubungan-investor/ease-of-doing-business',
-        [EaseOfDoingBusinessController::class, 'index']
-    )->name('hubungan-investor.ease-of-doing-business');
+        '/hubungan-investor/rute-pelayaran-lokasi',
+        [RuteController::class, 'index']
+    )->name('hubungan-investor.rute-pelayaran-lokasi');
 
     Route::post(
-        '/hubungan-investor/ease-of-doing-business',
-        [EaseOfDoingBusinessController::class, 'store']
-    )->name('hubungan-investor.ease-of-doing-business.store');
+        '/hubungan-investor/rute-pelayaran-lokasi',
+        [RuteController::class, 'store']
+    )->name('hubungan-investor.rute-pelayaran-lokasi.store');
 
     Route::put(
-        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}',
-        [EaseOfDoingBusinessController::class, 'update']
-    )->name('hubungan-investor.ease-of-doing-business.update');
+        '/hubungan-investor/rute-pelayaran-lokasi/{rute}',
+        [RuteController::class, 'update']
+    )->name('hubungan-investor.rute-pelayaran-lokasi.update');
 
     Route::delete(
-        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}',
-        [EaseOfDoingBusinessController::class, 'destroy']
-    )->name('hubungan-investor.ease-of-doing-business.destroy');
+        '/hubungan-investor/rute-pelayaran-lokasi/{rute}',
+        [RuteController::class, 'destroy']
+    )->name('hubungan-investor.rute-pelayaran-lokasi.destroy');
 
     Route::patch(
-        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}/toggle-aktif',
-        [EaseOfDoingBusinessController::class, 'toggleAktif']
-    )->name('hubungan-investor.ease-of-doing-business.toggle-aktif');
+        '/hubungan-investor/rute-pelayaran-lokasi/{rute}/toggle-aktif',
+        [RuteController::class, 'toggleAktif']
+    )->name('hubungan-investor.rute-pelayaran-lokasi.toggle-aktif');
 
     Route::patch(
-        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}/move-up',
-        [EaseOfDoingBusinessController::class, 'moveUp']
-    )->name('hubungan-investor.ease-of-doing-business.move-up');
-
-    Route::patch(
-        '/hubungan-investor/ease-of-doing-business/{easeOfDoingBusiness}/move-down',
-        [EaseOfDoingBusinessController::class, 'moveDown']
-    )->name('hubungan-investor.ease-of-doing-business.move-down');
+        '/hubungan-investor/rute-pelayaran-lokasi/{rute}/move',
+        [RuteController::class, 'move']
+    )->name('hubungan-investor.rute-pelayaran-lokasi.move');
 });
 
 require __DIR__ . '/settings.php';

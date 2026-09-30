@@ -14,15 +14,106 @@ return new class extends Migration
         Schema::create('rutes', function (Blueprint $table) {
             $table->id();
 
-            $table->string('nama_rute');
-            $table->string('jalur');
-            $table->decimal('jarak', 10, 1);
-            $table->string('satuan_jarak')->default('km');
-            $table->string('waktu_tempuh');
+            // =====================================================
+            // INFORMASI RUTE
+            // =====================================================
+
+            $table->string('nama_rute', 200);
+
+            $table->string('jalur', 255);
+
+            $table->decimal('jarak', 10, 2);
+
+            $table->string(
+                'satuan_jarak',
+                20
+            )->default('km');
+
+            $table->string(
+                'waktu_tempuh',
+                100
+            );
+
             $table->text('deskripsi')->nullable();
-            $table->integer('urutan')->default(0);
+
+            // =====================================================
+            // ASAL & TUJUAN
+            // =====================================================
+
+            $table->string(
+                'asal',
+                200
+            )->nullable();
+
+            $table->string(
+                'tujuan',
+                200
+            )->nullable();
+
+            // =====================================================
+            // TITIK LOKASI UTAMA
+            // Digunakan untuk marker Leaflet
+            // =====================================================
+
+            $table->decimal(
+                'latitude',
+                10,
+                7
+            )->nullable();
+
+            $table->decimal(
+                'longitude',
+                10,
+                7
+            )->nullable();
+
+            // =====================================================
+            // GEOMETRY RUTE
+            // Format GeoJSON
+            //
+            // Point
+            // LineString
+            // MultiLineString
+            // =====================================================
+
+            $table->json(
+                'geometry'
+            )->nullable();
+
+            // =====================================================
+            // GAMBAR / ILUSTRASI
+            // =====================================================
+
+            $table->string(
+                'gambar'
+            )->nullable();
+
+            // =====================================================
+            // PENGATURAN TAMPILAN
+            // =====================================================
+
+            $table->unsignedInteger(
+                'urutan'
+            )->default(0)->index();
+
+            $table->boolean(
+                'aktif'
+            )->default(true)->index();
+
+            // =====================================================
+            // TIMESTAMPS
+            // =====================================================
 
             $table->timestamps();
+
+            // =====================================================
+            // COMPOSITE INDEX
+            // =====================================================
+
+            $table->index([
+                'aktif',
+                'urutan',
+            ]);
         });
     }
 
