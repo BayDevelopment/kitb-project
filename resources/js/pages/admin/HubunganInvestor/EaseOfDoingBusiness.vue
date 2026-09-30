@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
     computed,
+    nextTick,
     onBeforeUnmount,
     onMounted,
     ref,
@@ -113,6 +114,15 @@ interface IconOption {
     component: Component;
 }
 
+type FormState = {
+    judul: string;
+    slug: string;
+    ringkasan: string;
+    deskripsi: string;
+    ikon: string;
+    aktif: boolean;
+};
+
 /* -------------------------------------------------------------------------
  * Props & constants
  * ---------------------------------------------------------------------- */
@@ -124,12 +134,12 @@ const props = defineProps<{
     };
 }>();
 
-const BASE_URL = "/hubungan-investor/kemudahan-berusaha";
-
 /**
- * Kolom `ikon` di database berupa string. Di sini disimpan sebagai key
- * ikon Lucide di bawah. Frontend publik cukup memakai pemetaan key yang sama.
+ * IMPORTANT:
+ * Harus sama dengan route Laravel.
  */
+const BASE_URL = "/hubungan-investor/ease-of-doing-business";
+
 const iconOptions: IconOption[] = [
     { key: "file-text", label: "Dokumen", component: FileText },
     { key: "file-check", label: "Dokumen Sah", component: FileCheck },
@@ -160,13 +170,14 @@ const iconMap: Record<string, Component> = Object.fromEntries(
 );
 
 /* -------------------------------------------------------------------------
- * Shared class names
+ * Shared classes
  * ---------------------------------------------------------------------- */
 
 const inputClass =
     "min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900";
 
-const inputErrorClass = "border-red-400 focus:border-red-500";
+const inputErrorClass =
+    "border-red-400 focus:border-red-500 dark:border-red-500";
 
 const labelClass =
     "mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300";
@@ -208,14 +219,18 @@ const infoCardClass =
 
 const columns = [
     { label: "No.", width: "w-16", align: "text-center" },
-    { label: "Kemudahan Berusaha", width: "w-[440px]", align: "text-left" },
+    {
+        label: "Kemudahan Berusaha",
+        width: "w-[440px]",
+        align: "text-left",
+    },
     { label: "Urutan", width: "w-40", align: "text-center" },
     { label: "Aktif", width: "w-44", align: "text-center" },
     { label: "Aksi", width: "w-44", align: "text-right" },
 ];
 
 /* -------------------------------------------------------------------------
- * Data accessors
+ * Data
  * ---------------------------------------------------------------------- */
 
 const items = computed<KemudahanBerusaha[]>(
@@ -240,7 +255,7 @@ const perPage = computed(
     () =>
         props.kemudahanBerusaha?.meta?.per_page ??
         props.kemudahanBerusaha?.per_page ??
-        (items.value.length || 10),
+        10,
 );
 
 const lastPage = computed(
@@ -264,7 +279,7 @@ const toRow = computed(
 const getRowNumber = (index: number): number =>
     (currentPage.value - 1) * perPage.value + index + 1;
 
-const isFiltered = computed(() => Boolean(props.filters?.search));
+const isFiltered = computed(() => search.value.trim().length > 0);
 
 const isFirstItem = (index: number): boolean => getRowNumber(index) <= 1;
 
@@ -272,17 +287,16 @@ const isLastItem = (index: number): boolean =>
     getRowNumber(index) >= total.value;
 
 /* -------------------------------------------------------------------------
- * Page loading
+ * Loading
  * ---------------------------------------------------------------------- */
 
 const isPageLoading = ref(false);
 
 let removeRouterStartListener: (() => void) | null = null;
-
 let removeRouterFinishListener: (() => void) | null = null;
 
 /* -------------------------------------------------------------------------
- * Generic helpers
+ * Helpers
  * ---------------------------------------------------------------------- */
 
 const toStringValue = (value: unknown): string => {
@@ -312,7 +326,6 @@ const slugify = (value: string): string =>
         .replace(/-+/g, "-")
         .replace(/^-+|-+$/g, "");
 
-/** Ikon tidak dikenal / kosong jatuh ke ikon dokumen. */
 const resolveIcon = (key: string | null | undefined): Component =>
     iconMap[toStringValue(key)] ?? FileText;
 
@@ -329,18 +342,22 @@ const search = ref(props.filters?.search ?? "");
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
 const clearSearchTimer = (): void => {
-    if (searchTimer) {
+    if (searchTimer !== null) {
         clearTimeout(searchTimer);
         searchTimer = null;
     }
 };
 
 const visitList = (): void => {
+    const query = search.value.trim();
+
     router.get(
         BASE_URL,
-        {
-            search: search.value.trim() || undefined,
-        },
+        query
+            ? {
+                  search: query,
+              }
+            : {},
         {
             preserveState: true,
             preserveScroll: true,
@@ -352,7 +369,10 @@ const visitList = (): void => {
 const submitSearch = (): void => {
     clearSearchTimer();
 
-    searchTimer = setTimeout(visitList, 350);
+    searchTimer = setTimeout(() => {
+        visitList();
+        searchTimer = null;
+    }, 350);
 };
 
 const submitFilter = (): void => {
@@ -361,14 +381,21 @@ const submitFilter = (): void => {
 };
 
 const clearSearchInput = (): void => {
+    clearSearchTimer();
+
     search.value = "";
-    submitFilter();
+
+    visitList();
 };
 
 watch(
-    () => props.filters,
-    (filters) => {
-        search.value = filters?.search ?? "";
+    () => props.filters?.search,
+    (value) => {
+        const incoming = value ?? "";
+
+        if (incoming !== search.value) {
+            search.value = incoming;
+        }
     },
 );
 
@@ -412,9 +439,7 @@ const firstPageUrl = computed<string | null>(() => {
         return null;
     }
 
-    return paginationLinks.value.length > 2
-        ? (paginationLinks.value[1]?.url ?? null)
-        : null;
+    return paginationLinks.value[1]?.url ?? null;
 });
 
 const lastPageUrl = computed<string | null>(() => {
@@ -422,19 +447,15 @@ const lastPageUrl = computed<string | null>(() => {
         return null;
     }
 
-    return paginationLinks.value.length > 2
-        ? (paginationLinks.value[paginationLinks.value.length - 2]?.url ?? null)
-        : null;
+    return paginationLinks.value[paginationLinks.value.length - 2]?.url ?? null;
 });
 
 const previousPageUrl = computed<string | null>(
     () => paginationLinks.value[0]?.url ?? null,
 );
 
-const nextPageUrl = computed<string | null>(() =>
-    paginationLinks.value.length > 0
-        ? (paginationLinks.value[paginationLinks.value.length - 1]?.url ?? null)
-        : null,
+const nextPageUrl = computed<string | null>(
+    () => paginationLinks.value[paginationLinks.value.length - 1]?.url ?? null,
 );
 
 const navButtonClass = (url: string | null): string =>
@@ -454,25 +475,20 @@ const modalMode = ref<"create" | "edit">("create");
 
 const selectedItem = ref<KemudahanBerusaha | null>(null);
 
-const emptyForm = () => ({
+const emptyForm = (): FormState => ({
     judul: "",
     slug: "",
     ringkasan: "",
     deskripsi: "",
-    ikon: "" as string,
+    ikon: "",
     aktif: true,
 });
-
-type FormState = ReturnType<typeof emptyForm>;
 
 const form = ref<FormState>(emptyForm());
 
 const processing = ref(false);
-
 const processingDelete = ref(false);
-
 const processingToggleId = ref<number | null>(null);
-
 const processingMoveId = ref<number | null>(null);
 
 const errors = ref<FormErrors>({});
@@ -482,12 +498,7 @@ const isHydratingForm = ref(false);
 watch(
     () => form.value.judul,
     (value) => {
-        if (isHydratingForm.value) {
-            return;
-        }
-
-        // Slug yang sudah terbit tidak boleh berubah saat edit.
-        if (modalMode.value === "edit") {
+        if (isHydratingForm.value || modalMode.value === "edit") {
             return;
         }
 
@@ -495,14 +506,14 @@ watch(
     },
 );
 
-const hydrateForm = (data: FormState): void => {
+const hydrateForm = async (data: FormState): Promise<void> => {
     isHydratingForm.value = true;
 
     form.value = data;
 
-    requestAnimationFrame(() => {
-        isHydratingForm.value = false;
-    });
+    await nextTick();
+
+    isHydratingForm.value = false;
 };
 
 const resetForm = (): void => {
@@ -526,33 +537,29 @@ const closeAllModals = (): void => {
  * ---------------------------------------------------------------------- */
 
 const openCreate = (): void => {
-    if (processing.value) {
+    if (processing.value || processingDelete.value) {
         return;
     }
 
     modalMode.value = "create";
-
     selectedItem.value = null;
 
     resetForm();
-
     closeAllModals();
 
     showFormModal.value = true;
 };
 
 const openEdit = (item: KemudahanBerusaha): void => {
-    if (processing.value) {
+    if (processing.value || processingDelete.value) {
         return;
     }
 
     modalMode.value = "edit";
-
     selectedItem.value = item;
-
     errors.value = {};
 
-    hydrateForm({
+    void hydrateForm({
         judul: toStringValue(item.judul),
         slug: toStringValue(item.slug),
         ringkasan: toStringValue(item.ringkasan),
@@ -572,7 +579,6 @@ const closeForm = (): void => {
     }
 
     showFormModal.value = false;
-
     selectedItem.value = null;
 
     resetForm();
@@ -580,14 +586,12 @@ const closeForm = (): void => {
 
 const forceCloseForm = (): void => {
     showFormModal.value = false;
-
     selectedItem.value = null;
 
     resetForm();
 };
 
 const selectIcon = (key: string): void => {
-    // Klik ikon yang sama sekali lagi = kosongkan pilihan.
     form.value.ikon = form.value.ikon === key ? "" : key;
 
     errors.value.ikon = undefined;
@@ -623,6 +627,10 @@ const submit = (): void => {
 
     const id = selectedItem.value?.id;
 
+    if (isEdit && !id) {
+        return;
+    }
+
     const url = isEdit && id ? `${BASE_URL}/${id}` : BASE_URL;
 
     const payload = {
@@ -633,23 +641,18 @@ const submit = (): void => {
         aktif: form.value.aktif,
     };
 
+    processing.value = true;
+
     const options = {
         preserveScroll: true,
-
-        onStart: () => {
-            processing.value = true;
-        },
 
         onSuccess: () => {
             forceCloseForm();
         },
 
         onError: (serverErrors: Record<string, string>) => {
-            console.error("Gagal menyimpan kemudahan berusaha:", serverErrors);
-
             errors.value = serverErrors as FormErrors;
 
-            // Modal tetap terbuka supaya user dapat memperbaiki.
             showFormModal.value = true;
         },
 
@@ -657,8 +660,6 @@ const submit = (): void => {
             processing.value = false;
         },
     };
-
-    processing.value = true;
 
     if (isEdit) {
         router.put(url, payload, options);
@@ -681,7 +682,6 @@ const openDetail = (item: KemudahanBerusaha): void => {
 
 const closeDetail = (): void => {
     showDetailModal.value = false;
-
     selectedItem.value = null;
 };
 
@@ -741,23 +741,23 @@ const closeDelete = (): void => {
     }
 
     showDeleteModal.value = false;
-
     selectedItem.value = null;
 };
 
 const deleteItem = (): void => {
-    if (!selectedItem.value || processingDelete.value) {
+    const item = selectedItem.value;
+
+    if (!item || processingDelete.value) {
         return;
     }
 
     processingDelete.value = true;
 
-    router.delete(`${BASE_URL}/${selectedItem.value.id}`, {
+    router.delete(`${BASE_URL}/${item.id}`, {
         preserveScroll: true,
 
         onSuccess: () => {
             showDeleteModal.value = false;
-
             selectedItem.value = null;
         },
 
@@ -772,11 +772,15 @@ const deleteItem = (): void => {
 };
 
 /* -------------------------------------------------------------------------
- * Toggle aktif & urutan
+ * Toggle & ordering
  * ---------------------------------------------------------------------- */
 
 const toggleAktif = (item: KemudahanBerusaha): void => {
-    if (processingToggleId.value !== null) {
+    if (
+        processingToggleId.value !== null ||
+        processing.value ||
+        processingDelete.value
+    ) {
         return;
     }
 
@@ -804,6 +808,7 @@ const moveItem = (item: KemudahanBerusaha, direction: "up" | "down"): void => {
     if (
         processingMoveId.value !== null ||
         processing.value ||
+        processingDelete.value ||
         isFiltered.value
     ) {
         return;
@@ -830,7 +835,7 @@ const moveItem = (item: KemudahanBerusaha, direction: "up" | "down"): void => {
 };
 
 /* -------------------------------------------------------------------------
- * Keyboard (Esc) & body scroll lock
+ * Modal / keyboard
  * ---------------------------------------------------------------------- */
 
 const isAnyModalOpen = computed(
@@ -838,7 +843,7 @@ const isAnyModalOpen = computed(
 );
 
 const handleKeydown = (event: KeyboardEvent): void => {
-    if (event.key !== "Escape") {
+    if (event.key !== "Escape" || !isAnyModalOpen.value) {
         return;
     }
 
@@ -863,7 +868,6 @@ onMounted(() => {
     removeRouterStartListener = router.on("start", (event) => {
         const visit = event.detail.visit;
 
-        // Skeleton hanya untuk navigasi GET penuh.
         if (visit.method === "get" && !visit.preserveState) {
             isPageLoading.value = true;
         }
@@ -900,24 +904,29 @@ onBeforeUnmount(() => {
         >
             <div
                 class="blob-shape absolute -left-24 -top-32 h-96 w-96 rounded-full bg-gradient-to-br from-blue-400/30 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/25 dark:via-indigo-500/15 dark:to-transparent"
-            ></div>
+            />
+
             <div
                 class="blob-shape-delayed absolute -right-20 top-0 h-80 w-80 rounded-full bg-gradient-to-tr from-sky-300/30 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/20 dark:via-blue-500/10 dark:to-transparent"
-            ></div>
+            />
+
             <div
                 class="blob-shape-slow absolute left-[30%] -top-40 h-72 w-72 rounded-full bg-gradient-to-br from-indigo-300/25 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/15 dark:via-blue-500/10 dark:to-transparent"
-            ></div>
+            />
+
             <div
                 class="blob-shape absolute -bottom-40 right-[20%] h-72 w-72 rounded-full bg-gradient-to-br from-cyan-300/20 via-blue-300/10 to-transparent blur-3xl dark:from-cyan-500/10 dark:via-blue-500/10 dark:to-transparent"
-            ></div>
+            />
+
             <div class="absolute inset-0 opacity-40 dark:opacity-20">
                 <div
                     class="h-full w-full bg-[linear-gradient(to_right,#64748b12_1px,transparent_1px),linear-gradient(to_bottom,#64748b12_1px,transparent_1px)] bg-[size:32px_32px]"
-                ></div>
+                />
             </div>
+
             <div
                 class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent via-slate-50/40 to-slate-50/90 dark:via-slate-950/40 dark:to-[#07111f]/95"
-            ></div>
+            />
         </div>
 
         <!-- CONTENT -->
@@ -926,7 +935,7 @@ onBeforeUnmount(() => {
         >
             <!-- SKELETON -->
             <div v-if="isPageLoading" class="animate-pulse" role="status">
-                <span class="sr-only">Memuat data...</span>
+                <span class="sr-only"> Memuat data... </span>
 
                 <div
                     class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
@@ -934,25 +943,27 @@ onBeforeUnmount(() => {
                     <div class="flex items-center gap-3">
                         <div
                             class="size-10 rounded-xl bg-slate-200 dark:bg-slate-800"
-                        ></div>
+                        />
+
                         <div class="space-y-2">
                             <div
                                 class="h-5 w-48 rounded-md bg-slate-200 dark:bg-slate-800"
-                            ></div>
+                            />
                             <div
                                 class="h-4 w-72 max-w-full rounded-md bg-slate-200 dark:bg-slate-800"
-                            ></div>
+                            />
                         </div>
                     </div>
+
                     <div
                         class="h-11 w-full rounded-xl bg-slate-200 sm:w-48 dark:bg-slate-800"
-                    ></div>
+                    />
                 </div>
 
                 <div :class="[cardClass, 'mb-5 p-4 sm:p-5']">
                     <div
                         class="h-11 rounded-xl bg-slate-200 dark:bg-slate-800"
-                    ></div>
+                    />
                 </div>
 
                 <div :class="[cardClass, 'overflow-hidden']">
@@ -964,18 +975,20 @@ onBeforeUnmount(() => {
                         >
                             <div
                                 class="size-12 shrink-0 rounded-xl bg-slate-200 dark:bg-slate-800"
-                            ></div>
+                            />
+
                             <div class="flex-1 space-y-2">
                                 <div
                                     class="h-4 w-1/3 rounded bg-slate-200 dark:bg-slate-800"
-                                ></div>
+                                />
                                 <div
                                     class="h-3 w-1/2 rounded bg-slate-200 dark:bg-slate-800"
-                                ></div>
+                                />
                             </div>
+
                             <div
                                 class="h-4 w-24 rounded bg-slate-200 dark:bg-slate-800"
-                            ></div>
+                            />
                         </div>
                     </div>
                 </div>
@@ -1000,6 +1013,7 @@ onBeforeUnmount(() => {
                             >
                                 Kemudahan Berusaha
                             </h1>
+
                             <p
                                 class="mt-0.5 text-sm leading-5 text-slate-500 dark:text-slate-400"
                             >
@@ -1011,6 +1025,7 @@ onBeforeUnmount(() => {
 
                     <button
                         type="button"
+                        :disabled="processing || processingDelete"
                         :class="[
                             primaryBtnClass,
                             'hover:shadow-md active:scale-[0.99]',
@@ -1077,6 +1092,7 @@ onBeforeUnmount(() => {
                                 >
                                     Data Kemudahan Berusaha
                                 </h2>
+
                                 <p
                                     class="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400"
                                 >
@@ -1156,11 +1172,14 @@ onBeforeUnmount(() => {
                                                     >
                                                         {{ item.judul }}
                                                     </p>
+
                                                     <p
                                                         class="mt-0.5 truncate text-xs text-blue-600 dark:text-blue-400"
                                                     >
-                                                        / {{ item.slug }}
+                                                        /
+                                                        {{ item.slug }}
                                                     </p>
+
                                                     <p
                                                         v-if="item.ringkasan"
                                                         class="mt-1 line-clamp-2 max-w-md text-xs leading-5 text-slate-500 dark:text-slate-400"
@@ -1249,11 +1268,13 @@ onBeforeUnmount(() => {
                                                         item.id
                                                     "
                                                     class="size-3.5 animate-spin rounded-full border-2 border-current/20 border-t-current"
-                                                ></span>
+                                                />
+
                                                 <ToggleRight
                                                     v-else-if="item.aktif"
                                                     class="size-4"
                                                 />
+
                                                 <ToggleLeft
                                                     v-else
                                                     class="size-4"
@@ -1287,6 +1308,10 @@ onBeforeUnmount(() => {
                                                     type="button"
                                                     title="Edit"
                                                     aria-label="Edit kemudahan berusaha"
+                                                    :disabled="
+                                                        processing ||
+                                                        processingDelete
+                                                    "
                                                     :class="[
                                                         rowIconBtnClass,
                                                         'hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400',
@@ -1300,6 +1325,10 @@ onBeforeUnmount(() => {
                                                     type="button"
                                                     title="Hapus"
                                                     aria-label="Hapus kemudahan berusaha"
+                                                    :disabled="
+                                                        processing ||
+                                                        processingDelete
+                                                    "
                                                     :class="[
                                                         rowIconBtnClass,
                                                         'hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400',
@@ -1327,18 +1356,21 @@ onBeforeUnmount(() => {
                                 Menampilkan
                                 <span
                                     class="font-medium text-slate-700 dark:text-slate-200"
-                                    >{{ fromRow }}</span
                                 >
+                                    {{ fromRow }}
+                                </span>
                                 -
                                 <span
                                     class="font-medium text-slate-700 dark:text-slate-200"
-                                    >{{ toRow }}</span
                                 >
+                                    {{ toRow }}
+                                </span>
                                 dari
                                 <span
                                     class="font-medium text-slate-700 dark:text-slate-200"
-                                    >{{ total }}</span
                                 >
+                                    {{ total }}
+                                </span>
                                 data
                             </p>
 
@@ -1495,6 +1527,7 @@ onBeforeUnmount(() => {
                                         : "Edit Kemudahan Berusaha"
                                 }}
                             </h2>
+
                             <p
                                 class="mt-0.5 text-sm leading-5 text-slate-500 dark:text-slate-400"
                             >
@@ -1529,20 +1562,23 @@ onBeforeUnmount(() => {
                             <div>
                                 <label for="f-judul" :class="labelClass">
                                     Judul
-                                    <span class="text-red-500">*</span>
+                                    <span class="text-red-500"> * </span>
                                 </label>
+
                                 <input
                                     id="f-judul"
                                     v-model="form.judul"
                                     type="text"
                                     maxlength="255"
                                     required
+                                    autocomplete="off"
                                     placeholder="Contoh: Perizinan Terpadu Satu Pintu"
                                     :class="[
                                         inputClass,
                                         errors.judul && inputErrorClass,
                                     ]"
                                 />
+
                                 <p v-if="errors.judul" :class="errorClass">
                                     {{ errors.judul }}
                                 </p>
@@ -1550,15 +1586,17 @@ onBeforeUnmount(() => {
 
                             <!-- SLUG -->
                             <div>
-                                <label for="f-slug" :class="labelClass"
-                                    >Slug</label
-                                >
+                                <label for="f-slug" :class="labelClass">
+                                    Slug
+                                </label>
+
                                 <div class="relative">
                                     <span
                                         class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"
                                     >
                                         /
                                     </span>
+
                                     <input
                                         id="f-slug"
                                         v-model="form.slug"
@@ -1570,12 +1608,14 @@ onBeforeUnmount(() => {
                                         class="min-h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-2.5 pl-8 pr-4 text-sm text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400"
                                     />
                                 </div>
+
                                 <p
                                     class="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-slate-400 dark:text-slate-500"
                                 >
                                     <span
                                         class="mt-1.5 inline-flex size-1.5 shrink-0 rounded-full bg-blue-500"
-                                    ></span>
+                                    />
+
                                     <span>
                                         {{
                                             modalMode === "edit"
@@ -1584,6 +1624,7 @@ onBeforeUnmount(() => {
                                         }}
                                     </span>
                                 </p>
+
                                 <p v-if="errors.slug" :class="errorClass">
                                     {{ errors.slug }}
                                 </p>
@@ -1591,7 +1632,7 @@ onBeforeUnmount(() => {
 
                             <!-- IKON -->
                             <div>
-                                <span :class="labelClass">Ikon</span>
+                                <span :class="labelClass"> Ikon </span>
 
                                 <div
                                     role="radiogroup"
@@ -1618,10 +1659,12 @@ onBeforeUnmount(() => {
                                             :is="option.component"
                                             class="size-5"
                                         />
+
                                         <span
                                             class="w-full truncate text-center"
-                                            >{{ option.label }}</span
                                         >
+                                            {{ option.label }}
+                                        </span>
                                     </button>
                                 </div>
 
@@ -1634,6 +1677,7 @@ onBeforeUnmount(() => {
                                             : "Belum ada ikon dipilih. Ikon dokumen dipakai sebagai bawaan."
                                     }}
                                 </p>
+
                                 <p v-if="errors.ikon" :class="errorClass">
                                     {{ errors.ikon }}
                                 </p>
@@ -1641,9 +1685,10 @@ onBeforeUnmount(() => {
 
                             <!-- RINGKASAN -->
                             <div>
-                                <label for="f-ringkasan" :class="labelClass"
-                                    >Ringkasan</label
-                                >
+                                <label for="f-ringkasan" :class="labelClass">
+                                    Ringkasan
+                                </label>
+
                                 <textarea
                                     id="f-ringkasan"
                                     v-model="form.ringkasan"
@@ -1655,12 +1700,14 @@ onBeforeUnmount(() => {
                                         'resize-none leading-6',
                                         errors.ringkasan && inputErrorClass,
                                     ]"
-                                ></textarea>
+                                />
+
                                 <p
                                     class="mt-1 text-right text-xs text-slate-400 dark:text-slate-500"
                                 >
                                     {{ form.ringkasan.length }}/1000
                                 </p>
+
                                 <p v-if="errors.ringkasan" :class="errorClass">
                                     {{ errors.ringkasan }}
                                 </p>
@@ -1668,9 +1715,10 @@ onBeforeUnmount(() => {
 
                             <!-- DESKRIPSI -->
                             <div>
-                                <label for="f-deskripsi" :class="labelClass"
-                                    >Deskripsi</label
-                                >
+                                <label for="f-deskripsi" :class="labelClass">
+                                    Deskripsi
+                                </label>
+
                                 <textarea
                                     id="f-deskripsi"
                                     v-model="form.deskripsi"
@@ -1682,7 +1730,8 @@ onBeforeUnmount(() => {
                                         'resize-y leading-6',
                                         errors.deskripsi && inputErrorClass,
                                     ]"
-                                ></textarea>
+                                />
+
                                 <p v-if="errors.deskripsi" :class="errorClass">
                                     {{ errors.deskripsi }}
                                 </p>
@@ -1690,9 +1739,10 @@ onBeforeUnmount(() => {
 
                             <!-- AKTIF -->
                             <div>
-                                <span :class="labelClass"
-                                    >Status Publikasi</span
-                                >
+                                <span :class="labelClass">
+                                    Status Publikasi
+                                </span>
+
                                 <button
                                     type="button"
                                     role="switch"
@@ -1710,21 +1760,26 @@ onBeforeUnmount(() => {
                                             v-if="form.aktif"
                                             class="size-5 shrink-0"
                                         />
+
                                         <ToggleLeft
                                             v-else
                                             class="size-5 shrink-0"
                                         />
+
                                         {{
                                             form.aktif
                                                 ? "Data Aktif"
                                                 : "Data Nonaktif"
                                         }}
                                     </span>
+
                                     <span
                                         class="hidden text-xs opacity-70 sm:inline"
-                                        >Klik untuk ubah</span
                                     >
+                                        Klik untuk ubah
+                                    </span>
                                 </button>
+
                                 <p v-if="errors.aktif" :class="errorClass">
                                     {{ errors.aktif }}
                                 </p>
@@ -1750,7 +1805,7 @@ onBeforeUnmount(() => {
                                 <span
                                     v-if="processing"
                                     class="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
-                                ></span>
+                                />
 
                                 {{
                                     processing
@@ -1787,6 +1842,7 @@ onBeforeUnmount(() => {
                             >
                                 Detail Kemudahan Berusaha
                             </h2>
+
                             <p
                                 class="mt-0.5 text-sm leading-5 text-slate-500 dark:text-slate-400"
                             >
@@ -1846,12 +1902,14 @@ onBeforeUnmount(() => {
                                         :is="field.icon"
                                         class="size-4 text-blue-500"
                                     />
+
                                     <span
                                         class="text-xs text-slate-500 dark:text-slate-400"
                                     >
                                         {{ field.label }}
                                     </span>
                                 </div>
+
                                 <p
                                     class="mt-1 break-words font-semibold text-slate-800 dark:text-slate-100"
                                     :class="
@@ -1870,6 +1928,7 @@ onBeforeUnmount(() => {
                             >
                                 Ringkasan
                             </h4>
+
                             <div
                                 class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
                             >
@@ -1885,6 +1944,7 @@ onBeforeUnmount(() => {
                             >
                                 Deskripsi
                             </h4>
+
                             <div
                                 class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
                             >
@@ -1903,6 +1963,7 @@ onBeforeUnmount(() => {
                         >
                             Tutup
                         </button>
+
                         <button
                             type="button"
                             :class="primaryBtnClass"
@@ -1942,6 +2003,7 @@ onBeforeUnmount(() => {
                         >
                             Hapus Kemudahan Berusaha?
                         </h2>
+
                         <p
                             class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
                         >
@@ -1976,7 +2038,8 @@ onBeforeUnmount(() => {
                             <span
                                 v-if="processingDelete"
                                 class="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
-                            ></span>
+                            />
+
                             {{
                                 processingDelete ? "Menghapus..." : "Ya, Hapus"
                             }}
@@ -1986,7 +2049,7 @@ onBeforeUnmount(() => {
             </div>
         </Transition>
 
-        <!-- PAGE LOADING BAR -->
+        <!-- PAGE LOADING -->
         <Transition name="loading">
             <div
                 v-if="isPageLoading"
@@ -1997,7 +2060,7 @@ onBeforeUnmount(() => {
                 >
                     <div
                         class="animate-loading-bar h-full w-1/3 rounded-full bg-blue-600"
-                    ></div>
+                    />
                 </div>
             </div>
         </Transition>
