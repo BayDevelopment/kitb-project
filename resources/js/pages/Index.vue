@@ -1,12 +1,13 @@
 <script setup>
-import { ref } from "vue";
-import { Head, useForm } from "@inertiajs/vue3";
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
+import { Head } from "@inertiajs/vue3";
 
 // Halaman ini adalah landing page publik (guest) — jangan pakai
 // dashboard/sidebar layout, meskipun app.ts punya default layout global.
 defineOptions({ layout: null });
 
 const mobileMenuOpen = ref(false);
+const openMobileGroup = ref(null);
 
 /* ---------------- Fade-in on scroll (local directive) ---------------- */
 const prefersReducedMotion =
@@ -19,7 +20,9 @@ const vFadeIn = {
             el.classList.add("fade-in-visible");
             return;
         }
+
         el.classList.add("fade-in");
+
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((entry) => {
@@ -31,6 +34,7 @@ const vFadeIn = {
             },
             { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
         );
+
         observer.observe(el);
     },
 };
@@ -63,14 +67,19 @@ const vCountUp = {
             (entries) => {
                 entries.forEach((entry) => {
                     if (!entry.isIntersecting) return;
+
                     observer.unobserve(el);
 
                     setTimeout(() => {
                         const start = performance.now();
+
                         const tick = (now) => {
-                            const elapsed = now - start;
-                            const progress = Math.min(elapsed / duration, 1);
+                            const progress = Math.min(
+                                (now - start) / duration,
+                                1,
+                            );
                             const eased = 1 - Math.pow(1 - progress, 3);
+
                             el.textContent = formatId(target * eased, decimals);
 
                             if (progress < 1) {
@@ -91,41 +100,13 @@ const vCountUp = {
     },
 };
 
-/* ---------------- Form jadwalkan kunjungan lahan ---------------- */
-const showVisitForm = ref(false);
-const showSuccessToast = ref(false);
+/* ---------------- Ajukan kunjungan lahan ---------------- */
+// Tujuan semua tombol "Ajukan Kunjungan". Arahkan ke route form kunjungan
+// yang dilindungi middleware auth (belum login -> otomatis ke login,
+// lalu kembali ke sini lewat redirect()->intended()).
+const visitUrl = "/kunjungan-lahan/buat";
 
-const visitForm = useForm({
-    nama: "",
-    instansi: "",
-    email: "",
-    telepon: "",
-    tanggal_kunjungan: "",
-    jumlah_peserta: "",
-    keperluan: "",
-});
-
-function openVisitForm() {
-    showVisitForm.value = true;
-}
-
-function closeVisitForm() {
-    showVisitForm.value = false;
-    visitForm.clearErrors();
-}
-
-function submitVisitForm() {
-    visitForm.post("/kunjungan-lahan", {
-        preserveScroll: true,
-        onSuccess: () => {
-            visitForm.reset();
-            showVisitForm.value = false;
-            showSuccessToast.value = true;
-            setTimeout(() => (showSuccessToast.value = false), 5000);
-        },
-    });
-}
-
+/* ---------------- Statistik ---------------- */
 const stats = [
     { target: 6070, decimals: 0, suffix: "Ha", label: "Wilayah pengembangan" },
     {
@@ -143,6 +124,7 @@ const stats = [
     { target: 117, decimals: 0, suffix: "K+", label: "KK petani sawit aktif" },
 ];
 
+/* ---------------- Visi & Misi ---------------- */
 const misi = [
     {
         title: "Melampaui batas industri konvensional",
@@ -162,6 +144,7 @@ const misi = [
     },
 ];
 
+/* ---------------- Rute pelayaran ---------------- */
 const routes = [
     {
         name: "Rute 1",
@@ -183,6 +166,7 @@ const routes = [
     },
 ];
 
+/* ---------------- Ketersediaan lahan ---------------- */
 const lahan = [
     {
         target: 6070.3,
@@ -204,6 +188,7 @@ const lahan = [
     },
 ];
 
+/* ---------------- Pembangunan tahap 1 ---------------- */
 const tahap1 = [
     {
         title: "Kawasan industri",
@@ -295,7 +280,7 @@ const kawasanZones = [
     },
 ];
 
-/* ---------------- Navbar ---------------- */
+/* ---------------- Navigasi (dipakai navbar & footer) ---------------- */
 const navGroups = [
     {
         label: "Profil Perusahaan",
@@ -319,7 +304,7 @@ const navGroups = [
     {
         label: "Hubungan Investor",
         items: [
-            { label: "Jadwalkan Kunjungan Lahan", action: "openVisitForm" },
+            { label: "Ajukan Kunjungan Lahan", href: visitUrl },
             { label: "Peluang Investasi", href: "#" },
             { label: "Ease of Doing Business", href: "#" },
             { label: "Rute Pelayaran & Lokasi", href: "#lokasi" },
@@ -331,34 +316,63 @@ const navGroups = [
             { label: "Berita", href: "#" },
             { label: "Galeri", href: "#" },
             { label: "Publikasi", href: "#" },
+            { label: "Karier", href: "/karier", badge: "Join Us" },
         ],
     },
 ];
 
 const kontakLink = { href: "#kontak", label: "Kontak" };
 
-const openMobileGroup = ref(null);
-
+/* ---------------- Mobile navigation ---------------- */
 function toggleMobileGroup(i) {
     openMobileGroup.value = openMobileGroup.value === i ? null : i;
 }
 
-function handleNavItemClick(item) {
+function toggleMobileMenu() {
+    mobileMenuOpen.value = !mobileMenuOpen.value;
+    if (!mobileMenuOpen.value) openMobileGroup.value = null;
+}
+
+function closeMobileMenu() {
     mobileMenuOpen.value = false;
     openMobileGroup.value = null;
-
-    if (item.action === "openVisitForm") {
-        openVisitForm();
-    }
 }
+
+// Dipakai navbar desktop, navbar mobile, dan footer
+function handleNavItemClick() {
+    closeMobileMenu();
+}
+
+// Kunci scroll halaman saat menu terbuka
+watch(mobileMenuOpen, (open) => {
+    document.body.style.overflow = open ? "hidden" : "";
+});
+
+function onKeydown(e) {
+    if (e.key !== "Escape") return;
+    closeMobileMenu();
+}
+
+function onResize() {
+    if (window.innerWidth >= 1024) closeMobileMenu();
+}
+
+onMounted(() => {
+    window.addEventListener("keydown", onKeydown);
+    window.addEventListener("resize", onResize);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener("keydown", onKeydown);
+    window.removeEventListener("resize", onResize);
+    document.body.style.overflow = "";
+});
 
 /* Ganti href dengan akun resmi KITB yang sebenarnya */
 const socials = [
-    { label: "Facebook", abbr: "f", href: "#" },
-    { label: "Instagram", abbr: "ig", href: "#" },
-    { label: "X (Twitter)", abbr: "x", href: "#" },
-    { label: "LinkedIn", abbr: "in", href: "#" },
-    { label: "YouTube", abbr: "yt", href: "#" },
+    { label: "Instagram", type: "instagram", href: "#" },
+    { label: "TikTok", type: "tiktok", href: "#" },
+    { label: "YouTube", type: "youtube", href: "#" },
 ];
 </script>
 
@@ -373,24 +387,44 @@ const socials = [
         <!-- ================= NAV ================= -->
         <header
             class="fixed top-0 left-0 right-0 z-50"
-            style="padding-top: env(safe-area-inset-top, 0px)"
+            style="
+                padding-top: env(safe-area-inset-top, 0px);
+                padding-left: env(safe-area-inset-left, 0px);
+                padding-right: env(safe-area-inset-right, 0px);
+            "
         >
+            <!-- Backdrop menu mobile -->
+            <Transition name="backdrop">
+                <div
+                    v-if="mobileMenuOpen"
+                    class="lg:hidden fixed inset-0 bg-kitb-navy-900/50 backdrop-blur-[2px]"
+                    aria-hidden="true"
+                    @click="closeMobileMenu"
+                />
+            </Transition>
+
             <div
-                class="backdrop-blur-md bg-kitb-sand-50/80 border-b border-black/5"
+                class="relative backdrop-blur-md bg-kitb-sand-50/85 border-b border-black/5"
             >
                 <nav
-                    class="max-w-7xl mx-auto px-6 md:px-10 h-20 flex items-center justify-between"
+                    class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-16 sm:h-20 flex items-center justify-between gap-3"
                 >
-                    <a href="#top" class="flex items-center gap-2.5">
+                    <!-- LOGO -->
+                    <a
+                        href="#top"
+                        class="flex items-center gap-2.5 min-w-0"
+                        aria-label="KITB - Beranda"
+                        @click="closeMobileMenu"
+                    >
                         <img
                             src="/images/siak-kabupaten.png"
                             alt="Lambang Kabupaten Siak"
-                            class="h-9 w-auto"
+                            class="h-8 sm:h-9 w-auto"
                         />
                         <img
                             src="/images/kitb-logo.png"
                             alt="Logo KITB"
-                            class="h-9 w-auto"
+                            class="h-8 sm:h-9 w-auto"
                         />
                         <div
                             class="leading-tight hidden sm:block border-l border-black/10 pl-2.5 ml-0.5"
@@ -403,8 +437,9 @@ const socials = [
                         </div>
                     </a>
 
+                    <!-- DESKTOP NAVIGATION -->
                     <div
-                        class="hidden md:flex items-center gap-1 text-[14.5px] font-medium"
+                        class="hidden lg:flex items-center gap-1 text-[14.5px] font-medium"
                     >
                         <div
                             v-for="group in navGroups"
@@ -416,7 +451,6 @@ const socials = [
                                 class="nav-trigger flex items-center gap-1.5 px-3.5 py-2 rounded-full"
                             >
                                 {{ group.label }}
-
                                 <svg
                                     width="10"
                                     height="6"
@@ -435,7 +469,7 @@ const socials = [
                             </button>
 
                             <div
-                                class="nav-dropdown absolute left-1/2 -translate-x-1/2 top-full pt-3 w-64 opacity-0 invisible translate-y-1 pointer-events-none transition-all duration-200 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:pointer-events-auto"
+                                class="absolute left-1/2 -translate-x-1/2 top-full pt-3 w-64 opacity-0 invisible translate-y-1 pointer-events-none transition-all duration-200 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:pointer-events-auto"
                             >
                                 <div
                                     class="rounded-2xl bg-kitb-surface shadow-xl border border-black/5 p-2 overflow-hidden"
@@ -443,19 +477,21 @@ const socials = [
                                     <div
                                         class="h-[3px] w-full bg-kitb-teal-500 rounded-full mb-1.5"
                                     />
-
                                     <a
                                         v-for="item in group.items"
                                         :key="item.label"
                                         :href="item.href || '#'"
                                         class="block px-3.5 py-2.5 rounded-xl text-[14px] text-kitb-ink-900/75 hover:bg-kitb-sand-100 hover:text-kitb-green-800 transition-colors"
                                         @click="
-                                            item.action === 'openVisitForm' &&
-                                            ($event.preventDefault(),
-                                            openVisitForm())
+                                            handleNavItemClick(item, $event)
                                         "
                                     >
                                         {{ item.label }}
+                                        <span
+                                            v-if="item.badge"
+                                            class="ml-2 inline-flex items-center rounded-full bg-kitb-teal-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-kitb-teal-700"
+                                            >{{ item.badge }}</span
+                                        >
                                     </a>
                                 </div>
                             </div>
@@ -469,10 +505,10 @@ const socials = [
                         </a>
                     </div>
 
-                    <button
-                        type="button"
-                        class="hidden md:inline-flex items-center gap-2 text-[14px] font-medium text-white px-5 py-2.5 rounded-full btn-primary"
-                        @click="openVisitForm"
+                    <!-- DESKTOP CTA -->
+                    <a
+                        :href="visitUrl"
+                        class="hidden lg:inline-flex items-center gap-2 text-[14px] font-medium text-white px-5 py-2.5 rounded-full btn-primary"
                     >
                         <svg
                             width="15"
@@ -496,112 +532,134 @@ const socials = [
                                 stroke-linecap="round"
                             />
                         </svg>
-                        Atur Jadwal
-                    </button>
+                        Ajukan Kunjungan
+                    </a>
 
+                    <!-- HAMBURGER -->
                     <button
-                        class="md:hidden w-10 h-10 flex items-center justify-center"
-                        aria-label="Menu"
-                        @click="mobileMenuOpen = !mobileMenuOpen"
+                        type="button"
+                        class="lg:hidden relative w-11 h-11 -mr-2 flex items-center justify-center rounded-full active:bg-black/5"
+                        :aria-label="
+                            mobileMenuOpen ? 'Tutup menu' : 'Buka menu'
+                        "
+                        aria-controls="mobile-menu"
+                        :aria-expanded="mobileMenuOpen"
+                        @click="toggleMobileMenu"
                     >
-                        <svg
-                            width="22"
-                            height="22"
-                            viewBox="0 0 22 22"
-                            fill="none"
+                        <span
+                            class="burger"
+                            :class="{ 'is-open': mobileMenuOpen }"
                         >
-                            <path
-                                d="M3 6h16M3 11h16M3 16h16"
-                                stroke="currentColor"
-                                stroke-width="1.6"
-                                stroke-linecap="round"
-                            />
-                        </svg>
+                            <span /><span /><span />
+                        </span>
                     </button>
                 </nav>
             </div>
 
-            <!-- Mobile menu -->
-            <div
-                v-show="mobileMenuOpen"
-                class="md:hidden bg-kitb-sand-50 border-b border-black/5 px-6 py-5 flex flex-col gap-1 text-[15px] font-medium max-h-[calc(100vh-80px)] overflow-y-auto"
-            >
+            <!-- ================= MOBILE MENU ================= -->
+            <Transition name="menu-panel">
                 <div
-                    v-for="(group, i) in navGroups"
-                    :key="group.label"
-                    class="border-b border-black/5 last:border-b-0"
+                    v-if="mobileMenuOpen"
+                    id="mobile-menu"
+                    class="lg:hidden absolute left-0 right-0 top-full bg-kitb-sand-50 border-b border-black/5 shadow-2xl rounded-b-3xl overflow-hidden"
                 >
-                    <button
-                        type="button"
-                        class="w-full flex items-center justify-between py-3.5"
-                        @click="toggleMobileGroup(i)"
-                    >
-                        {{ group.label }}
-
-                        <svg
-                            width="12"
-                            height="8"
-                            viewBox="0 0 12 8"
-                            fill="none"
-                            class="transition-transform duration-200"
-                            :class="{ 'rotate-180': openMobileGroup === i }"
-                        >
-                            <path
-                                d="M1 1l5 5 5-5"
-                                stroke="currentColor"
-                                stroke-width="1.5"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                        </svg>
-                    </button>
-
                     <div
-                        v-show="openMobileGroup === i"
-                        class="pb-3 pl-3 flex flex-col gap-1"
+                        class="mobile-scroll px-5 sm:px-8 pt-3 overflow-y-auto overscroll-contain"
+                        style="
+                            padding-bottom: calc(
+                                1.5rem + env(safe-area-inset-bottom, 0px)
+                            );
+                        "
                     >
-                        <a
-                            v-for="item in group.items"
-                            :key="item.label"
-                            :href="item.href || '#'"
-                            class="py-2 text-[14px] text-kitb-ink-900/70"
-                            @click="
-                                item.action === 'openVisitForm'
-                                    ? ($event.preventDefault(),
-                                      handleNavItemClick(item))
-                                    : handleNavItemClick(item)
-                            "
+                        <div
+                            v-for="(group, i) in navGroups"
+                            :key="group.label"
+                            class="m-item border-b border-black/5"
+                            :style="{ '--i': i }"
                         >
-                            {{ item.label }}
+                            <button
+                                type="button"
+                                class="w-full flex items-center justify-between py-4 text-[15.5px] font-medium text-kitb-green-900"
+                                :aria-expanded="openMobileGroup === i"
+                                @click="toggleMobileGroup(i)"
+                            >
+                                {{ group.label }}
+                                <svg
+                                    width="12"
+                                    height="8"
+                                    viewBox="0 0 12 8"
+                                    fill="none"
+                                    class="transition-transform duration-300"
+                                    :class="{
+                                        'rotate-180': openMobileGroup === i,
+                                    }"
+                                >
+                                    <path
+                                        d="M1 1l5 5 5-5"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    />
+                                </svg>
+                            </button>
+
+                            <div
+                                class="acc"
+                                :class="{ 'is-open': openMobileGroup === i }"
+                            >
+                                <div
+                                    class="acc-inner"
+                                    :inert="openMobileGroup !== i"
+                                >
+                                    <div class="pb-3 pl-3 flex flex-col">
+                                        <a
+                                            v-for="item in group.items"
+                                            :key="item.label"
+                                            :href="item.href || '#'"
+                                            class="py-2.5 text-[14.5px] text-kitb-ink-900/70 active:text-kitb-green-800"
+                                            @click="
+                                                handleNavItemClick(item, $event)
+                                            "
+                                        >
+                                            {{ item.label }}
+                                            <span
+                                                v-if="item.badge"
+                                                class="ml-2 inline-flex items-center rounded-full bg-kitb-teal-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-kitb-teal-700"
+                                                >{{ item.badge }}</span
+                                            >
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <a
+                            :href="kontakLink.href"
+                            class="m-item block py-4 border-b border-black/5 text-[15.5px] font-medium text-kitb-green-900"
+                            :style="{ '--i': navGroups.length }"
+                            @click="closeMobileMenu"
+                        >
+                            {{ kontakLink.label }}
+                        </a>
+
+                        <a
+                            :href="visitUrl"
+                            class="m-item w-full text-white text-[15px] font-medium text-center py-3.5 rounded-full mt-5 btn-primary block"
+                            :style="{ '--i': navGroups.length + 1 }"
+                            @click="closeMobileMenu"
+                        >
+                            Ajukan Kunjungan
                         </a>
                     </div>
                 </div>
-
-                <a
-                    :href="kontakLink.href"
-                    class="py-3.5 border-b border-black/5"
-                    @click="mobileMenuOpen = false"
-                >
-                    {{ kontakLink.label }}
-                </a>
-
-                <button
-                    type="button"
-                    class="text-white text-center py-2.5 rounded-full mt-4 btn-primary"
-                    @click="
-                        mobileMenuOpen = false;
-                        openVisitForm();
-                    "
-                >
-                    Atur Jadwal
-                </button>
-            </div>
+            </Transition>
         </header>
 
         <!-- ================= HERO ================= -->
         <section
             id="top"
-            class="relative pt-40 pb-28 md:pt-48 md:pb-36 hero-blob-field overflow-hidden"
+            class="relative pt-32 pb-20 sm:pt-40 md:pt-48 md:pb-36 hero-blob-field overflow-hidden"
         >
             <div
                 class="blob blob-organic-1 drift-a"
@@ -619,7 +677,6 @@ const socials = [
                     opacity: 0.9;
                 "
             />
-
             <div
                 class="blob blob-organic-2 drift-b"
                 style="
@@ -636,27 +693,27 @@ const socials = [
                 "
             />
 
-            <div class="max-w-7xl mx-auto px-6 md:px-10 relative">
+            <div class="max-w-7xl mx-auto px-5 sm:px-6 md:px-10 relative">
                 <div class="max-w-2xl" v-fade-in>
                     <div
-                        class="inline-flex items-center gap-2 text-[13px] font-medium px-3.5 py-1.5 rounded-full mb-8 bg-kitb-green-700/10 text-kitb-green-800"
+                        class="inline-flex items-center gap-2 text-[12.5px] sm:text-[13px] font-medium px-3.5 py-1.5 rounded-full mb-6 sm:mb-8 bg-kitb-green-700/10 text-kitb-green-800"
                     >
                         <span
-                            class="w-1.5 h-1.5 rounded-full bg-kitb-teal-500"
+                            class="w-1.5 h-1.5 rounded-full bg-kitb-teal-500 shrink-0"
                         />
                         Badan Usaha Milik Daerah &middot; Kabupaten Siak
                     </div>
 
                     <h1
-                        class="font-display leading-[1.05] mb-7 text-kitb-green-900 font-bold"
-                        style="font-size: clamp(2.4rem, 5.4vw, 4.3rem)"
+                        class="font-display leading-[1.08] mb-6 sm:mb-7 text-kitb-green-900 font-bold"
+                        style="font-size: clamp(2.1rem, 5.4vw, 4.3rem)"
                     >
                         Kawasan industri yang berdiri tepat di bibir Selat
                         Malaka
                     </h1>
 
                     <p
-                        class="text-[17px] md:text-[18px] leading-relaxed max-w-lg mb-10 text-kitb-ink-900/70"
+                        class="text-[16px] md:text-[18px] leading-relaxed max-w-lg mb-8 sm:mb-10 text-kitb-ink-900/70"
                     >
                         PT Kawasan Industri Tanjung Buton mengintegrasikan lahan
                         industri, pelabuhan laut dalam, dan hilirisasi komoditas
@@ -664,18 +721,18 @@ const socials = [
                         tersibuk di dunia
                     </p>
 
-                    <div class="flex flex-wrap items-center gap-4">
-                        <button
-                            type="button"
-                            class="inline-flex items-center text-[15px] font-medium text-white px-7 py-3.5 rounded-full btn-primary"
-                            @click="openVisitForm"
+                    <div
+                        class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4"
+                    >
+                        <a
+                            :href="visitUrl"
+                            class="w-full sm:w-auto inline-flex items-center justify-center text-[15px] font-medium text-white px-7 py-3.5 rounded-full btn-primary"
                         >
-                            Jadwalkan kunjungan lahan
-                        </button>
-
+                            Ajukan kunjungan lahan
+                        </a>
                         <a
                             href="#kawasan"
-                            class="inline-flex items-center text-[15px] font-medium px-7 py-3.5 rounded-full border border-black/15 text-kitb-ink-900"
+                            class="w-full sm:w-auto inline-flex items-center justify-center text-[15px] font-medium px-7 py-3.5 rounded-full border border-black/15 text-kitb-ink-900"
                         >
                             Lihat master plan
                         </a>
@@ -684,11 +741,11 @@ const socials = [
 
                 <div
                     v-fade-in
-                    class="grid grid-cols-2 md:grid-cols-4 gap-8 mt-24 pt-10 border-t border-black/10 max-w-4xl"
+                    class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8 mt-16 md:mt-24 pt-10 border-t border-black/10 max-w-4xl"
                 >
                     <div v-for="(s, i) in stats" :key="s.label">
                         <div
-                            class="stat-number text-3xl md:text-4xl text-kitb-green-800"
+                            class="stat-number text-2xl sm:text-3xl md:text-4xl text-kitb-green-800"
                         >
                             <span
                                 v-count-up="{
@@ -699,13 +756,13 @@ const socials = [
                             >
                                 0
                             </span>
-
-                            <span class="text-lg align-top">{{
+                            <span class="text-base sm:text-lg align-top">{{
                                 s.suffix
                             }}</span>
                         </div>
-
-                        <div class="text-[13px] mt-1 text-kitb-ink-900/55">
+                        <div
+                            class="text-[12.5px] sm:text-[13px] mt-1 text-kitb-ink-900/55"
+                        >
                             {{ s.label }}
                         </div>
                     </div>
@@ -714,7 +771,10 @@ const socials = [
         </section>
 
         <!-- ================= TENTANG ================= -->
-        <section id="tentang" class="relative py-24 md:py-32 overflow-hidden">
+        <section
+            id="tentang"
+            class="relative py-16 sm:py-24 md:py-32 overflow-hidden"
+        >
             <div
                 class="blob blob-organic-2 drift-b"
                 style="
@@ -732,16 +792,15 @@ const socials = [
             />
 
             <div
-                class="max-w-7xl mx-auto px-6 md:px-10 relative grid md:grid-cols-12 gap-12 md:gap-8"
+                class="max-w-7xl mx-auto px-5 sm:px-6 md:px-10 relative grid md:grid-cols-12 gap-8 md:gap-8"
             >
                 <div class="md:col-span-4" v-fade-in>
                     <p class="text-[13px] font-medium mb-4 text-kitb-teal-600">
                         Tentang KITB
                     </p>
-
                     <h2
                         class="font-display leading-[1.1] text-kitb-green-900 font-bold"
-                        style="font-size: clamp(1.9rem, 3.2vw, 2.6rem)"
+                        style="font-size: clamp(1.7rem, 3.2vw, 2.6rem)"
                     >
                         Bukan sekadar penyedia lahan
                     </h2>
@@ -749,7 +808,7 @@ const socials = [
 
                 <div
                     v-fade-in
-                    class="md:col-span-7 md:col-start-6 space-y-6 text-[16.5px] leading-relaxed text-kitb-ink-900/72"
+                    class="md:col-span-7 md:col-start-6 space-y-6 text-[16px] sm:text-[16.5px] leading-relaxed text-kitb-ink-900/72"
                 >
                     <p>
                         Di tengah dinamika ekonomi global, kebutuhan akan ruang
@@ -772,14 +831,13 @@ const socials = [
                         kesejahteraan masyarakat sekitar.
                     </p>
 
-                    <div class="pt-4 grid grid-cols-2 gap-6">
+                    <div class="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div class="border-l-2 pl-5 border-kitb-teal-500">
                             <div
                                 class="font-display font-semibold text-lg mb-1 text-kitb-green-800"
                             >
                                 Smart Industrial Park
                             </div>
-
                             <div class="text-[14.5px] text-kitb-ink-900/55">
                                 Digitalisasi &amp; otomasi untuk efisiensi
                                 operasional tenant.
@@ -792,7 +850,6 @@ const socials = [
                             >
                                 Green Industrial Estate
                             </div>
-
                             <div class="text-[14.5px] text-kitb-ink-900/55">
                                 Energi terbarukan, efisiensi air, pengelolaan
                                 limbah ramah lingkungan
@@ -806,7 +863,7 @@ const socials = [
         <!-- ================= VISI MISI ================= -->
         <section
             id="visi-misi"
-            class="relative py-24 md:py-32 overflow-hidden bg-kitb-navy-900"
+            class="relative py-16 sm:py-24 md:py-32 overflow-hidden bg-kitb-navy-900"
         >
             <div
                 class="blob blob-organic-3 drift-a"
@@ -823,7 +880,6 @@ const socials = [
                     opacity: 0.45;
                 "
             />
-
             <div
                 class="blob blob-organic-1"
                 style="
@@ -836,15 +892,14 @@ const socials = [
                 "
             />
 
-            <div class="max-w-7xl mx-auto px-6 md:px-10 relative">
-                <div class="max-w-xl mb-16" v-fade-in>
+            <div class="max-w-7xl mx-auto px-5 sm:px-6 md:px-10 relative">
+                <div class="max-w-xl mb-12 md:mb-16" v-fade-in>
                     <p class="text-[13px] font-medium mb-4 text-kitb-teal-300">
                         Visi
                     </p>
-
                     <h2
                         class="font-display leading-[1.15] text-white font-bold"
-                        style="font-size: clamp(1.9rem, 3.4vw, 2.7rem)"
+                        style="font-size: clamp(1.7rem, 3.4vw, 2.7rem)"
                     >
                         Menjadi kawasan industri dan maritim terpadu yang
                         berkelanjutan, pintar, dan berdaya saing global
@@ -855,7 +910,7 @@ const socials = [
                     Misi
                 </p>
 
-                <div class="grid md:grid-cols-2 gap-x-10 gap-y-10">
+                <div class="grid md:grid-cols-2 gap-x-10 gap-y-8 md:gap-y-10">
                     <div
                         v-for="(m, i) in misi"
                         :key="m.title"
@@ -870,11 +925,10 @@ const socials = [
                         ]"
                     >
                         <h3
-                            class="font-display font-semibold text-white text-xl mb-2.5"
+                            class="font-display font-semibold text-white text-lg sm:text-xl mb-2.5"
                         >
                             {{ m.title }}
                         </h3>
-
                         <p class="text-[15px] leading-relaxed text-white/60">
                             {{ m.desc }}
                         </p>
@@ -884,9 +938,12 @@ const socials = [
         </section>
 
         <!-- ================= LOKASI ================= -->
-        <section id="lokasi" class="relative py-24 md:py-32 overflow-hidden">
-            <div class="max-w-7xl mx-auto px-6 md:px-10">
-                <div class="grid md:grid-cols-12 gap-12 items-start">
+        <section
+            id="lokasi"
+            class="relative py-16 sm:py-24 md:py-32 overflow-hidden"
+        >
+            <div class="max-w-7xl mx-auto px-5 sm:px-6 md:px-10">
+                <div class="grid md:grid-cols-12 gap-10 md:gap-12 items-start">
                     <div class="md:col-span-5" v-fade-in>
                         <p
                             class="text-[13px] font-medium mb-4 text-kitb-teal-600"
@@ -896,7 +953,7 @@ const socials = [
 
                         <h2
                             class="font-display leading-[1.1] mb-6 text-kitb-green-900 font-bold"
-                            style="font-size: clamp(1.9rem, 3.2vw, 2.6rem)"
+                            style="font-size: clamp(1.7rem, 3.2vw, 2.6rem)"
                         >
                             Menghadap langsung jalur pelayaran tersibuk di
                             dunia.
@@ -917,29 +974,24 @@ const socials = [
                                 <div
                                     class="w-1.5 h-1.5 rounded-full mt-2.5 shrink-0 bg-kitb-teal-500"
                                 />
-
                                 <p class="text-[15px] text-kitb-ink-900/68">
                                     Panjang alur pelayaran &plusmn; 36 mil,
                                     lebar alur 15&ndash;17 m LWS
                                 </p>
                             </div>
-
                             <div class="flex items-start gap-3.5">
                                 <div
                                     class="w-1.5 h-1.5 rounded-full mt-2.5 shrink-0 bg-kitb-teal-500"
                                 />
-
                                 <p class="text-[15px] text-kitb-ink-900/68">
                                     Fasilitas kapal labuh dan pelayanan
                                     pemanduan tersedia
                                 </p>
                             </div>
-
                             <div class="flex items-start gap-3.5">
                                 <div
                                     class="w-1.5 h-1.5 rounded-full mt-2.5 shrink-0 bg-kitb-teal-500"
                                 />
-
                                 <p class="text-[15px] text-kitb-ink-900/68">
                                     Ombak relatif kecil (0,32&ndash;0,98 m),
                                     arus maksimal 0,68&ndash;0,83 m/detik
@@ -949,39 +1001,40 @@ const socials = [
                     </div>
 
                     <div
-                        class="md:col-span-6 md:col-start-7"
+                        class="md:col-span-6 md:col-start-7 min-w-0"
                         v-fade-in
                         style="transition-delay: 120ms"
                     >
                         <div
-                            class="rounded-2xl overflow-hidden bg-kitb-sand-100"
+                            class="rounded-2xl overflow-x-auto bg-kitb-sand-100"
                         >
-                            <table class="w-full text-[14.5px]">
+                            <table
+                                class="w-full min-w-[520px] text-[14px] sm:text-[14.5px]"
+                            >
                                 <thead>
                                     <tr class="text-left bg-kitb-green-700">
                                         <th
-                                            class="px-6 py-4 font-medium text-white text-[13px]"
+                                            class="px-4 sm:px-6 py-3.5 sm:py-4 font-medium text-white text-[13px]"
                                         >
                                             Rute
                                         </th>
                                         <th
-                                            class="px-6 py-4 font-medium text-white text-[13px]"
+                                            class="px-4 sm:px-6 py-3.5 sm:py-4 font-medium text-white text-[13px]"
                                         >
                                             Jalur
                                         </th>
                                         <th
-                                            class="px-6 py-4 font-medium text-white text-[13px]"
+                                            class="px-4 sm:px-6 py-3.5 sm:py-4 font-medium text-white text-[13px]"
                                         >
                                             Jarak
                                         </th>
                                         <th
-                                            class="px-6 py-4 font-medium text-white text-[13px]"
+                                            class="px-4 sm:px-6 py-3.5 sm:py-4 font-medium text-white text-[13px]"
                                         >
                                             Waktu tempuh
                                         </th>
                                     </tr>
                                 </thead>
-
                                 <tbody>
                                     <tr
                                         v-for="r in routes"
@@ -989,25 +1042,22 @@ const socials = [
                                         class="route-row"
                                     >
                                         <td
-                                            class="px-6 py-4 font-medium text-kitb-green-800"
+                                            class="px-4 sm:px-6 py-3.5 sm:py-4 font-medium text-kitb-green-800"
                                         >
                                             {{ r.name }}
                                         </td>
-
                                         <td
-                                            class="px-6 py-4 text-kitb-ink-900/70"
+                                            class="px-4 sm:px-6 py-3.5 sm:py-4 text-kitb-ink-900/70"
                                         >
                                             {{ r.path }}
                                         </td>
-
                                         <td
-                                            class="px-6 py-4 text-kitb-ink-900/70"
+                                            class="px-4 sm:px-6 py-3.5 sm:py-4 text-kitb-ink-900/70 whitespace-nowrap"
                                         >
                                             {{ r.distance }}
                                         </td>
-
                                         <td
-                                            class="px-6 py-4 text-kitb-ink-900/70"
+                                            class="px-4 sm:px-6 py-3.5 sm:py-4 text-kitb-ink-900/70 whitespace-nowrap"
                                         >
                                             {{ r.time }}
                                         </td>
@@ -1028,7 +1078,7 @@ const socials = [
         <!-- ================= KAWASAN / MASTER PLAN ================= -->
         <section
             id="kawasan"
-            class="relative py-24 md:py-32 overflow-hidden bg-kitb-sand-100"
+            class="relative py-16 sm:py-24 md:py-32 overflow-hidden bg-kitb-sand-100"
         >
             <div
                 class="blob blob-organic-2 drift-b"
@@ -1046,21 +1096,23 @@ const socials = [
                 "
             />
 
-            <div class="max-w-7xl mx-auto px-6 md:px-10 relative">
-                <div class="max-w-xl mb-16" v-fade-in>
+            <div class="max-w-7xl mx-auto px-5 sm:px-6 md:px-10 relative">
+                <div class="max-w-xl mb-12 md:mb-16" v-fade-in>
                     <p class="text-[13px] font-medium mb-4 text-kitb-teal-600">
                         Ketersediaan lahan
                     </p>
-
                     <h2
                         class="font-display leading-[1.1] text-kitb-green-900 font-bold"
-                        style="font-size: clamp(1.9rem, 3.2vw, 2.6rem)"
+                        style="font-size: clamp(1.7rem, 3.2vw, 2.6rem)"
                     >
                         6.070 hektar, terbagi dalam tahapan yang jelas
                     </h2>
                 </div>
 
-                <div v-fade-in class="grid md:grid-cols-3 gap-10 mb-20">
+                <div
+                    v-fade-in
+                    class="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-10 mb-16 md:mb-20"
+                >
                     <div v-for="(l, i) in lahan" :key="l.label">
                         <div
                             class="stat-number text-4xl md:text-5xl mb-2 text-kitb-green-800"
@@ -1074,12 +1126,10 @@ const socials = [
                             >
                                 0
                             </span>
-
                             <span class="text-xl align-top ml-1">{{
                                 l.unit
                             }}</span>
                         </div>
-
                         <div class="text-[14.5px] text-kitb-ink-900/55">
                             {{ l.label }}
                         </div>
@@ -1087,12 +1137,14 @@ const socials = [
                 </div>
 
                 <!-- ================= TAHAP 1 ================= -->
-                <div class="border-t pt-16 border-black/10">
+                <div class="border-t pt-12 md:pt-16 border-black/10">
                     <p class="text-[13px] font-medium mb-10 text-kitb-teal-600">
                         Pembangunan tahap 1 &middot; 300 Ha
                     </p>
 
-                    <div class="grid md:grid-cols-3 gap-x-8 gap-y-12 relative">
+                    <div
+                        class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10 relative"
+                    >
                         <div
                             v-for="(t, i) in tahap1"
                             :key="t.title"
@@ -1104,7 +1156,6 @@ const socials = [
                                 v-if="i < tahap1.length - 1"
                                 class="absolute left-0 top-1.5 bottom-0 w-px process-line"
                             />
-
                             <div
                                 class="absolute left-[-4.5px] top-1 w-2.5 h-2.5 rounded-full"
                                 :class="
@@ -1113,13 +1164,11 @@ const socials = [
                                         : 'bg-kitb-green-700'
                                 "
                             />
-
                             <h3
                                 class="font-display font-semibold text-lg mb-2 text-kitb-green-900"
                             >
                                 {{ t.title }}
                             </h3>
-
                             <p
                                 class="text-[14.5px] leading-relaxed text-kitb-ink-900/62"
                             >
@@ -1130,12 +1179,13 @@ const socials = [
                 </div>
 
                 <!-- ================= PETA TAHAPAN PENGEMBANGAN ================= -->
-                <div class="border-t pt-16 mt-20 border-black/10">
+                <div
+                    class="border-t pt-12 md:pt-16 mt-16 md:mt-20 border-black/10"
+                >
                     <div
                         v-fade-in
-                        class="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start"
+                        class="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start"
                     >
-                        <!-- Keterangan -->
                         <div class="lg:col-span-4">
                             <p
                                 class="text-[13px] font-medium mb-4 text-kitb-teal-600"
@@ -1145,7 +1195,7 @@ const socials = [
 
                             <h3
                                 class="font-display leading-[1.1] mb-5 text-kitb-green-900 font-bold"
-                                style="font-size: clamp(1.7rem, 2.8vw, 2.3rem)"
+                                style="font-size: clamp(1.5rem, 2.8vw, 2.3rem)"
                             >
                                 {{ masterPlan.judul }}
                             </h3>
@@ -1162,45 +1212,50 @@ const socials = [
                                 <div class="text-[12px] text-white/55 mb-1">
                                     Total luas kawasan
                                 </div>
-
                                 <div class="font-display font-bold text-3xl">
                                     {{
                                         masterPlan.total_luas_ha.toLocaleString(
                                             "id-ID",
                                         )
                                     }}
-
                                     <span
                                         class="text-lg font-medium text-white/65"
+                                        >Ha</span
                                     >
-                                        Ha
-                                    </span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Peta -->
-                        <div class="lg:col-span-8">
+                        <div class="lg:col-span-8 min-w-0">
                             <div
                                 class="rounded-2xl overflow-hidden bg-kitb-surface border border-black/5 shadow-sm"
                             >
-                                <a
-                                    :href="masterPlan.gambar_path"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="block"
+                                <div
+                                    class="overflow-x-auto overscroll-x-contain"
                                 >
-                                    <img
-                                        :src="masterPlan.gambar_path"
-                                        :alt="masterPlan.judul"
-                                        class="w-full h-auto object-contain"
-                                    />
-                                </a>
+                                    <a
+                                        :href="masterPlan.gambar_path"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="block min-w-[560px] sm:min-w-0"
+                                    >
+                                        <img
+                                            :src="masterPlan.gambar_path"
+                                            :alt="masterPlan.judul"
+                                            class="w-full h-auto object-contain"
+                                            loading="lazy"
+                                        />
+                                    </a>
+                                </div>
                             </div>
 
                             <p class="text-[12.5px] mt-3 text-kitb-ink-900/45">
-                                Klik peta untuk melihat gambar dalam ukuran
+                                Ketuk peta untuk melihat gambar dalam ukuran
                                 penuh.
+                                <span class="sm:hidden"
+                                    >Geser ke samping untuk melihat seluruh
+                                    peta.</span
+                                >
                             </p>
                         </div>
                     </div>
@@ -1208,7 +1263,7 @@ const socials = [
                     <!-- Legend zona -->
                     <div
                         v-fade-in
-                        class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-3"
+                        class="mt-10 md:mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-3"
                     >
                         <div
                             v-for="zone in kawasanZones"
@@ -1220,14 +1275,12 @@ const socials = [
                                     class="w-4 h-4 rounded shrink-0 border border-black/10"
                                     :style="{ backgroundColor: zone.warna }"
                                 />
-
                                 <div class="min-w-0">
                                     <div
                                         class="text-[14px] font-medium text-kitb-green-900"
                                     >
                                         {{ zone.label }}
                                     </div>
-
                                     <div
                                         v-if="zone.catatan"
                                         class="text-[11.5px] text-kitb-ink-900/45"
@@ -1257,11 +1310,11 @@ const socials = [
         </section>
 
         <!-- ================= CTA ================= -->
-        <section class="relative py-20 md:py-28">
-            <div class="max-w-7xl mx-auto px-6 md:px-10">
+        <section class="relative py-14 sm:py-20 md:py-28">
+            <div class="max-w-7xl mx-auto px-5 sm:px-6 md:px-10">
                 <div
                     v-fade-in
-                    class="rounded-3xl px-8 py-14 md:px-16 md:py-20 text-center relative overflow-hidden bg-kitb-green-700"
+                    class="rounded-3xl px-6 py-12 sm:px-8 md:px-16 md:py-20 text-center relative overflow-hidden bg-kitb-green-700"
                 >
                     <div
                         class="blob blob-organic-1 drift-a"
@@ -1274,7 +1327,6 @@ const socials = [
                             opacity: 0.25;
                         "
                     />
-
                     <div
                         class="blob blob-organic-3 drift-b"
                         style="
@@ -1295,20 +1347,19 @@ const socials = [
 
                     <h2
                         class="font-display text-white leading-[1.15] max-w-2xl mx-auto relative font-bold"
-                        style="font-size: clamp(1.8rem, 3.6vw, 2.8rem)"
+                        style="font-size: clamp(1.6rem, 3.6vw, 2.8rem)"
                     >
                         Bersama para mitra dan investor, kami siap memimpin
                         transformasi industri Indonesia.
                     </h2>
 
-                    <div class="mt-10 relative">
-                        <button
-                            type="button"
-                            class="inline-flex items-center text-[15px] font-medium px-8 py-3.5 rounded-full bg-white text-[#163a70]"
-                            @click="openVisitForm"
+                    <div class="mt-8 sm:mt-10 relative">
+                        <a
+                            :href="visitUrl"
+                            class="w-full sm:w-auto inline-flex items-center justify-center text-[15px] font-medium px-8 py-3.5 rounded-full bg-white text-[#163a70]"
                         >
                             Mulai diskusi investasi
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1317,7 +1368,7 @@ const socials = [
         <!-- ================= FOOTER / KONTAK ================= -->
         <footer
             id="kontak"
-            class="relative pt-20 pb-8 overflow-hidden bg-kitb-navy-900"
+            class="relative pt-16 md:pt-20 pb-8 overflow-hidden bg-kitb-navy-900"
         >
             <div
                 class="blob blob-organic-2"
@@ -1331,20 +1382,21 @@ const socials = [
                 "
             />
 
-            <div class="max-w-7xl mx-auto px-6 md:px-10 relative">
+            <div class="max-w-7xl mx-auto px-5 sm:px-6 md:px-10 relative">
                 <!-- Logo, alamat, email -->
-                <div class="flex flex-col items-center text-center mb-16">
+                <div
+                    class="flex flex-col items-center text-center mb-14 md:mb-16"
+                >
                     <div class="flex items-center gap-4 mb-4">
                         <img
                             src="/images/siak-kabupaten.png"
                             alt="Lambang Kabupaten Siak"
-                            class="h-14 w-auto rounded-sm"
+                            class="h-12 sm:h-14 w-auto rounded-sm"
                         />
-
                         <img
                             src="/images/kitb-logo.png"
                             alt="Logo KITB"
-                            class="h-14 w-auto"
+                            class="h-12 sm:h-14 w-auto"
                         />
                     </div>
 
@@ -1360,9 +1412,10 @@ const socials = [
                         Sungai Apit, Kabupaten Siak, Provinsi Riau
                     </p>
 
-                    <p class="text-[14.5px] text-white/60 mt-1.5">
+                    <p
+                        class="text-[14.5px] text-white/60 mt-1.5 max-w-full break-words"
+                    >
                         <span class="font-medium text-white/85">Email:</span>
-
                         <a
                             href="mailto:info@tanjungbuton-industrial.co.id"
                             class="hover:text-white transition-colors"
@@ -1372,223 +1425,145 @@ const socials = [
                     </p>
                 </div>
 
-                <!-- Kolom navigasi -->
+                <!-- Kolom navigasi (data dari navGroups) -->
                 <div
-                    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-x-8 gap-y-10 pb-14 border-b border-white/10"
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-8 gap-y-10 pb-12 md:pb-14 border-b border-white/10"
                 >
-                    <!-- Profil Perusahaan -->
-                    <div class="text-center md:text-left">
+                    <div
+                        v-for="group in navGroups"
+                        :key="group.label"
+                        class="text-center sm:text-left"
+                    >
                         <h4 class="text-[13px] font-semibold text-white mb-4">
-                            Profil Perusahaan
+                            {{ group.label }}
                         </h4>
-
                         <ul
-                            class="flex flex-col items-center md:items-start gap-2.5 text-[14.5px] text-white/55"
+                            class="flex flex-col items-center sm:items-start gap-2.5 text-[14.5px] text-white/55"
                         >
-                            <li>
+                            <li v-for="item in group.items" :key="item.label">
                                 <a
-                                    href="#tentang"
+                                    :href="item.href || '#'"
                                     class="hover:text-white transition-colors"
+                                    @click="handleNavItemClick(item, $event)"
                                 >
-                                    Tentang Kami
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#visi-misi"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Visi, Misi, dan Nilai
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Latar Belakang
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Struktur Perusahaan
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Anak Usaha
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Kawasan Industri -->
-                    <div class="text-center md:text-left">
-                        <h4 class="text-[13px] font-semibold text-white mb-4">
-                            Kawasan Industri
-                        </h4>
-
-                        <ul
-                            class="flex flex-col items-center md:items-start gap-2.5 text-[14.5px] text-white/55"
-                        >
-                            <li>
-                                <a
-                                    href="#kawasan"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Master Plan KITB
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#kawasan"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Ketersediaan Lahan
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Pembangunan Tahap 1
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Kawasan Pelabuhan
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Hubungan Investor -->
-                    <div class="text-center md:text-left">
-                        <h4 class="text-[13px] font-semibold text-white mb-4">
-                            Hubungan Investor
-                        </h4>
-
-                        <ul
-                            class="flex flex-col items-center md:items-start gap-2.5 text-[14.5px] text-white/55"
-                        >
-                            <li>
-                                <button
-                                    type="button"
-                                    class="hover:text-white transition-colors text-center md:text-left"
-                                    @click="openVisitForm"
-                                >
-                                    Jadwalkan Kunjungan Lahan
-                                </button>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Peluang Investasi
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Ease of Doing Business
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#lokasi"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Rute Pelayaran &amp; Lokasi
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Pusat Informasi -->
-                    <div class="text-center md:text-left">
-                        <h4 class="text-[13px] font-semibold text-white mb-4">
-                            Pusat Informasi
-                        </h4>
-
-                        <ul
-                            class="flex flex-col items-center md:items-start gap-2.5 text-[14.5px] text-white/55"
-                        >
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Berita
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Galeri
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
-                                    href="#"
-                                    class="hover:text-white transition-colors"
-                                >
-                                    Publikasi
+                                    {{ item.label }}
+                                    <span
+                                        v-if="item.badge"
+                                        class="ml-2 inline-flex items-center rounded-full bg-kitb-teal-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-kitb-teal-300"
+                                        >{{ item.badge }}</span
+                                    >
                                 </a>
                             </li>
                         </ul>
                     </div>
 
                     <!-- Kontak Kami -->
-                    <div class="text-center md:text-left">
+                    <div
+                        class="text-center sm:text-left sm:col-span-2 lg:col-span-1 min-w-0"
+                    >
                         <h4 class="text-[13px] font-semibold text-white mb-4">
                             Kontak Kami
                         </h4>
 
                         <a
                             href="mailto:info@tanjungbuton-industrial.co.id"
-                            class="inline-flex items-center text-[13.5px] font-medium text-white px-4 py-2 rounded-full bg-kitb-teal-500 mb-4"
+                            class="inline-flex items-center gap-2 text-[13.5px] font-medium text-white px-5 py-2.5 rounded-full bg-kitb-teal-500 hover:brightness-110 transition mb-5"
                         >
-                            info@tanjungbuton-industrial.co.id
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                aria-hidden="true"
+                            >
+                                <rect
+                                    x="3"
+                                    y="5"
+                                    width="18"
+                                    height="14"
+                                    rx="2.5"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                />
+                                <path
+                                    d="M4 7.5l8 6 8-6"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                />
+                            </svg>
+                            Kirim Email
                         </a>
 
                         <div
-                            class="flex items-center justify-center md:justify-start gap-2.5"
+                            class="flex items-center justify-center sm:justify-start gap-2.5"
                         >
                             <a
                                 v-for="soc in socials"
                                 :key="soc.label"
                                 :href="soc.href"
                                 :aria-label="soc.label"
-                                class="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold bg-white/10 text-white/70 hover:bg-kitb-teal-500 hover:text-white transition-colors"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 text-white/70 hover:bg-kitb-teal-500 hover:text-white transition-colors"
                             >
-                                {{ soc.abbr }}
+                                <svg
+                                    v-if="soc.type === 'instagram'"
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    aria-hidden="true"
+                                >
+                                    <rect
+                                        x="3"
+                                        y="3"
+                                        width="18"
+                                        height="18"
+                                        rx="5"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                    />
+                                    <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="4"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                    />
+                                    <circle
+                                        cx="17.2"
+                                        cy="6.8"
+                                        r="1.1"
+                                        fill="currentColor"
+                                    />
+                                </svg>
+                                <svg
+                                    v-else-if="soc.type === 'tiktok'"
+                                    width="17"
+                                    height="17"
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"
+                                    />
+                                </svg>
+                                <svg
+                                    v-else
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M21.6 7.2a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.84.43A2.5 2.5 0 0 0 2.4 7.2C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.84-.43a2.5 2.5 0 0 0 1.76-1.77C22 15.2 22 12 22 12s0-3.2-.4-4.8zM10 9.5v5l4.5-2.5z"
+                                    />
+                                </svg>
                             </a>
                         </div>
                     </div>
@@ -1597,6 +1572,7 @@ const socials = [
                 <!-- Bottom bar -->
                 <div
                     class="pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-[13px] text-white/40"
+                    style="padding-bottom: env(safe-area-inset-bottom, 0px)"
                 >
                     <p
                         class="flex flex-wrap items-center gap-x-2 gap-y-1 justify-center md:justify-start text-center md:text-left"
@@ -1605,24 +1581,18 @@ const socials = [
                             &copy; 2026 PT. Kawasan Industri Tanjung Buton.
                             Badan Usaha Milik Daerah, Kabupaten Siak.
                         </span>
-
                         <span class="hidden md:inline">/</span>
-
                         <a
                             href="#"
                             class="underline hover:text-white transition-colors"
+                            >Kebijakan Privasi</a
                         >
-                            Kebijakan Privasi
-                        </a>
-
                         <span class="hidden md:inline">/</span>
-
                         <a
                             href="#"
                             class="underline hover:text-white transition-colors"
+                            >Pengaduan</a
                         >
-                            Pengaduan
-                        </a>
                     </p>
 
                     <p class="text-center">
@@ -1631,220 +1601,16 @@ const socials = [
                 </div>
             </div>
         </footer>
-
-        <!-- ================= MODAL ================= -->
-        <Transition name="modal-fade">
-            <div
-                v-if="showVisitForm"
-                class="fixed inset-0 z-[100] flex items-center justify-center px-4 py-10"
-            >
-                <div
-                    class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                    @click="closeVisitForm"
-                />
-
-                <div
-                    class="relative w-full max-w-lg max-h-[88vh] overflow-y-auto rounded-3xl bg-kitb-sand-50 shadow-2xl"
-                >
-                    <div
-                        class="sticky top-0 flex items-start justify-between px-7 pt-7 pb-4 bg-kitb-sand-50"
-                    >
-                        <div>
-                            <p
-                                class="text-[13px] font-medium text-kitb-teal-600 mb-1"
-                            >
-                                Kunjungan Lahan
-                            </p>
-
-                            <h3
-                                class="font-display font-bold text-xl text-kitb-green-900"
-                            >
-                                Jadwalkan kunjungan Anda
-                            </h3>
-                        </div>
-
-                        <button
-                            type="button"
-                            aria-label="Tutup"
-                            class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-black/5 shrink-0"
-                            @click="closeVisitForm"
-                        >
-                            <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 18 18"
-                                fill="none"
-                            >
-                                <path
-                                    d="M4 4l10 10M14 4L4 14"
-                                    stroke="currentColor"
-                                    stroke-width="1.6"
-                                    stroke-linecap="round"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <form
-                        class="px-7 pb-7 space-y-4"
-                        @submit.prevent="submitVisitForm"
-                    >
-                        <div>
-                            <label
-                                class="block text-[13px] font-medium mb-1.5 text-kitb-ink-900/70"
-                            >
-                                Nama lengkap
-                            </label>
-
-                            <input
-                                v-model="visitForm.nama"
-                                type="text"
-                                required
-                                class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
-                                placeholder="Nama Anda"
-                            />
-
-                            <p
-                                v-if="visitForm.errors.nama"
-                                class="text-[13px] text-red-600 mt-1"
-                            >
-                                {{ visitForm.errors.nama }}
-                            </p>
-                        </div>
-
-                        <div>
-                            <label
-                                class="block text-[13px] font-medium mb-1.5 text-kitb-ink-900/70"
-                            >
-                                Instansi / Perusahaan
-                            </label>
-
-                            <input
-                                v-model="visitForm.instansi"
-                                type="text"
-                                class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
-                                placeholder="Nama perusahaan / instansi"
-                            />
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label
-                                    class="block text-[13px] font-medium mb-1.5 text-kitb-ink-900/70"
-                                >
-                                    Email
-                                </label>
-
-                                <input
-                                    v-model="visitForm.email"
-                                    type="email"
-                                    required
-                                    class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
-                                    placeholder="nama@email.com"
-                                />
-
-                                <p
-                                    v-if="visitForm.errors.email"
-                                    class="text-[13px] text-red-600 mt-1"
-                                >
-                                    {{ visitForm.errors.email }}
-                                </p>
-                            </div>
-
-                            <div>
-                                <label
-                                    class="block text-[13px] font-medium mb-1.5 text-kitb-ink-900/70"
-                                >
-                                    No. Telepon
-                                </label>
-
-                                <input
-                                    v-model="visitForm.telepon"
-                                    type="tel"
-                                    required
-                                    class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
-                                    placeholder="08xx-xxxx-xxxx"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label
-                                    class="block text-[13px] font-medium mb-1.5 text-kitb-ink-900/70"
-                                >
-                                    Tanggal kunjungan
-                                </label>
-
-                                <input
-                                    v-model="visitForm.tanggal_kunjungan"
-                                    type="date"
-                                    required
-                                    class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
-                                />
-                            </div>
-
-                            <div>
-                                <label
-                                    class="block text-[13px] font-medium mb-1.5 text-kitb-ink-900/70"
-                                >
-                                    Jumlah peserta
-                                </label>
-
-                                <input
-                                    v-model="visitForm.jumlah_peserta"
-                                    type="number"
-                                    min="1"
-                                    class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
-                                    placeholder="1"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label
-                                class="block text-[13px] font-medium mb-1.5 text-kitb-ink-900/70"
-                            >
-                                Keperluan / catatan
-                            </label>
-
-                            <textarea
-                                v-model="visitForm.keperluan"
-                                rows="3"
-                                class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20 resize-none"
-                                placeholder="Ceritakan tujuan kunjungan Anda"
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            :disabled="visitForm.processing"
-                            class="w-full inline-flex items-center justify-center text-[15px] font-medium text-white px-7 py-3.5 rounded-full btn-primary disabled:opacity-60"
-                        >
-                            {{
-                                visitForm.processing
-                                    ? "Mengirim..."
-                                    : "Kirim jadwal kunjungan"
-                            }}
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </Transition>
-
-        <!-- ================= TOAST SUKSES ================= -->
-        <Transition name="toast-fade">
-            <div
-                v-if="showSuccessToast"
-                class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[110] bg-kitb-navy-900 text-white text-[14.5px] px-6 py-3.5 rounded-full shadow-xl"
-            >
-                Permintaan kunjungan terkirim — tim kami akan menghubungi Anda.
-            </div>
-        </Transition>
     </div>
 </template>
 
 <style scoped>
+/* ---------------- Global ---------------- */
+:global(html) {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+}
+
 .kitb-landing {
     font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
 }
@@ -1853,9 +1619,24 @@ const socials = [
     font-family: inherit;
 }
 
+/* Cegah auto-zoom iOS saat fokus input */
+.kitb-landing input,
+.kitb-landing textarea {
+    font-size: 16px;
+}
+
+.kitb-landing a:focus-visible,
+.kitb-landing button:focus-visible {
+    outline: 2px solid #2e6fbf;
+    outline-offset: 2px;
+}
+
+/* ---------------- Blob ---------------- */
 .blob {
     position: absolute;
     pointer-events: none;
+    max-width: 90vw;
+    max-height: 90vw;
 }
 
 .blob-organic-1 {
@@ -1875,7 +1656,6 @@ const socials = [
     100% {
         transform: translate(0, 0) rotate(0deg);
     }
-
     50% {
         transform: translate(18px, -24px) rotate(6deg);
     }
@@ -1886,7 +1666,6 @@ const socials = [
     100% {
         transform: translate(0, 0) rotate(0deg);
     }
-
     50% {
         transform: translate(-22px, 20px) rotate(-5deg);
     }
@@ -1898,13 +1677,6 @@ const socials = [
 
 .drift-b {
     animation: driftB 19s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .drift-a,
-    .drift-b {
-        animation: none;
-    }
 }
 
 .hero-blob-field {
@@ -1919,27 +1691,6 @@ const socials = [
     font-family: "Poppins", sans-serif;
     font-weight: 700;
     letter-spacing: -0.02em;
-}
-
-.nav-link {
-    position: relative;
-}
-
-.nav-link::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -4px;
-    height: 1.5px;
-    background: #2e6fbf;
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.25s ease;
-}
-
-.nav-link:hover::after {
-    transform: scaleX(1);
 }
 
 .route-row:nth-child(odd) {
@@ -1966,6 +1717,139 @@ const socials = [
     background: linear-gradient(180deg, #2e6fbf, #163a70);
 }
 
+/* ---------------- Navbar desktop ---------------- */
+.nav-trigger {
+    color: rgba(11, 31, 63, 0.8);
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.nav-trigger:hover,
+.nav-trigger:focus-visible {
+    background: rgba(22, 58, 112, 0.07);
+    color: #163a70;
+}
+
+/* ---------------- Hamburger -> X ---------------- */
+.burger {
+    position: relative;
+    width: 22px;
+    height: 16px;
+}
+
+.burger span {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    border-radius: 2px;
+    background: #163a70;
+    transition:
+        transform 0.35s cubic-bezier(0.65, 0, 0.35, 1),
+        opacity 0.2s ease,
+        top 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.burger span:nth-child(1) {
+    top: 0;
+}
+
+.burger span:nth-child(2) {
+    top: 7px;
+}
+
+.burger span:nth-child(3) {
+    top: 14px;
+}
+
+.burger.is-open span:nth-child(1) {
+    top: 7px;
+    transform: rotate(45deg);
+}
+
+.burger.is-open span:nth-child(2) {
+    opacity: 0;
+    transform: scaleX(0.3);
+}
+
+.burger.is-open span:nth-child(3) {
+    top: 7px;
+    transform: rotate(-45deg);
+}
+
+/* ---------------- Panel menu mobile ---------------- */
+.mobile-scroll {
+    max-height: calc(100dvh - 4rem - env(safe-area-inset-top, 0px) - 1rem);
+}
+
+@media (min-width: 640px) {
+    .mobile-scroll {
+        max-height: calc(100dvh - 5rem - env(safe-area-inset-top, 0px) - 1rem);
+    }
+}
+
+.menu-panel-enter-active {
+    transition:
+        opacity 0.3s ease,
+        transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.menu-panel-leave-active {
+    transition:
+        opacity 0.2s ease,
+        transform 0.25s ease;
+}
+
+.menu-panel-enter-from,
+.menu-panel-leave-to {
+    opacity: 0;
+    transform: translateY(-14px);
+}
+
+.backdrop-enter-active,
+.backdrop-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.backdrop-enter-from,
+.backdrop-leave-to {
+    opacity: 0;
+}
+
+/* Item menu muncul berurutan (stagger) */
+.m-item {
+    animation: menuItemIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 55ms + 80ms);
+}
+
+@keyframes menuItemIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Accordion halus tanpa hitung tinggi manual */
+.acc {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease;
+}
+
+.acc.is-open {
+    grid-template-rows: 1fr;
+}
+
+.acc-inner {
+    overflow: hidden;
+    min-height: 0;
+}
+
 /* ---------------- Fade-in on scroll ---------------- */
 .fade-in {
     opacity: 0;
@@ -1980,40 +1864,25 @@ const socials = [
     transform: translateY(0);
 }
 
-/* ---------------- Modal / toast transitions ---------------- */
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-    transition: opacity 0.25s ease;
-}
+/* ---------------- Reduced motion ---------------- */
+@media (prefers-reduced-motion: reduce) {
+    :global(html) {
+        scroll-behavior: auto;
+    }
 
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-    opacity: 0;
-}
+    .drift-a,
+    .drift-b,
+    .m-item {
+        animation: none;
+    }
 
-.modal-fade-enter-active > div:last-child,
-.modal-fade-leave-active > div:last-child {
-    transition:
-        opacity 0.25s ease,
-        transform 0.25s ease;
-}
-
-.modal-fade-enter-from > div:last-child,
-.modal-fade-leave-to > div:last-child {
-    opacity: 0;
-    transform: scale(0.96) translateY(8px);
-}
-
-.toast-fade-enter-active,
-.toast-fade-leave-active {
-    transition:
-        opacity 0.3s ease,
-        transform 0.3s ease;
-}
-
-.toast-fade-enter-from,
-.toast-fade-leave-to {
-    opacity: 0;
-    transform: translate(-50%, 12px);
+    .menu-panel-enter-active,
+    .menu-panel-leave-active,
+    .backdrop-enter-active,
+    .backdrop-leave-active,
+    .acc,
+    .burger span {
+        transition: none;
+    }
 }
 </style>
