@@ -32,7 +32,7 @@ class PublicLowonganKerjaController extends Controller
             ->paginate(9)
             ->withQueryString();
 
-        return Inertia::render('Public/Karier/Index', [
+        return Inertia::render('Karier/Index', [
             'lowongans' => $lowongans,
         ]);
     }
@@ -57,7 +57,7 @@ class PublicLowonganKerjaController extends Controller
             })
             ->firstOrFail();
 
-        return Inertia::render('Public/Karier/Detail', [
+        return Inertia::render('Karier/Detail', [
             'lowongan' => $lowongan,
         ]);
     }

@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\RuteController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PublicLamaranController;
 use App\Http\Controllers\PublicLowonganKerjaController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,9 +26,29 @@ Route::get('/', function () {
 })->name('home');
 
 
-// Karir public
-Route::get('/karier', [PublicLowonganKerjaController::class, 'index'])->name('karier');
-Route::get('/karier/{slug}', [PublicLowonganKerjaController::class, 'show'])->name('karier.detail');
+// Karier public
+Route::get('/karier', [
+    PublicLowonganKerjaController::class,
+    'index',
+])->name('karier');
+
+Route::get('/karier/{lowongan:slug}', [
+    PublicLowonganKerjaController::class,
+    'show',
+])->name('karier.detail');
+
+// Lamaran public
+Route::get('/karier/{lowongan:slug}/lamar', [
+    PublicLamaranController::class,
+    'create',
+])->name('karier.lamar');
+
+Route::post('/karier/{lowongan:slug}/lamar', [
+    PublicLamaranController::class,
+    'store',
+])
+    ->middleware('throttle:5,1')
+    ->name('karier.lamar.store');
 
 
 // Admin
