@@ -15,6 +15,35 @@
         }
     </style>
 
+    {{-- ===== SEO DASAR ===== --}}
+    <meta name="description"
+        content="Aplikasi KITB untuk mengelola profil perusahaan, informasi kawasan, dan hubungan investor secara terpusat.">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="author" content="KITB">
+    <meta name="application-name" content="KITB">
+    <link rel="canonical" href="https://domain-anda.com">
+
+    {{-- ===== OPEN GRAPH ===== --}}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="KITB">
+    <meta property="og:title" content="KITB Web – Aplikasi Manajemen KITB">
+    <meta property="og:description"
+        content="Aplikasi KITB untuk mengelola profil perusahaan, informasi kawasan, dan hubungan investor secara terpusat.">
+    <meta property="og:url" content="https://domain-anda.com">
+    <meta property="og:image" content="https://domain-anda.com/og-image.png">
+    <meta property="og:locale" content="id_ID">
+
+    {{-- ===== TWITTER / X ===== --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="KITB Web – Aplikasi Manajemen KITB">
+    <meta name="twitter:description"
+        content="Aplikasi KITB untuk mengelola profil perusahaan, informasi kawasan, dan hubungan investor secara terpusat.">
+    <meta name="twitter:image" content="https://domain-anda.com/og-image.png">
+
+    {{-- ===== BROWSER ===== --}}
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0b1728" media="(prefers-color-scheme: dark)">
+
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -22,7 +51,9 @@
     @vite(['resources/css/app.css', 'resources/js/app.ts'])
 
     <x-inertia::head>
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>
+            KITB - PT Kawasan Industri Tanjung Buton
+        </title>
     </x-inertia::head>
 </head>
 

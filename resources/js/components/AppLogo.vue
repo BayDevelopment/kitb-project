@@ -1,19 +1,31 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-
-const name = usePage().props.name;
+const logoSrc = "/logoside.png";
 </script>
 
 <template>
     <div
-        class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
+        class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg"
     >
-        <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />
+        <img
+            :src="logoSrc"
+            alt="Logo KITB"
+            width="32"
+            height="32"
+            class="size-full object-contain"
+            draggable="false"
+        />
     </div>
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold">{{
-            name
-        }}</span>
+
+    <div class="ml-2 grid flex-1 text-left">
+        <span
+            class="truncate text-[15px] leading-[1.1] font-bold tracking-wide"
+        >
+            KITB MANAGEMENT
+        </span>
+        <span
+            class="truncate text-[10px] leading-[1.1] font-medium text-slate-500 dark:text-slate-400"
+        >
+            Tanjung Buton
+        </span>
     </div>
 </template>

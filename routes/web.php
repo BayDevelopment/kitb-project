@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AnakUsahaController;
+use App\Http\Controllers\Admin\BeritaController;
 use App\Http\Controllers\Admin\EaseOfDoingBusinessController;
 use App\Http\Controllers\Admin\Kawasan\FasilitasController;
 use App\Http\Controllers\Admin\Kawasan\InfrastrukturController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Admin\ProfilPerusahaanController;
 use App\Http\Controllers\Admin\RuteController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -27,8 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::inertia('dashboard', 'Dashboard')
-        ->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------
@@ -493,6 +494,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
         '/hubungan-investor/rute-pelayaran-lokasi/{rute}/move',
         [RuteController::class, 'move']
     )->name('hubungan-investor.rute-pelayaran-lokasi.move');
+
+    Route::get(
+        '/pusat-informasi/berita',
+        [BeritaController::class, 'index']
+    )->name('pusat-informasi.berita');
+
+    Route::post(
+        '/pusat-informasi/berita',
+        [BeritaController::class, 'store']
+    )->name('pusat-informasi.berita.store');
+
+    Route::put(
+        '/pusat-informasi/berita/{berita}',
+        [BeritaController::class, 'update']
+    )->name('pusat-informasi.berita.update');
+
+    Route::delete(
+        '/pusat-informasi/berita/{berita}',
+        [BeritaController::class, 'destroy']
+    )->name('pusat-informasi.berita.destroy');
+
+    Route::patch(
+        '/pusat-informasi/berita/{berita}/toggle-status',
+        [BeritaController::class, 'toggleStatus']
+    )->name('pusat-informasi.berita.toggle-status');
+
+    Route::patch(
+        '/pusat-informasi/berita/{berita}/toggle-featured',
+        [BeritaController::class, 'toggleFeatured']
+    )->name('pusat-informasi.berita.toggle-featured');
 });
 
 require __DIR__ . '/settings.php';

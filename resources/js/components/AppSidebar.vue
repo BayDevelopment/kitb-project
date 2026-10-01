@@ -12,6 +12,7 @@ import {
     Map,
     MapPinned,
     Network,
+    Newspaper,
     Route,
     Target,
     Users,
@@ -22,7 +23,6 @@ import AppLogo from "@/components/AppLogo.vue";
 import NavFooter from "@/components/NavFooter.vue";
 import NavMain from "@/components/NavMain.vue";
 import NavUser from "@/components/NavUser.vue";
-
 import {
     Sidebar,
     SidebarContent,
@@ -32,9 +32,12 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
 import { dashboard } from "@/routes";
 import type { NavItem } from "@/types";
+
+/* =========================================================
+   AUTH
+========================================================= */
 
 interface AuthUser {
     name?: string;
@@ -42,25 +45,27 @@ interface AuthUser {
     email_verified_at?: string | null;
 }
 
-const page = usePage<{ auth?: { user?: AuthUser } }>();
+const page = usePage<{
+    auth?: {
+        user?: AuthUser;
+    };
+}>();
 
 const isEmailVerified = computed(
     () => !!page.props.auth?.user?.email_verified_at,
 );
 
+/* =========================================================
+   MENU
+========================================================= */
+
 const mainNavItems: NavItem[] = [
-    // =========================================================
-    // DASHBOARD
-    // =========================================================
     {
         title: "Dashboard",
         href: dashboard(),
         icon: LayoutGrid,
     },
 
-    // =========================================================
-    // PROFIL PERUSAHAAN
-    // =========================================================
     {
         title: "Profil Perusahaan",
         icon: Building2,
@@ -88,9 +93,6 @@ const mainNavItems: NavItem[] = [
         ],
     },
 
-    // =========================================================
-    // KAWASAN
-    // =========================================================
     {
         title: "Kawasan",
         icon: Map,
@@ -118,9 +120,6 @@ const mainNavItems: NavItem[] = [
         ],
     },
 
-    // =========================================================
-    // HUBUNGAN INVESTOR
-    // =========================================================
     {
         title: "Hubungan Investor",
         icon: BriefcaseBusiness,
@@ -147,6 +146,17 @@ const mainNavItems: NavItem[] = [
             },
         ],
     },
+    {
+        title: "Pusat Informasi",
+        icon: Newspaper,
+        items: [
+            {
+                title: "Berita",
+                href: "/pusat-informasi/berita",
+                icon: Newspaper,
+            },
+        ],
+    },
 ];
 
 const footerNavItems: NavItem[] = [
@@ -162,29 +172,9 @@ const footerNavItems: NavItem[] = [
     },
 ];
 
-function resolveHref(href: NavItem["href"]): string {
-    return typeof href === "string" ? href : (href?.url ?? "");
-}
-
-function isActiveHref(href: string, currentUrl: string): boolean {
-    if (!href) {
-        return false;
-    }
-
-    return currentUrl === href || currentUrl.startsWith(`${href}/`);
-}
-
-const activeGroupTitles = computed<string[]>(() => {
-    const currentUrl = page.url;
-
-    return mainNavItems
-        .filter((item) =>
-            item.items?.some((sub) =>
-                isActiveHref(resolveHref(sub.href), currentUrl),
-            ),
-        )
-        .map((item) => item.title);
-});
+/* =========================================================
+   SKELETON
+========================================================= */
 
 const skeletonWidths = ["100%", "92%", "96%", "88%", "94%", "90%"];
 
@@ -202,21 +192,8 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 
 <template>
     <Sidebar collapsible="icon" variant="inset" class="kitb-sidebar">
-        <!-- Header -->
-        <SidebarHeader
-            class="relative overflow-hidden border-b border-slate-200/80 bg-white dark:border-slate-800 dark:bg-[#0b1728]"
-        >
-            <!-- Header decoration -->
-            <div
-                class="pointer-events-none absolute -left-12 -top-16 size-36 rounded-full bg-[#0b1f3a]/8 blur-3xl dark:bg-white/5"
-                aria-hidden="true"
-            />
-
-            <div
-                class="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full bg-blue-500/8 blur-3xl dark:bg-blue-400/8"
-                aria-hidden="true"
-            />
-
+        <!-- HEADER -->
+        <SidebarHeader class="border-b border-sidebar-border bg-transparent">
             <SidebarMenu class="relative z-10">
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child class="rounded-xl">
@@ -228,26 +205,12 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
             </SidebarMenu>
         </SidebarHeader>
 
-        <!-- Navigation -->
+        <!-- CONTENT -->
         <SidebarContent
-            class="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-slate-50 dark:bg-[#07111f]"
+            class="kitb-sidebar-content relative flex min-h-0 flex-1 flex-col overflow-y-auto"
         >
-            <!-- Background decoration -->
-            <div
-                class="pointer-events-none absolute inset-0 overflow-hidden"
-                aria-hidden="true"
-            >
-                <div
-                    class="absolute -left-24 top-24 size-48 rounded-full bg-[#0b1f3a]/4 blur-3xl dark:bg-blue-500/4"
-                />
-
-                <div
-                    class="absolute -right-24 bottom-24 size-56 rounded-full bg-blue-500/4 blur-3xl dark:bg-cyan-500/4"
-                />
-            </div>
-
-            <div class="relative z-10 min-w-0 pb-6">
-                <Transition name="nav-fade" mode="out-in">
+            <div class="relative z-10 min-w-0 px-1 pb-6">
+                <Transition name="kitb-nav-fade" mode="out-in">
                     <!-- Skeleton -->
                     <div
                         v-if="!isEmailVerified"
@@ -259,20 +222,15 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                     >
                         <span class="sr-only"> Memuat navigasi… </span>
 
-                        <!-- Dashboard skeleton -->
                         <div
                             class="flex h-9 items-center gap-3 rounded-lg px-3"
                         >
                             <div
-                                class="size-4 shrink-0 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
+                                class="kitb-skeleton size-4 shrink-0 rounded-md"
                             />
-
-                            <div
-                                class="h-4 w-24 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
-                            />
+                            <div class="kitb-skeleton h-4 w-24 rounded-md" />
                         </div>
 
-                        <!-- Group skeleton -->
                         <template
                             v-for="group in navSkeletonGroups.filter(
                                 (g) => g.hasChildren,
@@ -283,11 +241,10 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                                 class="mt-3 flex h-9 items-center gap-3 rounded-lg px-3"
                             >
                                 <div
-                                    class="size-4 shrink-0 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
+                                    class="kitb-skeleton size-4 shrink-0 rounded-md"
                                 />
-
                                 <div
-                                    class="h-4 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
+                                    class="kitb-skeleton h-4 rounded-md"
                                     :style="{ width: group.titleWidth }"
                                 />
                             </div>
@@ -296,7 +253,7 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                                 <div
                                     v-for="(child, index) in group.children"
                                     :key="index"
-                                    class="h-8 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-700/70"
+                                    class="kitb-skeleton h-8 rounded-lg"
                                     :style="{ width: child.width }"
                                 />
                             </div>
@@ -304,22 +261,14 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                     </div>
 
                     <!-- Navigation -->
-                    <NavMain
-                        v-else
-                        key="navigation"
-                        :items="mainNavItems"
-                        :default-open-groups="activeGroupTitles"
-                    />
+                    <NavMain v-else key="navigation" :items="mainNavItems" />
                 </Transition>
             </div>
         </SidebarContent>
 
-        <!-- Footer -->
-        <SidebarFooter
-            class="relative border-t border-slate-200/80 bg-white dark:border-slate-800 dark:bg-[#0b1728]"
-        >
-            <Transition name="nav-fade" mode="out-in">
-                <!-- Footer Skeleton -->
+        <!-- FOOTER -->
+        <SidebarFooter class="border-t border-sidebar-border bg-transparent">
+            <Transition name="kitb-nav-fade" mode="out-in">
                 <div
                     v-if="!isEmailVerified"
                     key="footer-skeleton"
@@ -327,45 +276,27 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                     aria-hidden="true"
                 >
                     <div class="flex h-8 items-center gap-3 px-3">
-                        <div
-                            class="size-4 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
-                        />
-
-                        <div
-                            class="h-3.5 w-20 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
-                        />
+                        <div class="kitb-skeleton size-4 rounded-md" />
+                        <div class="kitb-skeleton h-3.5 w-20 rounded-md" />
                     </div>
 
                     <div class="flex h-8 items-center gap-3 px-3">
-                        <div
-                            class="size-4 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
-                        />
-
-                        <div
-                            class="h-3.5 w-24 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
-                        />
+                        <div class="kitb-skeleton size-4 rounded-md" />
+                        <div class="kitb-skeleton h-3.5 w-24 rounded-md" />
                     </div>
 
                     <div
-                        class="mt-2 flex h-11 items-center gap-3 rounded-lg border border-slate-200/70 px-3 dark:border-slate-700/70"
+                        class="kitb-user-skeleton mt-2 flex h-11 items-center gap-3 rounded-lg border px-3"
                     >
-                        <div
-                            class="size-7 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700"
-                        />
+                        <div class="kitb-skeleton size-7 rounded-full" />
 
                         <div class="flex-1 space-y-1.5">
-                            <div
-                                class="h-3 w-20 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
-                            />
-
-                            <div
-                                class="h-2.5 w-28 animate-pulse rounded-md bg-slate-200/70 dark:bg-slate-700/70"
-                            />
+                            <div class="kitb-skeleton h-3 w-20 rounded-md" />
+                            <div class="kitb-skeleton h-2.5 w-28 rounded-md" />
                         </div>
                     </div>
                 </div>
 
-                <!-- Footer Navigation -->
                 <div v-else key="footer-navigation" class="min-w-0">
                     <NavFooter :items="footerNavItems" />
                     <NavUser />
@@ -377,302 +308,168 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
     <slot />
 </template>
 
-<style scoped>
+<!--
+    Sengaja TIDAK memakai <style scoped>.
+    Sidebar (shadcn) merender elemen di dalam komponen anak, bahkan di portal
+    untuk mobile, sehingga selector scoped + :deep() tidak menjangkaunya dan
+    styling light/dark jadi tidak konsisten. Semua selector di bawah diberi
+    prefix unik supaya tidak bocor ke komponen lain.
+
+    Warna menu/hover/aktif memakai token --sidebar-* dari app.css, jadi
+    light/dark otomatis ikut class .dark di <html>.
+-->
+<style>
 /* =========================================================
-   KITB SIDEBAR
+   VARIABEL KHUSUS SIDEBAR (light default, dark lewat .dark)
 ========================================================= */
 
-.kitb-sidebar {
-    --kitb-navy: #0b1f3a;
-    --kitb-navy-light: #163b68;
-    --kitb-blue: #2563eb;
-    --kitb-light-hover: rgba(22, 59, 104, 0.08);
-    --kitb-light-active: rgba(22, 59, 104, 0.12);
-    --kitb-dark-hover: rgba(255, 255, 255, 0.075);
-    --kitb-dark-active: rgba(255, 255, 255, 0.11);
+:root {
+    --ksb-glow: rgb(46 111 191 / 0.08);
+    --ksb-glow-2: rgb(6 182 212 / 0.05);
+    --ksb-from: #ffffff;
+    --ksb-mid: #f6f8fb;
+    --ksb-to: #eaf0f8;
+    --ksb-scroll: rgb(100 116 139 / 0.28);
+    --ksb-skeleton-a: #e2e8f0;
+    --ksb-skeleton-b: #f1f5f9;
+}
+
+.dark {
+    --ksb-glow: rgb(76 139 219 / 0.16);
+    --ksb-glow-2: rgb(34 211 238 / 0.06);
+    --ksb-from: #0c2040;
+    --ksb-mid: #0a1930;
+    --ksb-to: #081224;
+    --ksb-scroll: rgb(148 163 184 / 0.25);
+    --ksb-skeleton-a: #13284a;
+    --ksb-skeleton-b: #1d3760;
+}
+
+/* =========================================================
+   BACKGROUND (desktop + mobile sheet)
+========================================================= */
+
+.kitb-sidebar [data-sidebar="sidebar"],
+[data-sidebar="sidebar"][data-mobile="true"] {
+    background:
+        radial-gradient(circle at 0% 0%, var(--ksb-glow), transparent 45%),
+        radial-gradient(
+            circle at 100% 100%,
+            var(--ksb-glow-2),
+            transparent 45%
+        ),
+        linear-gradient(
+            180deg,
+            var(--ksb-from) 0%,
+            var(--ksb-mid) 55%,
+            var(--ksb-to) 100%
+        );
+    color: var(--sidebar-foreground);
 }
 
 /* =========================================================
    SCROLLBAR
 ========================================================= */
 
-:deep(.kitb-sidebar [data-sidebar="content"]) {
+:is(.kitb-sidebar, [data-sidebar="sidebar"][data-mobile="true"])
+    [data-sidebar="content"] {
     scrollbar-width: thin;
-    scrollbar-color: rgba(100, 116, 139, 0.25) transparent;
+    scrollbar-color: var(--ksb-scroll) transparent;
 }
 
-:deep(.kitb-sidebar [data-sidebar="content"]::-webkit-scrollbar) {
+:is(.kitb-sidebar, [data-sidebar="sidebar"][data-mobile="true"])
+    [data-sidebar="content"]::-webkit-scrollbar {
     width: 5px;
 }
 
-:deep(.kitb-sidebar [data-sidebar="content"]::-webkit-scrollbar-track) {
-    background: transparent;
-}
-
-:deep(.kitb-sidebar [data-sidebar="content"]::-webkit-scrollbar-thumb) {
+:is(.kitb-sidebar, [data-sidebar="sidebar"][data-mobile="true"])
+    [data-sidebar="content"]::-webkit-scrollbar-thumb {
     border-radius: 999px;
-    background: rgba(100, 116, 139, 0.25);
-}
-
-:deep(.kitb-sidebar [data-sidebar="content"]::-webkit-scrollbar-thumb:hover) {
-    background: rgba(100, 116, 139, 0.4);
+    background: var(--ksb-scroll);
 }
 
 /* =========================================================
-   MENU BUTTON — BASE
+   INDIKATOR MENU AKTIF (warna dari --sidebar-primary)
 ========================================================= */
 
-:deep(.kitb-sidebar [data-sidebar="menu-button"]) {
+:is(.kitb-sidebar, [data-sidebar="sidebar"][data-mobile="true"])
+    :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]) {
     position: relative;
-    min-width: 0;
-    overflow: hidden;
-    border: 1px solid transparent;
-    color: #475569;
-    transition:
-        background-color 160ms ease,
-        border-color 160ms ease,
-        color 160ms ease,
-        box-shadow 160ms ease;
 }
 
-/* =========================================================
-   LIGHT — HOVER
-========================================================= */
-
-:deep(.kitb-sidebar [data-sidebar="menu-button"]:hover) {
-    border-color: rgba(22, 59, 104, 0.1);
-    background: var(--kitb-light-hover);
-    color: var(--kitb-navy-light);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        0 2px 8px rgba(15, 23, 42, 0.035);
-}
-
-/* =========================================================
-   LIGHT — ACTIVE
-========================================================= */
-
-:deep(.kitb-sidebar [data-sidebar="menu-button"][data-active="true"]) {
-    border-color: rgba(22, 59, 104, 0.13);
-    background: var(--kitb-light-active);
-    color: var(--kitb-navy);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.7),
-        0 3px 10px rgba(11, 31, 58, 0.055);
-}
-
-/* Active indicator */
-
-:deep(.kitb-sidebar [data-sidebar="menu-button"][data-active="true"]::before) {
+:is(.kitb-sidebar, [data-sidebar="sidebar"][data-mobile="true"])
+    :is(
+        [data-sidebar="menu-button"],
+        [data-sidebar="menu-sub-button"]
+    )[data-active="true"]::before {
+    content: "";
     position: absolute;
     top: 50%;
     left: 0;
     width: 3px;
     height: 20px;
-    content: "";
     border-radius: 0 999px 999px 0;
-    background: var(--kitb-navy);
+    background: var(--sidebar-primary);
     transform: translateY(-50%);
 }
 
-/* =========================================================
-   ICONS — LIGHT
-========================================================= */
-
-:deep(.kitb-sidebar [data-sidebar="menu-button"] svg) {
-    flex-shrink: 0;
-    transition:
-        color 160ms ease,
-        opacity 160ms ease;
-}
-
-:deep(.kitb-sidebar [data-sidebar="menu-button"]:hover svg) {
-    color: var(--kitb-navy-light);
-}
-
-:deep(.kitb-sidebar [data-sidebar="menu-button"][data-active="true"] svg) {
-    color: var(--kitb-navy);
-}
-
-/* =========================================================
-   DARK MODE
-========================================================= */
-
-:deep(.dark .kitb-sidebar) {
-    --kitb-light-hover: rgba(255, 255, 255, 0.075);
-    --kitb-light-active: rgba(255, 255, 255, 0.11);
-}
-
-/* =========================================================
-   DARK — HOVER
-========================================================= */
-
-:deep(.dark .kitb-sidebar [data-sidebar="menu-button"]:hover) {
-    border-color: rgba(255, 255, 255, 0.1);
-    background: var(--kitb-dark-hover);
-    color: #ffffff;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.045),
-        0 2px 8px rgba(0, 0, 0, 0.12);
-}
-
-/* =========================================================
-   DARK — ACTIVE
-========================================================= */
-
-:deep(.dark .kitb-sidebar [data-sidebar="menu-button"][data-active="true"]) {
-    border-color: rgba(255, 255, 255, 0.14);
-    background: var(--kitb-dark-active);
-    color: #ffffff;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.06),
-        0 3px 12px rgba(0, 0, 0, 0.16);
-}
-
-/* Active indicator */
-
-:deep(
-    .dark .kitb-sidebar [data-sidebar="menu-button"][data-active="true"]::before
-) {
-    background: #ffffff;
-}
-
-/* =========================================================
-   DARK — ICON
-========================================================= */
-
-:deep(.dark .kitb-sidebar [data-sidebar="menu-button"]:hover svg) {
-    color: #ffffff;
-}
-
-:deep(
-    .dark .kitb-sidebar [data-sidebar="menu-button"][data-active="true"] svg
-) {
-    color: #ffffff;
-}
-
-/* =========================================================
-   SUBMENU
-========================================================= */
-
-:deep(.kitb-sidebar [data-sidebar="menu-sub-button"]) {
-    position: relative;
-    min-width: 0;
-    border: 1px solid transparent;
-    color: #64748b;
-    transition:
-        background-color 160ms ease,
-        border-color 160ms ease,
-        color 160ms ease;
-}
-
-/* Light submenu hover */
-
-:deep(.kitb-sidebar [data-sidebar="menu-sub-button"]:hover) {
-    border-color: rgba(22, 59, 104, 0.08);
-    background: rgba(22, 59, 104, 0.055);
-    color: var(--kitb-navy-light);
-}
-
-/* Light submenu active */
-
-:deep(.kitb-sidebar [data-sidebar="menu-sub-button"][data-active="true"]) {
-    border-color: rgba(22, 59, 104, 0.1);
-    background: rgba(22, 59, 104, 0.09);
-    color: var(--kitb-navy);
-    font-weight: 500;
-}
-
-/* Submenu indicator */
-
-:deep(
-    .kitb-sidebar [data-sidebar="menu-sub-button"][data-active="true"]::before
-) {
-    position: absolute;
-    top: 50%;
-    left: 0;
+:is(.kitb-sidebar, [data-sidebar="sidebar"][data-mobile="true"])
+    [data-sidebar="menu-sub-button"][data-active="true"]::before {
     width: 2px;
     height: 16px;
-    content: "";
-    border-radius: 0 999px 999px 0;
-    background: var(--kitb-navy);
-    transform: translateY(-50%);
 }
 
-/* Dark submenu */
-
-:deep(.dark .kitb-sidebar [data-sidebar="menu-sub-button"]:hover) {
-    border-color: rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.06);
-    color: #ffffff;
-}
-
-:deep(
-    .dark .kitb-sidebar [data-sidebar="menu-sub-button"][data-active="true"]
-) {
-    border-color: rgba(255, 255, 255, 0.11);
-    background: rgba(255, 255, 255, 0.085);
-    color: #ffffff;
-    font-weight: 500;
-}
-
-:deep(
-    .dark
-        .kitb-sidebar
-        [data-sidebar="menu-sub-button"][data-active="true"]::before
-) {
-    background: #ffffff;
+:is(.kitb-sidebar, [data-sidebar="sidebar"][data-mobile="true"])
+    [data-sidebar="menu-button"][data-active="true"]
+    svg {
+    color: var(--sidebar-primary);
 }
 
 /* =========================================================
-   FOOTER
+   FOOTER (NavFooter bawaan starter kit memakai warna netral)
 ========================================================= */
 
-:deep(
-    .kitb-sidebar [data-sidebar="footer"] [data-sidebar="menu-button"]:hover
-) {
-    border-color: rgba(22, 59, 104, 0.08);
-    background: rgba(22, 59, 104, 0.055);
-    color: var(--kitb-navy-light);
+:is(.kitb-sidebar, [data-sidebar="sidebar"][data-mobile="true"])
+    [data-sidebar="footer"]
+    [data-sidebar="menu-button"] {
+    color: var(--sidebar-foreground);
+    opacity: 0.8;
 }
 
-:deep(
-    .dark
-        .kitb-sidebar
-        [data-sidebar="footer"]
-        [data-sidebar="menu-button"]:hover
-) {
-    border-color: rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.06);
-    color: #ffffff;
+:is(.kitb-sidebar, [data-sidebar="sidebar"][data-mobile="true"])
+    [data-sidebar="footer"]
+    [data-sidebar="menu-button"]:hover {
+    color: var(--sidebar-accent-foreground);
+    opacity: 1;
 }
 
 /* =========================================================
-   COLLAPSED / ICON MODE
+   SKELETON
 ========================================================= */
 
-:deep(.kitb-sidebar[data-collapsible="icon"] [data-sidebar="menu-button"]) {
-    justify-content: center;
+.kitb-skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--ksb-skeleton-a) 0%,
+        var(--ksb-skeleton-b) 50%,
+        var(--ksb-skeleton-a) 100%
+    );
+    background-size: 200% 100%;
+    animation: kitb-skeleton 1.5s ease-in-out infinite;
 }
 
-:deep(.kitb-sidebar[data-collapsible="icon"] [data-sidebar="menu-button"] svg) {
-    margin-inline: auto;
+.kitb-user-skeleton {
+    border-color: var(--sidebar-border);
 }
 
-/*
- * Saat collapsed:
- * - tidak ada translate
- * - tidak ada perubahan width
- * - icon tetap center
- * - active indicator tetap di sisi kiri
- */
+@keyframes kitb-skeleton {
+    0% {
+        background-position: 200% 0;
+    }
 
-:deep(
-    .kitb-sidebar[data-collapsible="icon"]
-        [data-sidebar="menu-button"][data-active="true"]::before
-) {
-    width: 2px;
-    height: 18px;
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 /* =========================================================
@@ -680,13 +477,35 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 ========================================================= */
 
 @media (max-width: 767px) {
-    :deep(.kitb-sidebar [data-sidebar="menu-button"]) {
+    [data-sidebar="sidebar"][data-mobile="true"] [data-sidebar="menu-button"] {
         min-height: 2.75rem;
     }
 
-    :deep(.kitb-sidebar [data-sidebar="menu-sub-button"]) {
+    [data-sidebar="sidebar"][data-mobile="true"]
+        [data-sidebar="menu-sub-button"] {
         min-height: 2.5rem;
     }
+}
+
+/* =========================================================
+   TRANSISI NAVIGASI
+========================================================= */
+
+.kitb-nav-fade-enter-active,
+.kitb-nav-fade-leave-active {
+    transition:
+        opacity 220ms ease,
+        transform 220ms ease;
+}
+
+.kitb-nav-fade-enter-from {
+    opacity: 0;
+    transform: translateY(4px);
+}
+
+.kitb-nav-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-3px);
 }
 
 /* =========================================================
@@ -694,10 +513,18 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
 ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-    :deep(.kitb-sidebar [data-sidebar="menu-button"]),
-    :deep(.kitb-sidebar [data-sidebar="menu-sub-button"]),
-    :deep(.kitb-sidebar [data-sidebar="menu-button"] svg) {
+    .kitb-nav-fade-enter-active,
+    .kitb-nav-fade-leave-active {
         transition: none !important;
+    }
+
+    .kitb-nav-fade-enter-from,
+    .kitb-nav-fade-leave-to {
+        transform: none;
+    }
+
+    .kitb-skeleton {
+        animation: none !important;
     }
 }
 </style>

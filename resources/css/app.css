@@ -62,24 +62,27 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 
-    /* KITB Brand Colors */
-    --color-kitb-green-50: #eaf7f1;
-    --color-kitb-green-100: #cdebde;
-    --color-kitb-green-300: #5fbe96;
-    --color-kitb-green-500: #14895f;
-    --color-kitb-green-700: #0d6b4f;
-    --color-kitb-green-800: #0d4a37;
-    --color-kitb-green-900: #0a3d2c;
+    /* KITB Brand Colors (mengikuti light/dark lewat variable di :root & .dark) */
+    --color-kitb-green-50: var(--kitb-green-50);
+    --color-kitb-green-100: var(--kitb-green-100);
+    --color-kitb-green-300: var(--kitb-green-300);
+    --color-kitb-green-500: var(--kitb-green-500);
+    --color-kitb-green-700: var(--kitb-green-700);
+    --color-kitb-green-800: var(--kitb-green-800);
+    --color-kitb-green-900: var(--kitb-green-900);
 
-    --color-kitb-teal-300: #6fcbe0;
-    --color-kitb-teal-500: #1ca3c9;
-    --color-kitb-teal-600: #0e7c99;
+    --color-kitb-navy-900: var(--kitb-navy-900);
+    --color-kitb-surface: var(--kitb-surface);
 
-    --color-kitb-sand-50: #faf7f0;
-    --color-kitb-sand-100: #f3eee1;
+    --color-kitb-teal-300: var(--kitb-teal-300);
+    --color-kitb-teal-500: var(--kitb-teal-500);
+    --color-kitb-teal-600: var(--kitb-teal-600);
 
-    --color-kitb-ink-900: #101915;
-    --color-kitb-amber-500: #d98a2b;
+    --color-kitb-sand-50: var(--kitb-sand-50);
+    --color-kitb-sand-100: var(--kitb-sand-100);
+
+    --color-kitb-ink-900: var(--kitb-ink-900);
+    --color-kitb-amber-500: var(--kitb-amber-500);
 }
 
 /*
@@ -176,51 +179,73 @@
 */
 
 :root {
-    --background: hsl(0 0% 100%);
-    --foreground: hsl(0 0% 3.9%);
+    --background: #ffffff;
+    --foreground: #0f172a;
 
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(0 0% 3.9%);
+    --card: #ffffff;
+    --card-foreground: #0f172a;
 
-    --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(0 0% 3.9%);
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
 
-    --primary: hsl(0 0% 9%);
-    --primary-foreground: hsl(0 0% 98%);
+    --primary: #163a70;
+    --primary-foreground: #ffffff;
 
-    --secondary: hsl(0 0% 92.1%);
-    --secondary-foreground: hsl(0 0% 9%);
+    --secondary: #eaf0f8;
+    --secondary-foreground: #0b1f3f;
 
-    --muted: hsl(0 0% 96.1%);
-    --muted-foreground: hsl(0 0% 45.1%);
+    --muted: #f1f5fa;
+    --muted-foreground: #5b6b85;
 
-    --accent: hsl(0 0% 96.1%);
-    --accent-foreground: hsl(0 0% 9%);
+    --accent: #e4ecf8;
+    --accent-foreground: #0b1f3f;
 
     --destructive: hsl(0 84.2% 60.2%);
     --destructive-foreground: hsl(0 0% 98%);
 
-    --border: hsl(0 0% 92.8%);
-    --input: hsl(0 0% 89.8%);
-    --ring: hsl(0 0% 3.9%);
+    --border: #dde5f0;
+    --input: #d3dded;
+    --ring: #2e6fbf;
 
-    --chart-1: hsl(12 76% 61%);
-    --chart-2: hsl(173 58% 39%);
-    --chart-3: hsl(197 37% 24%);
-    --chart-4: hsl(43 74% 66%);
-    --chart-5: hsl(27 87% 67%);
+    --chart-1: #2e6fbf;
+    --chart-2: #163a70;
+    --chart-3: #4c8bdb;
+    --chart-4: #c8963e;
+    --chart-5: #7fa8e0;
 
     --radius: 0.75rem;
 
-    --sidebar-background: hsl(0 0% 98%);
-    --sidebar-foreground: hsl(240 5.3% 26.1%);
-    --sidebar-primary: hsl(0 0% 10%);
-    --sidebar-primary-foreground: hsl(0 0% 98%);
-    --sidebar-accent: hsl(0 0% 94%);
-    --sidebar-accent-foreground: hsl(0 0% 30%);
-    --sidebar-border: hsl(0 0% 91%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(0 0% 98%);
+    --sidebar-background: #f6f8fb;
+    --sidebar-foreground: #3b4a63;
+    --sidebar-primary: #163a70;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e4ecf8;
+    --sidebar-accent-foreground: #0b1f3f;
+    --sidebar-border: #d9e3f1;
+    --sidebar-ring: #2e6fbf;
+    --sidebar: #f6f8fb;
+
+    /* KITB — biru dongker (light) */
+    --kitb-green-50: #eef3fa;
+    --kitb-green-100: #d6e2f3;
+    --kitb-green-300: #7fa8e0;
+    --kitb-green-500: #1f4c91;
+    --kitb-green-700: #163a70; /* CTA, header tabel, badge */
+    --kitb-green-800: #10294f; /* angka statistik, judul */
+    --kitb-green-900: #0b1f3f; /* teks judul utama */
+
+    --kitb-navy-900: #0b1f3f; /* background gelap: Visi, footer, kartu luas */
+    --kitb-surface: #ffffff; /* kartu, dropdown, input */
+
+    --kitb-teal-300: #8fb8e8;
+    --kitb-teal-500: #2e6fbf;
+    --kitb-teal-600: #245aa0;
+
+    --kitb-sand-50: #f6f8fb;
+    --kitb-sand-100: #eaeff6;
+
+    --kitb-ink-900: #0f172a;
+    --kitb-amber-500: #c8963e;
 }
 
 /*
@@ -230,47 +255,111 @@
 */
 
 .dark {
-    --background: hsl(0 0% 3.9%);
-    --foreground: hsl(0 0% 98%);
+    color-scheme: dark;
 
-    --card: hsl(0 0% 3.9%);
-    --card-foreground: hsl(0 0% 98%);
+    --background: #081224;
+    --foreground: #e6edf8;
 
-    --popover: hsl(0 0% 3.9%);
-    --popover-foreground: hsl(0 0% 98%);
+    --card: #0d1b33;
+    --card-foreground: #e6edf8;
 
-    --primary: hsl(0 0% 98%);
-    --primary-foreground: hsl(0 0% 9%);
+    --popover: #0d1b33;
+    --popover-foreground: #e6edf8;
 
-    --secondary: hsl(0 0% 14.9%);
-    --secondary-foreground: hsl(0 0% 98%);
+    --primary: #5b96e3;
+    --primary-foreground: #061226;
 
-    --muted: hsl(0 0% 16.08%);
-    --muted-foreground: hsl(0 0% 63.9%);
+    --secondary: #132745;
+    --secondary-foreground: #e6edf8;
 
-    --accent: hsl(0 0% 14.9%);
-    --accent-foreground: hsl(0 0% 98%);
+    --muted: #0f203b;
+    --muted-foreground: #8fa3c2;
 
-    --destructive: hsl(0 84% 60%);
+    --accent: #14294d;
+    --accent-foreground: #ffffff;
+
+    --destructive: hsl(0 72% 55%);
     --destructive-foreground: hsl(0 0% 98%);
 
-    --border: hsl(0 0% 14.9%);
-    --input: hsl(0 0% 14.9%);
-    --ring: hsl(0 0% 83.1%);
+    --border: #1a2d4f;
+    --input: #1a2d4f;
+    --ring: #5b96e3;
 
-    --chart-1: hsl(220 70% 50%);
-    --chart-2: hsl(160 60% 45%);
-    --chart-3: hsl(30 80% 55%);
-    --chart-4: hsl(280 65% 60%);
-    --chart-5: hsl(340 75% 55%);
+    --chart-1: #5b96e3;
+    --chart-2: #8fb8e8;
+    --chart-3: #2e6fbf;
+    --chart-4: #d9a94f;
+    --chart-5: #7fa8e0;
 
-    --sidebar-background: hsl(0 0% 7%);
-    --sidebar-foreground: hsl(0 0% 95.9%);
-    --sidebar-primary: hsl(360 100% 100%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(0 0% 15.9%);
-    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-border: hsl(0 0% 15.9%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
-    --sidebar: hsl(240 5.9% 10%);
+    --sidebar-background: #0a1930;
+    --sidebar-foreground: #c5d3ea;
+    --sidebar-primary: #4c8bdb;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #14294d;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #182c4e;
+    --sidebar-ring: #4c8bdb;
+    --sidebar: #0a1930;
+
+    /* KITB — biru dongker (dark) */
+    --kitb-green-50: #0f1d36;
+    --kitb-green-100: #152a4d;
+    --kitb-green-300: #7fa8e0;
+    --kitb-green-500: #4c8bdb;
+    --kitb-green-700: #1a4484;
+    --kitb-green-800: #bfd4f2; /* terang, dipakai sebagai teks */
+    --kitb-green-900: #eaf1fb; /* terang, dipakai sebagai teks judul */
+
+    --kitb-navy-900: #0c2345; /* tetap biru dongker pekat */
+    --kitb-surface: #12223d;
+
+    --kitb-teal-300: #8fb8e8;
+    --kitb-teal-500: #4c8bdb;
+    --kitb-teal-600: #7fb0ee;
+
+    --kitb-sand-50: #081224; /* background halaman */
+    --kitb-sand-100: #0c1a31; /* background section selang-seling */
+
+    --kitb-ink-900: #e6edf8;
+    --kitb-amber-500: #d9a94f;
+}
+
+/*
+|--------------------------------------------------------------------------
+| KITB Landing — penyesuaian dark mode
+|--------------------------------------------------------------------------
+*/
+
+.dark .kitb-landing .border-black\/5 {
+    border-color: rgb(255 255 255 / 0.08);
+}
+
+.dark .kitb-landing .border-black\/10 {
+    border-color: rgb(255 255 255 / 0.12);
+}
+
+.dark .kitb-landing .border-black\/15 {
+    border-color: rgb(255 255 255 / 0.2);
+}
+
+.dark .kitb-landing .text-black\/50 {
+    color: rgb(255 255 255 / 0.55);
+}
+
+.dark .kitb-landing .hover\:bg-black\/5:hover {
+    background: rgb(255 255 255 / 0.06);
+}
+
+.dark .kitb-landing input,
+.dark .kitb-landing textarea {
+    color: var(--kitb-ink-900);
+}
+
+.dark .kitb-landing input::placeholder,
+.dark .kitb-landing textarea::placeholder {
+    color: rgb(255 255 255 / 0.35);
+}
+
+.dark .kitb-landing .blob {
+    filter: saturate(0.85) brightness(0.75);
 }

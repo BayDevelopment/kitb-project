@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive } from "vue";
+import { ref } from "vue";
 import { Head, useForm } from "@inertiajs/vue3";
 
 // Halaman ini adalah landing page publik (guest) — jangan pakai
@@ -228,6 +228,7 @@ const masterPlan = {
     total_luas_ha: 6070,
 };
 
+// Warna zona = legenda peta master plan, jangan diubah mengikuti tema.
 const kawasanZones = [
     {
         kode: "phase-1",
@@ -437,7 +438,7 @@ const socials = [
                                 class="nav-dropdown absolute left-1/2 -translate-x-1/2 top-full pt-3 w-64 opacity-0 invisible translate-y-1 pointer-events-none transition-all duration-200 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:pointer-events-auto"
                             >
                                 <div
-                                    class="rounded-2xl bg-white shadow-xl border border-black/5 p-2 overflow-hidden"
+                                    class="rounded-2xl bg-kitb-surface shadow-xl border border-black/5 p-2 overflow-hidden"
                                 >
                                     <div
                                         class="h-[3px] w-full bg-kitb-teal-500 rounded-full mb-1.5"
@@ -470,10 +471,32 @@ const socials = [
 
                     <button
                         type="button"
-                        class="hidden md:inline-flex items-center text-[14px] font-medium text-white px-5 py-2.5 rounded-full btn-primary"
+                        class="hidden md:inline-flex items-center gap-2 text-[14px] font-medium text-white px-5 py-2.5 rounded-full btn-primary"
                         @click="openVisitForm"
                     >
-                        Hubungi Kami
+                        <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                        >
+                            <rect
+                                x="2"
+                                y="3"
+                                width="12"
+                                height="11"
+                                rx="2"
+                                stroke="currentColor"
+                                stroke-width="1.4"
+                            />
+                            <path
+                                d="M2 7h12M5.5 1.5v3M10.5 1.5v3"
+                                stroke="currentColor"
+                                stroke-width="1.4"
+                                stroke-linecap="round"
+                            />
+                        </svg>
+                        Atur Jadwal
                     </button>
 
                     <button
@@ -489,7 +512,7 @@ const socials = [
                         >
                             <path
                                 d="M3 6h16M3 11h16M3 16h16"
-                                stroke="#101915"
+                                stroke="currentColor"
                                 stroke-width="1.6"
                                 stroke-linecap="round"
                             />
@@ -525,7 +548,7 @@ const socials = [
                         >
                             <path
                                 d="M1 1l5 5 5-5"
-                                stroke="#101915"
+                                stroke="currentColor"
                                 stroke-width="1.5"
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
@@ -570,7 +593,7 @@ const socials = [
                         openVisitForm();
                     "
                 >
-                    Hubungi Kami
+                    Atur Jadwal
                 </button>
             </div>
         </header>
@@ -589,9 +612,9 @@ const socials = [
                     right: -220px;
                     background: radial-gradient(
                         circle at 35% 30%,
-                        #6fcbe0,
-                        #1ca3c9 45%,
-                        #0d6b4f 85%
+                        #7fa8e0,
+                        #2e6fbf 45%,
+                        #163a70 85%
                     );
                     opacity: 0.9;
                 "
@@ -606,8 +629,8 @@ const socials = [
                     right: 120px;
                     background: radial-gradient(
                         circle at 60% 40%,
-                        #14895f,
-                        #0a3d2c 80%
+                        #1f4c91,
+                        #0b1f3f 80%
                     );
                     opacity: 0.85;
                 "
@@ -701,7 +724,7 @@ const socials = [
                     left: -200px;
                     background: radial-gradient(
                         circle at 40% 40%,
-                        #6fcbe0,
+                        #7fa8e0,
                         transparent 70%
                     );
                     opacity: 0.35;
@@ -783,7 +806,7 @@ const socials = [
         <!-- ================= VISI MISI ================= -->
         <section
             id="visi-misi"
-            class="relative py-24 md:py-32 overflow-hidden bg-kitb-green-900"
+            class="relative py-24 md:py-32 overflow-hidden bg-kitb-navy-900"
         >
             <div
                 class="blob blob-organic-3 drift-a"
@@ -794,7 +817,7 @@ const socials = [
                     right: -160px;
                     background: radial-gradient(
                         circle at 40% 40%,
-                        #1ca3c9,
+                        #2e6fbf,
                         transparent 70%
                     );
                     opacity: 0.45;
@@ -808,7 +831,7 @@ const socials = [
                     height: 260px;
                     top: 60px;
                     left: -100px;
-                    background: #6fcbe0;
+                    background: #7fa8e0;
                     opacity: 0.08;
                 "
             />
@@ -1016,7 +1039,7 @@ const socials = [
                     right: -180px;
                     background: radial-gradient(
                         circle at 40% 40%,
-                        #14895f,
+                        #1f4c91,
                         transparent 70%
                     );
                     opacity: 0.18;
@@ -1134,7 +1157,7 @@ const socials = [
                             </p>
 
                             <div
-                                class="rounded-2xl p-5 bg-kitb-green-900 text-white"
+                                class="rounded-2xl p-5 bg-kitb-navy-900 text-white"
                             >
                                 <div class="text-[12px] text-white/55 mb-1">
                                     Total luas kawasan
@@ -1159,7 +1182,7 @@ const socials = [
                         <!-- Peta -->
                         <div class="lg:col-span-8">
                             <div
-                                class="rounded-2xl overflow-hidden bg-white border border-black/5 shadow-sm"
+                                class="rounded-2xl overflow-hidden bg-kitb-surface border border-black/5 shadow-sm"
                             >
                                 <a
                                     :href="masterPlan.gambar_path"
@@ -1190,7 +1213,7 @@ const socials = [
                         <div
                             v-for="zone in kawasanZones"
                             :key="zone.kode"
-                            class="flex items-center justify-between gap-4 rounded-xl bg-white border border-black/5 px-4 py-3"
+                            class="flex items-center justify-between gap-4 rounded-xl bg-kitb-surface border border-black/5 px-4 py-3"
                         >
                             <div class="flex items-center gap-3 min-w-0">
                                 <span
@@ -1247,7 +1270,7 @@ const socials = [
                             height: 300px;
                             top: -100px;
                             left: -80px;
-                            background: #1ca3c9;
+                            background: #2e6fbf;
                             opacity: 0.25;
                         "
                     />
@@ -1259,7 +1282,7 @@ const socials = [
                             height: 260px;
                             bottom: -100px;
                             right: -60px;
-                            background: #d98a2b;
+                            background: #c8963e;
                             opacity: 0.15;
                         "
                     />
@@ -1281,7 +1304,7 @@ const socials = [
                     <div class="mt-10 relative">
                         <button
                             type="button"
-                            class="inline-flex items-center text-[15px] font-medium px-8 py-3.5 rounded-full bg-kitb-sand-50 text-kitb-green-800"
+                            class="inline-flex items-center text-[15px] font-medium px-8 py-3.5 rounded-full bg-white text-[#163a70]"
                             @click="openVisitForm"
                         >
                             Mulai diskusi investasi
@@ -1294,7 +1317,7 @@ const socials = [
         <!-- ================= FOOTER / KONTAK ================= -->
         <footer
             id="kontak"
-            class="relative pt-20 pb-8 overflow-hidden bg-kitb-green-900"
+            class="relative pt-20 pb-8 overflow-hidden bg-kitb-navy-900"
         >
             <div
                 class="blob blob-organic-2"
@@ -1303,7 +1326,7 @@ const socials = [
                     height: 400px;
                     bottom: -200px;
                     left: -150px;
-                    background: #1ca3c9;
+                    background: #2e6fbf;
                     opacity: 0.1;
                 "
             />
@@ -1616,7 +1639,7 @@ const socials = [
                 class="fixed inset-0 z-[100] flex items-center justify-center px-4 py-10"
             >
                 <div
-                    class="absolute inset-0 bg-kitb-ink-900/60 backdrop-blur-sm"
+                    class="absolute inset-0 bg-black/60 backdrop-blur-sm"
                     @click="closeVisitForm"
                 />
 
@@ -1654,7 +1677,7 @@ const socials = [
                             >
                                 <path
                                     d="M4 4l10 10M14 4L4 14"
-                                    stroke="#101915"
+                                    stroke="currentColor"
                                     stroke-width="1.6"
                                     stroke-linecap="round"
                                 />
@@ -1677,7 +1700,7 @@ const socials = [
                                 v-model="visitForm.nama"
                                 type="text"
                                 required
-                                class="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
+                                class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
                                 placeholder="Nama Anda"
                             />
 
@@ -1699,7 +1722,7 @@ const socials = [
                             <input
                                 v-model="visitForm.instansi"
                                 type="text"
-                                class="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
+                                class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
                                 placeholder="Nama perusahaan / instansi"
                             />
                         </div>
@@ -1716,7 +1739,7 @@ const socials = [
                                     v-model="visitForm.email"
                                     type="email"
                                     required
-                                    class="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
+                                    class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
                                     placeholder="nama@email.com"
                                 />
 
@@ -1739,7 +1762,7 @@ const socials = [
                                     v-model="visitForm.telepon"
                                     type="tel"
                                     required
-                                    class="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
+                                    class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
                                     placeholder="08xx-xxxx-xxxx"
                                 />
                             </div>
@@ -1757,7 +1780,7 @@ const socials = [
                                     v-model="visitForm.tanggal_kunjungan"
                                     type="date"
                                     required
-                                    class="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
+                                    class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
                                 />
                             </div>
 
@@ -1772,7 +1795,7 @@ const socials = [
                                     v-model="visitForm.jumlah_peserta"
                                     type="number"
                                     min="1"
-                                    class="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
+                                    class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20"
                                     placeholder="1"
                                 />
                             </div>
@@ -1788,7 +1811,7 @@ const socials = [
                             <textarea
                                 v-model="visitForm.keperluan"
                                 rows="3"
-                                class="w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20 resize-none"
+                                class="w-full rounded-xl border border-black/10 bg-kitb-surface px-4 py-2.5 text-[15px] outline-none focus:border-kitb-teal-500 focus:ring-2 focus:ring-kitb-teal-500/20 resize-none"
                                 placeholder="Ceritakan tujuan kunjungan Anda"
                             />
                         </div>
@@ -1813,7 +1836,7 @@ const socials = [
         <Transition name="toast-fade">
             <div
                 v-if="showSuccessToast"
-                class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[110] bg-kitb-green-900 text-white text-[14.5px] px-6 py-3.5 rounded-full shadow-xl"
+                class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[110] bg-kitb-navy-900 text-white text-[14.5px] px-6 py-3.5 rounded-full shadow-xl"
             >
                 Permintaan kunjungan terkirim — tim kami akan menghubungi Anda.
             </div>
@@ -1887,7 +1910,7 @@ const socials = [
 .hero-blob-field {
     background: radial-gradient(
         circle at 30% 20%,
-        rgba(28, 163, 201, 0.1),
+        rgba(46, 111, 191, 0.1),
         transparent 55%
     );
 }
@@ -1909,7 +1932,7 @@ const socials = [
     right: 0;
     bottom: -4px;
     height: 1.5px;
-    background: #1ca3c9;
+    background: #2e6fbf;
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.25s ease;
@@ -1920,23 +1943,27 @@ const socials = [
 }
 
 .route-row:nth-child(odd) {
-    background: rgba(13, 107, 79, 0.04);
+    background: rgba(22, 58, 112, 0.05);
+}
+
+:global(.dark) .route-row:nth-child(odd) {
+    background: rgb(255 255 255 / 0.04);
 }
 
 .btn-primary {
-    background: #0d6b4f;
+    background: #163a70;
     transition:
         background 0.2s ease,
         transform 0.2s ease;
 }
 
 .btn-primary:hover {
-    background: #14895f;
+    background: #1f4c91;
     transform: translateY(-1px);
 }
 
 .process-line {
-    background: linear-gradient(180deg, #1ca3c9, #14895f);
+    background: linear-gradient(180deg, #2e6fbf, #163a70);
 }
 
 /* ---------------- Fade-in on scroll ---------------- */

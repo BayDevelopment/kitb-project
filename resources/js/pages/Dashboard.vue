@@ -1,630 +1,619 @@
 <script setup lang="ts">
-import { Head } from "@inertiajs/vue3";
-import { onMounted, ref } from "vue";
-
-import { dashboard } from "@/routes";
+import { computed, type Component } from "vue";
+import { Head, Link } from "@inertiajs/vue3";
+import {
+    ArrowUpRight,
+    Building,
+    Building2,
+    BriefcaseBusiness,
+    CalendarCheck,
+    CalendarDays,
+    Construction,
+    ExternalLink,
+    FileStack,
+    Landmark,
+    LayoutGrid,
+    MapPinned,
+    Network,
+    Route,
+    Target,
+    Users,
+} from "lucide-vue-next";
+import AppLayout from "@/layouts/AppLayout.vue";
 
 defineOptions({
-    layout: {
-        breadcrumbs: [
-            {
-                title: "Dashboard",
-                href: dashboard(),
-            },
-        ],
+    layout: AppLayout,
+});
+
+/*
+|--------------------------------------------------------------------------
+| Interfaces
+|--------------------------------------------------------------------------
+*/
+
+interface GroupItem {
+    key: string;
+    label: string;
+    count: number;
+    href: string;
+}
+
+interface Group {
+    title: string;
+    items: GroupItem[];
+}
+
+interface Kunjungan {
+    id: number;
+    nama: string | null;
+    instansi: string | null;
+    tanggal_kunjungan: string | null;
+    jumlah_peserta: number | null;
+    created_at: string | null;
+}
+
+interface Zone {
+    label: string;
+    luas: number;
+    warna: string;
+}
+
+interface Props {
+    summary: {
+        kunjungan_total: number;
+        kunjungan_bulan_ini: number;
+        total_konten: number;
+        pengguna: number;
+        peluang_investasi: number;
+    };
+    groups: Group[];
+    kunjunganTerbaru: Kunjungan[];
+    zones: Zone[];
+}
+
+const props = defineProps<Props>();
+
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
+
+const iconMap: Record<string, Component> = {
+    tentang: Building2,
+    visi_misi: Target,
+    struktur: Network,
+    anak_usaha: Users,
+    profil_kawasan: Landmark,
+    infrastruktur: Construction,
+    fasilitas: Building,
+    peta: MapPinned,
+    peluang: BriefcaseBusiness,
+    ease: Landmark,
+    kunjungan: MapPinned,
+    rute: Route,
+};
+
+const groupAccent = [
+    "bg-blue-50 text-blue-600 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-900/40",
+    "bg-sky-50 text-sky-600 ring-sky-100 dark:bg-sky-950/40 dark:text-sky-400 dark:ring-sky-900/40",
+    "bg-indigo-50 text-indigo-600 ring-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-900/40",
+];
+
+const formatNumber = (value: number) => value.toLocaleString("id-ID");
+
+const formatDate = (value: string | null) => {
+    if (!value) return "-";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return value;
+
+    return date.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+    });
+};
+
+const today = new Date().toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+});
+
+const maxLuas = computed(() =>
+    Math.max(1, ...props.zones.map((zone) => zone.luas)),
+);
+
+const totalLuas = computed(() =>
+    props.zones.reduce((total, zone) => total + zone.luas, 0),
+);
+
+const statCards = computed(() => [
+    {
+        label: "Kunjungan Lahan",
+        value: props.summary.kunjungan_total,
+        note: `${formatNumber(props.summary.kunjungan_bulan_ini)} permintaan bulan ini`,
+        icon: CalendarCheck,
+        accent: groupAccent[0],
     },
-});
-
-const isLoading = ref(true);
-
-onMounted(() => {
-    window.setTimeout(() => {
-        isLoading.value = false;
-    }, 650);
-});
+    {
+        label: "Peluang Investasi",
+        value: props.summary.peluang_investasi,
+        note: "Dipublikasikan di website",
+        icon: BriefcaseBusiness,
+        accent: groupAccent[1],
+    },
+    {
+        label: "Total Konten",
+        value: props.summary.total_konten,
+        note: "Seluruh modul website",
+        icon: FileStack,
+        accent: groupAccent[2],
+    },
+    {
+        label: "Pengguna Admin",
+        value: props.summary.pengguna,
+        note: "Akun terdaftar",
+        icon: Users,
+        accent: groupAccent[0],
+    },
+]);
 </script>
 
 <template>
     <Head title="Dashboard" />
 
     <div
-        class="relative min-h-full overflow-hidden bg-slate-50 transition-colors duration-300 dark:bg-[#07111f]"
+        class="relative min-h-full overflow-hidden bg-slate-50/50 transition-colors duration-300 dark:bg-slate-950/50"
     >
-        <!-- =====================================================
-             BACKGROUND
-        ====================================================== -->
-
+        <!-- =========================================================
+             DECORATIVE BACKGROUND
+        ========================================================== -->
         <div
-            class="pointer-events-none absolute inset-0 overflow-hidden"
+            class="pointer-events-none absolute inset-x-0 top-0 z-0 h-96 overflow-hidden"
             aria-hidden="true"
         >
-            <!-- Light -->
+            <div
+                class="blob-shape absolute -left-24 -top-32 size-96 rounded-full bg-gradient-to-br from-blue-400/30 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/15 dark:to-transparent"
+            ></div>
 
             <div
-                class="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#0b1f3a]/8 blur-3xl transition-opacity duration-500 dark:opacity-0"
-            />
+                class="blob-shape-delayed absolute -right-20 top-4 size-80 rounded-full bg-gradient-to-tr from-sky-300/30 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10 dark:to-transparent"
+            ></div>
 
             <div
-                class="absolute -right-40 top-20 h-[28rem] w-[28rem] rounded-full bg-[#12345b]/8 blur-3xl transition-opacity duration-500 dark:opacity-0"
-            />
+                class="blob-shape-slow absolute left-1/3 -top-40 size-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/10 dark:to-transparent"
+            ></div>
+
+            <div class="absolute inset-0 opacity-40 dark:opacity-20">
+                <div
+                    class="h-full w-full bg-[linear-gradient(to_right,#64748b12_1px,transparent_1px),linear-gradient(to_bottom,#64748b12_1px,transparent_1px)] bg-[size:32px_32px]"
+                ></div>
+            </div>
 
             <div
-                class="absolute -bottom-40 left-1/3 h-[30rem] w-[30rem] rounded-full bg-[#0b1f3a]/6 blur-3xl transition-opacity duration-500 dark:opacity-0"
-            />
-
-            <div
-                class="absolute left-[8%] top-[42%] h-32 w-32 rounded-full bg-[#1d4ed8]/5 blur-2xl transition-opacity duration-500 dark:opacity-0"
-            />
-
-            <!-- Dark -->
-
-            <div
-                class="absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-[#163b68]/35 opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
-            />
-
-            <div
-                class="absolute -right-44 top-0 h-[34rem] w-[34rem] rounded-full bg-[#1d4ed8]/15 opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
-            />
-
-            <div
-                class="absolute -bottom-48 left-1/3 h-[34rem] w-[34rem] rounded-full bg-[#0e7490]/10 opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
-            />
-
-            <div
-                class="absolute right-[20%] top-[45%] h-40 w-40 rounded-full bg-[#2563eb]/10 opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
-            />
-
-            <!-- Decorative -->
-
-            <div
-                class="absolute left-[7%] top-[45%] h-20 w-20 rounded-full bg-[#163b68]/10 shadow-xl shadow-[#0b1f3a]/10 dark:bg-[#60a5fa]/10 dark:shadow-[#2563eb]/10"
-            />
-
-            <div
-                class="absolute left-[4%] top-[54%] h-4 w-4 rounded-full bg-[#0b1f3a]/20 dark:bg-blue-300/30"
-            />
-
-            <div
-                class="absolute right-[8%] top-[30%] h-4 w-4 rounded-full bg-[#0b1f3a]/20 dark:bg-blue-300/30"
-            />
+                class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-slate-50/90 dark:to-slate-950/90"
+            ></div>
         </div>
 
-        <!-- =====================================================
-             CONTENT
-        ====================================================== -->
+        <!-- =========================================================
+             MAIN CONTENT
+        ========================================================== -->
+        <div
+            class="relative z-10 mx-auto w-full max-w-[1600px] p-4 sm:p-5 lg:p-6 xl:p-8"
+        >
+            <!-- HEADER -->
+            <div
+                class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div class="flex items-center gap-3">
+                    <div
+                        class="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-400"
+                    >
+                        <LayoutGrid class="size-5" />
+                    </div>
 
-        <div class="relative flex flex-1 flex-col gap-6 p-4 sm:p-6">
-            <Transition name="dashboard-fade" mode="out-in">
-                <!-- =================================================
-                     SKELETON
-                ================================================== -->
-
-                <div
-                    v-if="isLoading"
-                    key="dashboard-skeleton"
-                    class="space-y-6"
-                    role="status"
-                    aria-live="polite"
-                    aria-busy="true"
-                >
-                    <span class="sr-only"> Memuat dashboard… </span>
-
-                    <!-- Welcome Skeleton -->
-
-                    <section class="space-y-3">
-                        <div
-                            class="h-4 w-64 animate-pulse rounded-md bg-slate-200 dark:bg-slate-800"
-                        />
-
-                        <div
-                            class="h-8 w-40 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
-                        />
-
-                        <div
-                            class="h-4 w-full max-w-xl animate-pulse rounded-md bg-slate-200/80 dark:bg-slate-800/80"
-                        />
-                    </section>
-
-                    <!-- Statistics Skeleton -->
-
-                    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                        <div
-                            v-for="index in 4"
-                            :key="`stat-${index}`"
-                            class="rounded-2xl border border-slate-200/80 bg-white/80 p-5 shadow-sm dark:border-slate-800/80 dark:bg-slate-900/70"
-                        >
-                            <div
-                                class="h-4 w-28 animate-pulse rounded-md bg-slate-200 dark:bg-slate-800"
-                            />
-
-                            <div
-                                class="mt-4 h-9 w-24 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
-                            />
-
-                            <div
-                                class="mt-3 h-3 w-36 animate-pulse rounded-md bg-slate-200/80 dark:bg-slate-800/80"
-                            />
-                        </div>
-                    </section>
-
-                    <!-- Main Skeleton -->
-
-                    <section class="grid gap-6 lg:grid-cols-3">
-                        <!-- Summary -->
-
-                        <div
-                            class="rounded-2xl border border-slate-200/80 bg-white/80 p-6 shadow-sm dark:border-slate-800/80 dark:bg-slate-900/70 lg:col-span-2"
-                        >
-                            <div
-                                class="h-5 w-40 animate-pulse rounded-md bg-slate-200 dark:bg-slate-800"
-                            />
-
-                            <div
-                                class="mt-2 h-4 w-72 max-w-full animate-pulse rounded-md bg-slate-200/80 dark:bg-slate-800/80"
-                            />
-
-                            <div class="mt-6 grid gap-3 sm:grid-cols-2">
-                                <div
-                                    v-for="index in 4"
-                                    :key="`summary-${index}`"
-                                    class="rounded-xl bg-slate-100/80 p-4 dark:bg-slate-800/60"
-                                >
-                                    <div
-                                        class="h-4 w-32 animate-pulse rounded-md bg-slate-200 dark:bg-slate-700"
-                                    />
-
-                                    <div
-                                        class="mt-3 h-3 w-full animate-pulse rounded-md bg-slate-200/80 dark:bg-slate-700/80"
-                                    />
-
-                                    <div
-                                        class="mt-2 h-3 w-3/4 animate-pulse rounded-md bg-slate-200/70 dark:bg-slate-700/70"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Status -->
-
-                        <div
-                            class="rounded-2xl border border-slate-200/80 bg-white/80 p-6 shadow-sm dark:border-slate-800/80 dark:bg-slate-900/70"
-                        >
-                            <div
-                                class="h-5 w-32 animate-pulse rounded-md bg-slate-200 dark:bg-slate-800"
-                            />
-
-                            <div class="mt-7 space-y-6">
-                                <div
-                                    v-for="index in 3"
-                                    :key="`status-${index}`"
-                                    class="flex items-center justify-between"
-                                >
-                                    <div
-                                        class="h-4 w-24 animate-pulse rounded-md bg-slate-200 dark:bg-slate-800"
-                                    />
-
-                                    <div
-                                        class="h-6 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <!-- =================================================
-                     ACTUAL DASHBOARD
-                ================================================== -->
-
-                <div v-else key="dashboard-content" class="space-y-6">
-                    <!-- Welcome -->
-
-                    <section class="dashboard-item dashboard-item-1">
-                        <p
-                            class="text-sm font-medium text-slate-500 dark:text-slate-400"
-                        >
-                            PT Kawasan Industri Tanjung Buton
-                        </p>
-
+                    <div class="min-w-0">
                         <h1
-                            class="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl"
+                            class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl"
                         >
                             Dashboard
                         </h1>
 
                         <p
-                            class="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500 dark:text-slate-400"
+                            class="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400"
                         >
-                            Kelola informasi dan konten website KITB melalui
-                            panel administrasi.
+                            <CalendarDays class="size-3.5" />
+                            {{ today }}
                         </p>
-                    </section>
-
-                    <!-- Statistics -->
-
-                    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                        <!-- Total Lahan -->
-
-                        <div
-                            class="dashboard-item dashboard-item-2 group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 p-5 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/75 dark:hover:border-slate-700 dark:hover:bg-slate-900/90"
-                        >
-                            <div
-                                class="absolute -right-10 -top-10 size-28 rounded-full bg-[#0b1f3a]/6 blur-2xl transition-transform duration-500 group-hover:scale-125 dark:bg-blue-500/10"
-                            />
-
-                            <div class="relative">
-                                <p
-                                    class="text-sm text-slate-500 dark:text-slate-400"
-                                >
-                                    Total Lahan
-                                </p>
-
-                                <p
-                                    class="mt-2 text-3xl font-semibold text-[#0b1f3a] dark:text-blue-100"
-                                >
-                                    6.070
-                                </p>
-
-                                <p
-                                    class="mt-1 text-xs text-slate-400 dark:text-slate-500"
-                                >
-                                    Hektare kawasan industri
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Zona -->
-
-                        <div
-                            class="dashboard-item dashboard-item-3 group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 p-5 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/75 dark:hover:border-slate-700 dark:hover:bg-slate-900/90"
-                        >
-                            <div
-                                class="absolute -right-10 -top-10 size-28 rounded-full bg-[#0b1f3a]/6 blur-2xl transition-transform duration-500 group-hover:scale-125 dark:bg-blue-500/10"
-                            />
-
-                            <div class="relative">
-                                <p
-                                    class="text-sm text-slate-500 dark:text-slate-400"
-                                >
-                                    Zona Kawasan
-                                </p>
-
-                                <p
-                                    class="mt-2 text-3xl font-semibold text-[#0b1f3a] dark:text-blue-100"
-                                >
-                                    9
-                                </p>
-
-                                <p
-                                    class="mt-1 text-xs text-slate-400 dark:text-slate-500"
-                                >
-                                    Zona dalam master plan
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Rute -->
-
-                        <div
-                            class="dashboard-item dashboard-item-4 group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 p-5 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/75 dark:hover:border-slate-700 dark:hover:bg-slate-900/90"
-                        >
-                            <div
-                                class="absolute -right-10 -top-10 size-28 rounded-full bg-[#0b1f3a]/6 blur-2xl transition-transform duration-500 group-hover:scale-125 dark:bg-blue-500/10"
-                            />
-
-                            <div class="relative">
-                                <p
-                                    class="text-sm text-slate-500 dark:text-slate-400"
-                                >
-                                    Rute Pelayaran
-                                </p>
-
-                                <p
-                                    class="mt-2 text-3xl font-semibold text-[#0b1f3a] dark:text-blue-100"
-                                >
-                                    36
-                                </p>
-
-                                <p
-                                    class="mt-1 text-xs text-slate-400 dark:text-slate-500"
-                                >
-                                    Mil menuju Selat Malaka
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Pembangunan -->
-
-                        <div
-                            class="dashboard-item dashboard-item-5 group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 p-5 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/75 dark:hover:border-slate-700 dark:hover:bg-slate-900/90"
-                        >
-                            <div
-                                class="absolute -right-10 -top-10 size-28 rounded-full bg-[#0b1f3a]/6 blur-2xl transition-transform duration-500 group-hover:scale-125 dark:bg-blue-500/10"
-                            />
-
-                            <div class="relative">
-                                <p
-                                    class="text-sm text-slate-500 dark:text-slate-400"
-                                >
-                                    Pembangunan
-                                </p>
-
-                                <p
-                                    class="mt-2 text-3xl font-semibold text-[#0b1f3a] dark:text-blue-100"
-                                >
-                                    Tahap 1
-                                </p>
-
-                                <p
-                                    class="mt-1 text-xs text-slate-400 dark:text-slate-500"
-                                >
-                                    Pengembangan kawasan
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Main Content -->
-
-                    <section class="grid gap-6 lg:grid-cols-3">
-                        <!-- Ringkasan -->
-
-                        <div
-                            class="dashboard-item dashboard-item-6 relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/75 lg:col-span-2"
-                        >
-                            <div
-                                class="absolute -right-24 -top-24 size-64 rounded-full bg-[#0b1f3a]/5 blur-3xl dark:bg-blue-500/10"
-                            />
-
-                            <div class="relative">
-                                <h2
-                                    class="text-base font-semibold text-slate-900 dark:text-white"
-                                >
-                                    Ringkasan Website
-                                </h2>
-
-                                <p
-                                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-                                >
-                                    Informasi konten yang dikelola melalui
-                                    admin.
-                                </p>
-
-                                <div class="mt-6 grid gap-3 sm:grid-cols-2">
-                                    <div
-                                        class="rounded-xl bg-slate-50/90 p-4 ring-1 ring-slate-100 transition-colors hover:bg-slate-100/80 dark:bg-slate-800/70 dark:ring-slate-700/70 dark:hover:bg-slate-800"
-                                    >
-                                        <p
-                                            class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                                        >
-                                            Profil Perusahaan
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400"
-                                        >
-                                            Informasi, visi, misi, struktur, dan
-                                            anak usaha.
-                                        </p>
-                                    </div>
-
-                                    <div
-                                        class="rounded-xl bg-slate-50/90 p-4 ring-1 ring-slate-100 transition-colors hover:bg-slate-100/80 dark:bg-slate-800/70 dark:ring-slate-700/70 dark:hover:bg-slate-800"
-                                    >
-                                        <p
-                                            class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                                        >
-                                            Kawasan Industri
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400"
-                                        >
-                                            Master plan, zona, lahan, dan
-                                            pembangunan.
-                                        </p>
-                                    </div>
-
-                                    <div
-                                        class="rounded-xl bg-slate-50/90 p-4 ring-1 ring-slate-100 transition-colors hover:bg-slate-100/80 dark:bg-slate-800/70 dark:ring-slate-700/70 dark:hover:bg-slate-800"
-                                    >
-                                        <p
-                                            class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                                        >
-                                            Investasi
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400"
-                                        >
-                                            Peluang investasi, kemudahan usaha,
-                                            dan rute.
-                                        </p>
-                                    </div>
-
-                                    <div
-                                        class="rounded-xl bg-slate-50/90 p-4 ring-1 ring-slate-100 transition-colors hover:bg-slate-100/80 dark:bg-slate-800/70 dark:ring-slate-700/70 dark:hover:bg-slate-800"
-                                    >
-                                        <p
-                                            class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                                        >
-                                            Informasi
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400"
-                                        >
-                                            Berita, galeri, dan publikasi KITB.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Status -->
-
-                        <div
-                            class="dashboard-item dashboard-item-7 relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/75"
-                        >
-                            <div
-                                class="absolute -bottom-20 -right-20 size-48 rounded-full bg-[#0b1f3a]/6 blur-3xl dark:bg-blue-500/10"
-                            />
-
-                            <div class="relative">
-                                <h2
-                                    class="text-base font-semibold text-slate-900 dark:text-white"
-                                >
-                                    Status Sistem
-                                </h2>
-
-                                <div class="mt-6 space-y-5">
-                                    <div
-                                        class="flex items-center justify-between gap-4"
-                                    >
-                                        <span
-                                            class="text-sm text-slate-500 dark:text-slate-400"
-                                        >
-                                            Website
-                                        </span>
-
-                                        <span
-                                            class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
-                                        >
-                                            Aktif
-                                        </span>
-                                    </div>
-
-                                    <div
-                                        class="flex items-center justify-between gap-4"
-                                    >
-                                        <span
-                                            class="text-sm text-slate-500 dark:text-slate-400"
-                                        >
-                                            Database
-                                        </span>
-
-                                        <span
-                                            class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
-                                        >
-                                            Terhubung
-                                        </span>
-                                    </div>
-
-                                    <div
-                                        class="flex items-center justify-between gap-4"
-                                    >
-                                        <span
-                                            class="text-sm text-slate-500 dark:text-slate-400"
-                                        >
-                                            Admin Panel
-                                        </span>
-
-                                        <span
-                                            class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
-                                        >
-                                            Online
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                    </div>
                 </div>
-            </Transition>
+
+                <a
+                    href="/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/20 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-950"
+                >
+                    <ExternalLink class="size-4" />
+                    Lihat Website
+                </a>
+            </div>
+
+            <!-- STAT CARDS -->
+            <div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div
+                    v-for="card in statCards"
+                    :key="card.label"
+                    class="rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm shadow-slate-200/40 backdrop-blur-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p
+                                class="text-sm font-medium text-slate-500 dark:text-slate-400"
+                            >
+                                {{ card.label }}
+                            </p>
+
+                            <p
+                                class="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white"
+                            >
+                                {{ formatNumber(card.value) }}
+                            </p>
+                        </div>
+
+                        <div
+                            class="flex size-10 shrink-0 items-center justify-center rounded-xl ring-1"
+                            :class="card.accent"
+                        >
+                            <component :is="card.icon" class="size-5" />
+                        </div>
+                    </div>
+
+                    <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                        {{ card.note }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- KUNJUNGAN + ZONA -->
+            <div class="mb-5 grid gap-5 xl:grid-cols-3">
+                <!-- Kunjungan terbaru -->
+                <div
+                    class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10 xl:col-span-2"
+                >
+                    <div
+                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                    >
+                        <div>
+                            <h2
+                                class="text-base font-semibold text-slate-900 dark:text-white"
+                            >
+                                Permintaan Kunjungan Lahan
+                            </h2>
+
+                            <p
+                                class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                Pengajuan terbaru dari form di website.
+                            </p>
+                        </div>
+
+                        <Link
+                            href="/hubungan-investor/kunjungan-lahan"
+                            class="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                            Lihat semua
+                            <ArrowUpRight class="size-4" />
+                        </Link>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[560px] text-left text-sm">
+                            <thead
+                                class="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-800/50"
+                            >
+                                <tr>
+                                    <th
+                                        class="px-6 py-3 font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Pemohon
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Tanggal Kunjungan
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Peserta
+                                    </th>
+                                    <th
+                                        class="px-6 py-3 font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Diajukan
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody
+                                class="divide-y divide-slate-100 dark:divide-slate-800"
+                            >
+                                <tr
+                                    v-for="item in kunjunganTerbaru"
+                                    :key="item.id"
+                                    class="transition-colors duration-200 hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
+                                >
+                                    <td class="px-6 py-3.5">
+                                        <p
+                                            class="font-medium text-slate-900 dark:text-white"
+                                        >
+                                            {{ item.nama || "-" }}
+                                        </p>
+
+                                        <p
+                                            class="text-xs text-slate-500 dark:text-slate-400"
+                                        >
+                                            {{ item.instansi || "-" }}
+                                        </p>
+                                    </td>
+
+                                    <td
+                                        class="px-6 py-3.5 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{ formatDate(item.tanggal_kunjungan) }}
+                                    </td>
+
+                                    <td
+                                        class="px-6 py-3.5 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{ item.jumlah_peserta ?? "-" }}
+                                    </td>
+
+                                    <td
+                                        class="px-6 py-3.5 text-slate-500 dark:text-slate-400"
+                                    >
+                                        {{ formatDate(item.created_at) }}
+                                    </td>
+                                </tr>
+
+                                <tr v-if="kunjunganTerbaru.length === 0">
+                                    <td
+                                        colspan="4"
+                                        class="px-6 py-14 text-center"
+                                    >
+                                        <div
+                                            class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
+                                        >
+                                            <CalendarCheck class="size-6" />
+                                        </div>
+
+                                        <p
+                                            class="mt-3 font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            Belum ada permintaan
+                                        </p>
+
+                                        <p
+                                            class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                                        >
+                                            Permintaan dari tombol Atur Jadwal
+                                            akan muncul di sini.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Zona kawasan -->
+                <div
+                    class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/50 backdrop-blur-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10"
+                >
+                    <h2
+                        class="text-base font-semibold text-slate-900 dark:text-white"
+                    >
+                        Luas Zona Kawasan
+                    </h2>
+
+                    <p
+                        class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
+                    >
+                        Total {{ formatNumber(totalLuas) }} Ha
+                    </p>
+
+                    <div v-if="zones.length" class="mt-5 space-y-3.5">
+                        <div v-for="zone in zones" :key="zone.label">
+                            <div
+                                class="mb-1.5 flex items-center justify-between gap-3 text-sm"
+                            >
+                                <span
+                                    class="flex min-w-0 items-center gap-2 text-slate-700 dark:text-slate-200"
+                                >
+                                    <span
+                                        class="size-2.5 shrink-0 rounded-sm"
+                                        :style="{
+                                            backgroundColor: zone.warna,
+                                        }"
+                                    ></span>
+
+                                    <span class="truncate">
+                                        {{ zone.label }}
+                                    </span>
+                                </span>
+
+                                <span
+                                    class="shrink-0 font-medium text-slate-900 dark:text-white"
+                                >
+                                    {{ formatNumber(zone.luas) }} Ha
+                                </span>
+                            </div>
+
+                            <div
+                                class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                            >
+                                <div
+                                    class="h-full rounded-full"
+                                    :style="{
+                                        width: `${(zone.luas / maxLuas) * 100}%`,
+                                        backgroundColor: zone.warna,
+                                    }"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        v-else
+                        class="mt-8 text-center text-sm text-slate-500 dark:text-slate-400"
+                    >
+                        Data zona kawasan belum tersedia.
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODUL KONTEN -->
+            <div class="grid gap-5 lg:grid-cols-3">
+                <div
+                    v-for="(group, index) in groups"
+                    :key="group.title"
+                    class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-slate-200/50 backdrop-blur-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10"
+                >
+                    <h2
+                        class="mb-4 text-base font-semibold text-slate-900 dark:text-white"
+                    >
+                        {{ group.title }}
+                    </h2>
+
+                    <div class="space-y-1.5">
+                        <Link
+                            v-for="item in group.items"
+                            :key="item.key"
+                            :href="item.href"
+                            class="group flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                        >
+                            <span class="flex min-w-0 items-center gap-3">
+                                <span
+                                    class="flex size-9 shrink-0 items-center justify-center rounded-lg ring-1"
+                                    :class="groupAccent[index % 3]"
+                                >
+                                    <component
+                                        :is="iconMap[item.key] ?? Building2"
+                                        class="size-4"
+                                    />
+                                </span>
+
+                                <span
+                                    class="truncate text-sm font-medium text-slate-700 group-hover:text-blue-600 dark:text-slate-200 dark:group-hover:text-blue-400"
+                                >
+                                    {{ item.label }}
+                                </span>
+                            </span>
+
+                            <span
+                                class="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            >
+                                {{ formatNumber(item.count) }}
+                            </span>
+                        </Link>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <style scoped>
-/* =========================================================
-   PAGE TRANSITION
-========================================================= */
-
-.dashboard-fade-enter-active,
-.dashboard-fade-leave-active {
-    transition:
-        opacity 320ms ease,
-        transform 320ms ease;
+.blob-shape {
+    animation: blob-float 12s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
 }
 
-.dashboard-fade-enter-from {
-    opacity: 0;
-    transform: translateY(8px);
+.blob-shape-delayed {
+    animation: blob-float-delayed 15s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
 }
 
-.dashboard-fade-leave-to {
-    opacity: 0;
-    transform: translateY(-4px);
+.blob-shape-slow {
+    animation: blob-float-slow 18s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
 }
 
-/* =========================================================
-   CONTENT STAGGER
-========================================================= */
-
-.dashboard-item {
-    opacity: 0;
-    animation: dashboard-item-enter 480ms cubic-bezier(0.22, 1, 0.36, 1)
-        forwards;
-}
-
-.dashboard-item-1 {
-    animation-delay: 40ms;
-}
-
-.dashboard-item-2 {
-    animation-delay: 90ms;
-}
-
-.dashboard-item-3 {
-    animation-delay: 130ms;
-}
-
-.dashboard-item-4 {
-    animation-delay: 170ms;
-}
-
-.dashboard-item-5 {
-    animation-delay: 210ms;
-}
-
-.dashboard-item-6 {
-    animation-delay: 250ms;
-}
-
-.dashboard-item-7 {
-    animation-delay: 290ms;
-}
-
-@keyframes dashboard-item-enter {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
+@keyframes blob-float {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
     }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    33% {
+        transform: translate3d(25px, 15px, 0) scale(1.05);
+    }
+
+    66% {
+        transform: translate3d(-15px, 30px, 0) scale(0.96);
     }
 }
 
-/* =========================================================
-   REDUCED MOTION
-========================================================= */
+@keyframes blob-float-delayed {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    40% {
+        transform: translate3d(-30px, 20px, 0) scale(1.08);
+    }
+
+    75% {
+        transform: translate3d(15px, -15px, 0) scale(0.95);
+    }
+}
+
+@keyframes blob-float-slow {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate3d(0, 35px, 0) scale(1.1);
+    }
+}
 
 @media (prefers-reduced-motion: reduce) {
-    .dashboard-fade-enter-active,
-    .dashboard-fade-leave-active {
-        transition: none;
-    }
-
-    .dashboard-fade-enter-from,
-    .dashboard-fade-leave-to {
-        transform: none;
-    }
-
-    .dashboard-item {
-        opacity: 1;
+    .blob-shape,
+    .blob-shape-delayed,
+    .blob-shape-slow {
         animation: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .blob-shape {
+        left: -10rem;
+        top: -8rem;
+        width: 20rem;
+        height: 20rem;
+    }
+
+    .blob-shape-delayed {
+        right: -8rem;
+        width: 17rem;
+        height: 17rem;
+    }
+
+    .blob-shape-slow {
+        left: 35%;
+        width: 15rem;
+        height: 15rem;
     }
 }
 </style>
