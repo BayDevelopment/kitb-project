@@ -1364,10 +1364,10 @@ const socials = [
                         <span class="font-medium text-white/85">Email:</span>
 
                         <a
-                            href="mailto:info@kitb.co.id"
+                            href="mailto:info@tanjungbuton-industrial.co.id"
                             class="hover:text-white transition-colors"
                         >
-                            info@kitb.co.id
+                            info@tanjungbuton-industrial.co.id
                         </a>
                     </p>
                 </div>
@@ -1572,10 +1572,10 @@ const socials = [
                         </h4>
 
                         <a
-                            href="mailto:info@kitb.co.id"
+                            href="mailto:info@tanjungbuton-industrial.co.id"
                             class="inline-flex items-center text-[13.5px] font-medium text-white px-4 py-2 rounded-full bg-kitb-teal-500 mb-4"
                         >
-                            info@kitb.co.id
+                            info@tanjungbuton-industrial.co.id
                         </a>
 
                         <div
