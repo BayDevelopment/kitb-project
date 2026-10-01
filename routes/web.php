@@ -3,9 +3,11 @@
 use App\Http\Controllers\Admin\AnakUsahaController;
 use App\Http\Controllers\Admin\BeritaController;
 use App\Http\Controllers\Admin\EaseOfDoingBusinessController;
+use App\Http\Controllers\Admin\GaleriController;
 use App\Http\Controllers\Admin\Kawasan\FasilitasController;
 use App\Http\Controllers\Admin\Kawasan\InfrastrukturController;
 use App\Http\Controllers\Admin\KunjunganLahanController;
+use App\Http\Controllers\Admin\LowonganController;
 use App\Http\Controllers\Admin\PeluangInvestasiController as AdminPeluangInvestasiController;
 use App\Http\Controllers\Admin\PetaKawasanController;
 use App\Http\Controllers\Admin\ProfilKawasanController;
@@ -14,6 +16,7 @@ use App\Http\Controllers\Admin\RuteController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PublicLowonganKerjaController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -21,6 +24,13 @@ Route::get('/', function () {
     return Inertia::render('Index');
 })->name('home');
 
+
+// Karir public
+Route::get('/karier', [PublicLowonganKerjaController::class, 'index'])->name('karier');
+Route::get('/karier/{slug}', [PublicLowonganKerjaController::class, 'show'])->name('karier.detail');
+
+
+// Admin
 Route::middleware(['auth', 'verified'])->group(function () {
 
     /*
@@ -524,6 +534,77 @@ Route::middleware(['auth', 'verified'])->group(function () {
         '/pusat-informasi/berita/{berita}/toggle-featured',
         [BeritaController::class, 'toggleFeatured']
     )->name('pusat-informasi.berita.toggle-featured');
+
+    Route::get(
+        '/pusat-informasi/galeri',
+        [GaleriController::class, 'index']
+    )->name('pusat-informasi.galeri.index');
+
+    Route::post(
+        '/pusat-informasi/galeri',
+        [GaleriController::class, 'store']
+    )->name('pusat-informasi.galeri.store');
+
+    Route::put(
+        '/pusat-informasi/galeri/{galeri}',
+        [GaleriController::class, 'update']
+    )->name('pusat-informasi.galeri.update');
+
+    Route::delete(
+        '/pusat-informasi/galeri/{galeri}',
+        [GaleriController::class, 'destroy']
+    )->name('pusat-informasi.galeri.destroy');
+
+    Route::patch(
+        '/pusat-informasi/galeri/{galeri}/toggle-aktif',
+        [GaleriController::class, 'toggleAktif']
+    )->name('pusat-informasi.galeri.toggle-aktif');
+
+    Route::patch(
+        '/pusat-informasi/galeri/{galeri}/move',
+        [GaleriController::class, 'move']
+    )->name('pusat-informasi.galeri.move');
+
+    /*
+|--------------------------------------------------------------------------
+| Pusat Informasi - Lowongan
+|--------------------------------------------------------------------------
+*/
+
+    Route::get(
+        '/pusat-informasi/lowongan',
+        [LowonganController::class, 'index']
+    )->name('pusat-informasi.lowongan.index');
+
+    Route::post(
+        '/pusat-informasi/lowongan',
+        [LowonganController::class, 'store']
+    )->name('pusat-informasi.lowongan.store');
+
+    Route::put(
+        '/pusat-informasi/lowongan/{lowongan}',
+        [LowonganController::class, 'update']
+    )->name('pusat-informasi.lowongan.update');
+
+    Route::delete(
+        '/pusat-informasi/lowongan/{lowongan}',
+        [LowonganController::class, 'destroy']
+    )->name('pusat-informasi.lowongan.destroy');
+
+    Route::patch(
+        '/pusat-informasi/lowongan/{lowongan}/toggle-status',
+        [LowonganController::class, 'toggleStatus']
+    )->name('pusat-informasi.lowongan.toggle-status');
+
+    Route::patch(
+        '/pusat-informasi/lowongan/{lowongan}/toggle-featured',
+        [LowonganController::class, 'toggleFeatured']
+    )->name('pusat-informasi.lowongan.toggle-featured');
+
+    Route::patch(
+        '/pusat-informasi/lowongan/{lowongan}/move',
+        [LowonganController::class, 'move']
+    )->name('pusat-informasi.lowongan.move');
 });
 
 require __DIR__ . '/settings.php';

@@ -16,6 +16,7 @@ import {
     Route,
     Target,
     Users,
+    Images,
 } from "lucide-vue-next";
 import { computed } from "vue";
 
@@ -154,6 +155,16 @@ const mainNavItems: NavItem[] = [
                 title: "Berita",
                 href: "/pusat-informasi/berita",
                 icon: Newspaper,
+            },
+            {
+                title: "Galeri",
+                href: "/pusat-informasi/galeri",
+                icon: Images,
+            },
+            {
+                title: "Lowongan",
+                href: "/pusat-informasi/lowongan",
+                icon: BriefcaseBusiness,
             },
         ],
     },
