@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class Lamaran extends Model
@@ -31,7 +32,10 @@ class Lamaran extends Model
     ];
 
     /**
-     * Path file tidak boleh ikut ke JSON/Inertia.
+     * Path file tidak ikut dikirim ke JSON/Inertia.
+     *
+     * Admin tetap dapat mengakses dokumen melalui
+     * endpoint download yang disediakan LamaranController.
      */
     protected $hidden = [
         'cv',
@@ -51,22 +55,33 @@ class Lamaran extends Model
         ];
     }
 
+    /**
+     * Hapus dokumen ketika data lamaran dihapus.
+     */
     protected static function booted(): void
     {
-        static::deleting(function (Lamaran $lamaran) {
-            foreach ([$lamaran->cv, $lamaran->surat_lamaran] as $path) {
-                if ($path) {
+        static::deleted(function (Lamaran $lamaran) {
+            $paths = array_filter([$lamaran->cv, $lamaran->surat_lamaran]);
+
+            DB::afterCommit(function () use ($paths) {
+                foreach ($paths as $path) {
                     Storage::disk('public')->delete($path);
                 }
-            }
+            });
         });
     }
 
+    /**
+     * Relasi ke lowongan.
+     */
     public function lowongan(): BelongsTo
     {
         return $this->belongsTo(Lowongan::class);
     }
 
+    /**
+     * Apakah pelamar memiliki CV.
+     */
     protected function hasCv(): Attribute
     {
         return Attribute::get(
@@ -74,6 +89,9 @@ class Lamaran extends Model
         );
     }
 
+    /**
+     * Apakah pelamar memiliki surat lamaran.
+     */
     protected function hasSuratLamaran(): Attribute
     {
         return Attribute::get(
@@ -81,20 +99,37 @@ class Lamaran extends Model
         );
     }
 
-    public function scopeStatus(Builder $query, ?string $status): Builder
-    {
+    /**
+     * Filter berdasarkan status.
+     */
+    public function scopeStatus(
+        Builder $query,
+        ?string $status
+    ): Builder {
         return $query->when(
             $status,
             fn($q) => $q->where('status', $status)
         );
     }
 
-    public function scopeSearch(Builder $query, ?string $term): Builder
-    {
+    /**
+     * Pencarian berdasarkan nama atau email.
+     */
+    public function scopeSearch(
+        Builder $query,
+        ?string $term
+    ): Builder {
         return $query->when($term, function ($q) use ($term) {
             $q->where(function ($q) use ($term) {
-                $q->where('nama_lengkap', 'like', "%{$term}%")
-                    ->orWhere('email', 'like', "%{$term}%");
+                $q->where(
+                    'nama_lengkap',
+                    'like',
+                    "%{$term}%"
+                )->orWhere(
+                    'email',
+                    'like',
+                    "%{$term}%"
+                );
             });
         });
     }

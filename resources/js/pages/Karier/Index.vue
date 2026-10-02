@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { Head, Link } from "@inertiajs/vue3";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { Head, Link, router } from "@inertiajs/vue3";
 import {
     ArrowRight,
     BriefcaseBusiness,
@@ -9,6 +9,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Clock3,
+    MapPin,
     Search,
     SlidersHorizontal,
     Users,
@@ -22,11 +23,10 @@ interface Lowongan {
     slug: string;
     deskripsi: string | null;
     departemen: string | null;
-    tipe: string | null;
+    tipe_pekerjaan: string | null;
     lokasi: string | null;
-    tanggal_buka: string | null;
+    tanggal_mulai: string | null;
     tanggal_tutup: string | null;
-    is_active: boolean;
 }
 
 interface LinkItem {
@@ -37,22 +37,24 @@ interface LinkItem {
 
 interface Paginator {
     current_page: number;
-    first_page_url: string;
     from: number | null;
     last_page: number;
-    last_page_url: string;
     links: LinkItem[];
     next_page_url: string | null;
-    path: string;
-    per_page: number;
     prev_page_url: string | null;
     to: number | null;
     total: number;
+    data: Lowongan[];
 }
 
 interface Props {
-    lowongans: Paginator & {
-        data: Lowongan[];
+    lowongans: Paginator;
+    departments: string[];
+    types: string[];
+    filters: {
+        search: string;
+        departemen: string;
+        tipe: string;
     };
 }
 
@@ -62,62 +64,146 @@ defineOptions({
     layout: PublicLayout,
 });
 
-const searchQuery = ref("");
-const selectedDepartment = ref("");
-const selectedType = ref("");
+/*
+|--------------------------------------------------------------------------
+| Loading
+|--------------------------------------------------------------------------
+*/
 
-const departments = computed(() => {
-    return [
-        ...new Set(
-            props.lowongans.data
-                .map((item) => item.departemen)
-                .filter((item): item is string => Boolean(item)),
-        ),
-    ].sort();
-});
+const isLoading = ref(false);
 
-const types = computed(() => {
-    return [
-        ...new Set(
-            props.lowongans.data
-                .map((item) => item.tipe)
-                .filter((item): item is string => Boolean(item)),
-        ),
-    ].sort();
-});
+let removeStartListener: (() => void) | undefined;
+let removeFinishListener: (() => void) | undefined;
 
-const filteredLowongans = computed(() => {
-    const keyword = searchQuery.value.trim().toLowerCase();
+onMounted(() => {
+    removeStartListener = router.on("start", () => {
+        isLoading.value = true;
+    });
 
-    return props.lowongans.data.filter((item) => {
-        const matchesSearch =
-            !keyword ||
-            item.judul.toLowerCase().includes(keyword) ||
-            item.departemen?.toLowerCase().includes(keyword) ||
-            item.lokasi?.toLowerCase().includes(keyword);
-
-        const matchesDepartment =
-            !selectedDepartment.value ||
-            item.departemen === selectedDepartment.value;
-
-        const matchesType =
-            !selectedType.value || item.tipe === selectedType.value;
-
-        return matchesSearch && matchesDepartment && matchesType;
+    removeFinishListener = router.on("finish", () => {
+        isLoading.value = false;
     });
 });
 
-const hasFilter = computed(() => {
-    return Boolean(
-        searchQuery.value || selectedDepartment.value || selectedType.value,
+/*
+|--------------------------------------------------------------------------
+| Filter
+|--------------------------------------------------------------------------
+*/
+
+const searchQuery = ref(props.filters.search ?? "");
+const selectedDepartment = ref(props.filters.departemen ?? "");
+const selectedType = ref(props.filters.tipe ?? "");
+
+let searchTimeout: ReturnType<typeof setTimeout> | undefined;
+
+const applyFilter = () => {
+    router.get(
+        "/karier",
+        {
+            search: searchQuery.value.trim() || undefined,
+            departemen: selectedDepartment.value || undefined,
+            tipe: selectedType.value || undefined,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ["lowongans", "filters"],
+        },
     );
+};
+
+watch(searchQuery, () => {
+    clearTimeout(searchTimeout);
+
+    searchTimeout = setTimeout(() => {
+        applyFilter();
+    }, 400);
 });
 
+watch([selectedDepartment, selectedType], () => {
+    applyFilter();
+});
+
+const hasFilter = computed(() =>
+    Boolean(
+        searchQuery.value.trim() ||
+        selectedDepartment.value ||
+        selectedType.value,
+    ),
+);
+
 const clearFilters = () => {
+    clearTimeout(searchTimeout);
+
     searchQuery.value = "";
     selectedDepartment.value = "";
     selectedType.value = "";
 };
+
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
+
+const typeLabels: Record<string, string> = {
+    full_time: "Full Time",
+    part_time: "Part Time",
+    contract: "Contract",
+    kontrak: "Kontrak",
+    internship: "Internship",
+    magang: "Magang",
+    freelance: "Freelance",
+    remote: "Remote",
+};
+
+const normalizeType = (value: string) =>
+    value
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+
+const getTypeLabel = (type: string | null) => {
+    if (!type) return "Full Time";
+
+    return typeLabels[normalizeType(type)] ?? type;
+};
+
+const getTypeIcon = (type: string | null) => {
+    const normalized = type ? normalizeType(type) : "";
+
+    return normalized.includes("intern") || normalized.includes("magang")
+        ? Users
+        : BriefcaseBusiness;
+};
+
+const jakartaDateKey = (value: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Jakarta",
+    }).format(value);
+
+const isDeadlineNear = (date: string | null) => {
+    if (!date) return false;
+
+    const deadline = new Date(date);
+
+    if (Number.isNaN(deadline.getTime())) {
+        return false;
+    }
+
+    const days =
+        (new Date(jakartaDateKey(deadline)).getTime() -
+            new Date(jakartaDateKey(new Date())).getTime()) /
+        86_400_000;
+
+    return days >= 0 && days <= 7;
+};
+
+const getDescription = (description: string | null) =>
+    description?.trim() ||
+    "Temukan kesempatan untuk berkembang dan berkontribusi bersama KITB.";
 
 const formatDate = (value: string | null) => {
     if (!value) return "-";
@@ -132,82 +218,23 @@ const formatDate = (value: string | null) => {
         day: "numeric",
         month: "long",
         year: "numeric",
+        timeZone: "Asia/Jakarta",
     });
 };
 
-const getTypeLabel = (type: string | null) => {
-    if (!type) return "Full Time";
+const pageLinks = computed(() => props.lowongans.links.slice(1, -1));
 
-    const normalized = type.toLowerCase();
+/*
+|--------------------------------------------------------------------------
+| Cleanup
+|--------------------------------------------------------------------------
+*/
 
-    if (normalized.includes("intern")) {
-        return "Internship";
-    }
+onBeforeUnmount(() => {
+    clearTimeout(searchTimeout);
 
-    if (normalized.includes("kontrak")) {
-        return "Kontrak";
-    }
-
-    if (normalized.includes("part")) {
-        return "Part Time";
-    }
-
-    return type;
-};
-
-const getTypeIcon = (type: string | null) => {
-    if (type?.toLowerCase().includes("intern")) {
-        return Users;
-    }
-
-    return BriefcaseBusiness;
-};
-
-const getDescription = (description: string | null) => {
-    if (!description) {
-        return "Temukan kesempatan untuk berkembang dan berkontribusi bersama KITB.";
-    }
-
-    const plainText = description
-        .replace(/<[^>]*>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-
-    if (!plainText) {
-        return "Temukan kesempatan untuk berkembang dan berkontribusi bersama KITB.";
-    }
-
-    return plainText.length > 150
-        ? `${plainText.substring(0, 150)}...`
-        : plainText;
-};
-
-const isDeadlineNear = (date: string | null) => {
-    if (!date) return false;
-
-    const deadline = new Date(date);
-    const now = new Date();
-
-    const difference =
-        (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-
-    return difference >= 0 && difference <= 7;
-};
-
-const previousLink = computed(() => {
-    return props.lowongans.links.find((link) =>
-        link.label.includes("Previous"),
-    );
-});
-
-const nextLink = computed(() => {
-    return props.lowongans.links.find((link) => link.label.includes("Next"));
-});
-
-const pageLinks = computed(() => {
-    return props.lowongans.links.filter((link) => {
-        return !link.label.includes("Previous") && !link.label.includes("Next");
-    });
+    removeStartListener?.();
+    removeFinishListener?.();
 });
 </script>
 
@@ -236,36 +263,39 @@ const pageLinks = computed(() => {
     </Head>
 
     <div
-        class="relative min-h-screen overflow-hidden bg-slate-50/70 dark:bg-slate-950"
+        class="relative min-h-screen overflow-x-clip bg-slate-50/70 dark:bg-slate-950"
     >
         <!-- =========================================================
              BACKGROUND AMBIENT
         ========================================================== -->
+
         <div
-            class="pointer-events-none absolute inset-x-0 top-0 h-[620px] overflow-hidden"
+            class="pointer-events-none absolute inset-x-0 -top-28 h-[820px] overflow-hidden"
             aria-hidden="true"
         >
-            <!-- Soft top gradient -->
+            <!-- Top fade -->
             <div
-                class="absolute inset-0 bg-gradient-to-b from-blue-50/90 via-slate-50/70 to-slate-50/0 dark:from-blue-950/20 dark:via-slate-950/50 dark:to-transparent"
+                class="absolute inset-x-0 top-0 h-60 bg-gradient-to-b from-blue-100/70 via-blue-50/40 to-transparent dark:from-blue-950/30 dark:via-blue-950/10"
             />
 
-            <!-- Subtle radial glow -->
+            <!-- Blob kiri -->
             <div
-                class="absolute left-1/2 top-0 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-blue-400/[0.08] blur-3xl dark:bg-blue-500/[0.07]"
+                class="blob blob-a absolute left-[2%] top-0 size-[26rem] rounded-full bg-gradient-to-br from-blue-400/35 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/15"
             />
 
+            <!-- Blob kanan -->
             <div
-                class="absolute left-[8%] top-[150px] h-64 w-64 rounded-full bg-sky-300/[0.07] blur-3xl dark:bg-sky-500/[0.04]"
+                class="blob blob-b absolute right-[2%] top-4 size-[22rem] rounded-full bg-gradient-to-tr from-sky-300/35 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10"
             />
 
+            <!-- Blob tengah -->
             <div
-                class="absolute right-[5%] top-[180px] h-72 w-72 rounded-full bg-indigo-300/[0.06] blur-3xl dark:bg-indigo-500/[0.04]"
+                class="blob blob-c absolute left-1/3 top-56 size-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/10"
             />
 
-            <!-- Technical grid -->
+            <!-- Grid -->
             <div
-                class="absolute inset-0 opacity-[0.28] dark:opacity-[0.12]"
+                class="absolute inset-0 opacity-[0.18] dark:opacity-[0.08]"
                 style="
                     background-image:
                         linear-gradient(
@@ -281,19 +311,19 @@ const pageLinks = computed(() => {
                     mask-image: linear-gradient(
                         to bottom,
                         black 0%,
-                        black 55%,
+                        black 48%,
                         transparent 100%
                     );
                     -webkit-mask-image: linear-gradient(
                         to bottom,
                         black 0%,
-                        black 55%,
+                        black 48%,
                         transparent 100%
                     );
                 "
             />
 
-            <!-- Bottom fade -->
+            <!-- Fade ke background -->
             <div
                 class="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-b from-transparent to-slate-50/90 dark:to-slate-950/90"
             />
@@ -302,24 +332,32 @@ const pageLinks = computed(() => {
         <!-- =========================================================
              CONTENT
         ========================================================== -->
+
         <div
             class="relative z-10 mx-auto w-full max-w-[1440px] px-4 pb-12 pt-24 sm:px-6 sm:pt-28 lg:px-8 lg:pb-16 lg:pt-32"
         >
             <!-- =====================================================
                  HERO
             ====================================================== -->
+
             <section class="mx-auto max-w-4xl text-center">
+                <!-- Badge -->
                 <div
-                    class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-blue-700 shadow-sm shadow-blue-900/5 backdrop-blur-sm dark:border-blue-900/60 dark:bg-slate-900/70 dark:text-blue-300"
+                    class="reveal mb-5 inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-blue-700 shadow-sm shadow-blue-900/5 backdrop-blur-sm dark:border-blue-900/60 dark:bg-slate-900/70 dark:text-blue-300"
+                    style="--d: 0"
                 >
                     <BriefcaseBusiness class="size-3.5" />
+
                     <span>Peluang Karier di KITB</span>
                 </div>
 
+                <!-- Heading -->
                 <h1
-                    class="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl dark:text-white"
+                    class="reveal text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl dark:text-white"
+                    style="--d: 100"
                 >
                     Bangun Masa Depan
+
                     <span
                         class="bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 bg-clip-text text-transparent"
                     >
@@ -327,17 +365,20 @@ const pageLinks = computed(() => {
                     </span>
                 </h1>
 
+                <!-- Description -->
                 <p
-                    class="mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base sm:leading-8 dark:text-slate-400"
+                    class="reveal mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base sm:leading-8 dark:text-slate-400"
+                    style="--d: 200"
                 >
                     Temukan peluang untuk berkembang, berkolaborasi, dan
                     memberikan kontribusi nyata dalam membangun kawasan industri
                     yang berkelanjutan.
                 </p>
 
-                <!-- Small stats -->
+                <!-- Stats -->
                 <div
-                    class="mx-auto mt-8 flex w-fit flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/75 p-1.5 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/70"
+                    class="reveal mx-auto mt-8 flex w-fit flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/75 p-1.5 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/70"
+                    style="--d: 300"
                 >
                     <div
                         class="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300"
@@ -348,9 +389,7 @@ const pageLinks = computed(() => {
                             <BriefcaseBusiness class="size-3.5" />
                         </div>
 
-                        <span>
-                            {{ props.lowongans.total }} Posisi Tersedia
-                        </span>
+                        <span> {{ lowongans.total }} Posisi Tersedia </span>
                     </div>
 
                     <div
@@ -366,7 +405,7 @@ const pageLinks = computed(() => {
                             <Building2 class="size-3.5" />
                         </div>
 
-                        <span> Lingkungan Profesional </span>
+                        <span>Lingkungan Profesional</span>
                     </div>
                 </div>
             </section>
@@ -374,7 +413,8 @@ const pageLinks = computed(() => {
             <!-- =====================================================
                  SEARCH & FILTER
             ====================================================== -->
-            <section class="mx-auto mt-10 max-w-6xl">
+
+            <section class="reveal mx-auto mt-10 max-w-6xl" style="--d: 380">
                 <div
                     class="rounded-3xl border border-slate-200/80 bg-white/90 p-3 shadow-xl shadow-slate-900/[0.04] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
                 >
@@ -439,7 +479,7 @@ const pageLinks = computed(() => {
                             </select>
                         </div>
 
-                        <!-- Clear -->
+                        <!-- Reset -->
                         <button
                             v-if="hasFilter"
                             type="button"
@@ -447,6 +487,7 @@ const pageLinks = computed(() => {
                             @click="clearFilters"
                         >
                             <X class="size-4" />
+
                             <span class="hidden sm:inline"> Reset </span>
                         </button>
                     </div>
@@ -456,19 +497,15 @@ const pageLinks = computed(() => {
                         class="mt-3 flex items-center gap-2 px-2 text-xs text-slate-500 dark:text-slate-400"
                     >
                         <span>
-                            Menampilkan
+                            Ditemukan
+
                             <strong
                                 class="font-semibold text-slate-700 dark:text-slate-200"
                             >
-                                {{ filteredLowongans.length }}
+                                {{ lowongans.total }}
                             </strong>
-                            dari
-                            <strong
-                                class="font-semibold text-slate-700 dark:text-slate-200"
-                            >
-                                {{ props.lowongans.data.length }}
-                            </strong>
-                            posisi pada halaman ini.
+
+                            posisi.
                         </span>
                     </div>
                 </div>
@@ -477,13 +514,117 @@ const pageLinks = computed(() => {
             <!-- =====================================================
                  JOB LIST
             ====================================================== -->
-            <section class="mx-auto mt-8 max-w-6xl">
+
+            <section class="reveal mx-auto mt-8 max-w-6xl" style="--d: 460">
+                <!-- =================================================
+                     SKELETON
+                ================================================== -->
+
                 <div
-                    v-if="filteredLowongans.length"
+                    v-if="isLoading"
+                    class="grid gap-5 md:grid-cols-2"
+                    aria-live="polite"
+                    aria-busy="true"
+                >
+                    <article
+                        v-for="index in 4"
+                        :key="`skeleton-${index}`"
+                        class="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900"
+                    >
+                        <div
+                            class="absolute inset-x-0 top-0 h-1 bg-slate-200 dark:bg-slate-800"
+                        />
+
+                        <div class="animate-pulse">
+                            <!-- Header -->
+                            <div class="flex items-start justify-between gap-4">
+                                <div
+                                    class="size-12 shrink-0 rounded-2xl bg-slate-200 dark:bg-slate-800"
+                                />
+
+                                <div class="flex gap-2">
+                                    <div
+                                        class="h-6 w-20 rounded-full bg-slate-200 dark:bg-slate-800"
+                                    />
+
+                                    <div
+                                        class="h-6 w-24 rounded-full bg-slate-200 dark:bg-slate-800"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Title -->
+                            <div class="mt-5 space-y-3">
+                                <div
+                                    class="h-6 w-3/4 rounded-lg bg-slate-200 dark:bg-slate-800"
+                                />
+
+                                <div
+                                    class="h-4 w-full rounded bg-slate-200 dark:bg-slate-800"
+                                />
+
+                                <div
+                                    class="h-4 w-11/12 rounded bg-slate-200 dark:bg-slate-800"
+                                />
+
+                                <div
+                                    class="h-4 w-2/3 rounded bg-slate-200 dark:bg-slate-800"
+                                />
+                            </div>
+
+                            <!-- Meta -->
+                            <div
+                                class="mt-5 space-y-3 border-t border-slate-100 pt-5 dark:border-slate-800"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="size-4 rounded bg-slate-200 dark:bg-slate-800"
+                                    />
+
+                                    <div
+                                        class="h-4 w-40 rounded bg-slate-200 dark:bg-slate-800"
+                                    />
+                                </div>
+
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="size-4 rounded bg-slate-200 dark:bg-slate-800"
+                                    />
+
+                                    <div
+                                        class="h-4 w-32 rounded bg-slate-200 dark:bg-slate-800"
+                                    />
+                                </div>
+
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="size-4 rounded bg-slate-200 dark:bg-slate-800"
+                                    />
+
+                                    <div
+                                        class="h-4 w-48 rounded bg-slate-200 dark:bg-slate-800"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Button -->
+                            <div
+                                class="mt-6 h-11 w-full rounded-2xl bg-slate-200 dark:bg-slate-800"
+                            />
+                        </div>
+                    </article>
+                </div>
+
+                <!-- =================================================
+                     DATA
+                ================================================== -->
+
+                <div
+                    v-else-if="lowongans.data.length"
                     class="grid gap-5 md:grid-cols-2"
                 >
                     <article
-                        v-for="lowongan in filteredLowongans"
+                        v-for="lowongan in lowongans.data"
                         :key="lowongan.id"
                         class="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-900/[0.07] dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-900/70"
                     >
@@ -499,17 +640,23 @@ const pageLinks = computed(() => {
                                     class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition duration-300 group-hover:scale-105 group-hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-400 dark:group-hover:bg-blue-950"
                                 >
                                     <component
-                                        :is="getTypeIcon(lowongan.tipe)"
+                                        :is="
+                                            getTypeIcon(lowongan.tipe_pekerjaan)
+                                        "
                                         class="size-5"
                                     />
                                 </div>
 
                                 <div class="flex flex-wrap justify-end gap-2">
                                     <span
-                                        v-if="lowongan.tipe"
+                                        v-if="lowongan.tipe_pekerjaan"
                                         class="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300"
                                     >
-                                        {{ getTypeLabel(lowongan.tipe) }}
+                                        {{
+                                            getTypeLabel(
+                                                lowongan.tipe_pekerjaan,
+                                            )
+                                        }}
                                     </span>
 
                                     <span
@@ -605,6 +752,7 @@ const pageLinks = computed(() => {
                 <!-- =================================================
                      EMPTY STATE
                 ================================================== -->
+
                 <div
                     v-else
                     class="rounded-3xl border border-dashed border-slate-300 bg-white/80 px-6 py-16 text-center dark:border-slate-700 dark:bg-slate-900/70"
@@ -618,14 +766,21 @@ const pageLinks = computed(() => {
                     <h3
                         class="mt-5 text-lg font-bold text-slate-900 dark:text-white"
                     >
-                        Posisi tidak ditemukan
+                        {{
+                            hasFilter
+                                ? "Posisi tidak ditemukan"
+                                : "Belum ada lowongan"
+                        }}
                     </h3>
 
                     <p
                         class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Belum ada posisi yang sesuai dengan pencarian atau
-                        filter yang kamu pilih.
+                        {{
+                            hasFilter
+                                ? "Belum ada posisi yang sesuai dengan pencarian atau filter yang kamu pilih."
+                                : "Saat ini belum ada posisi yang dibuka. Silakan cek kembali nanti."
+                        }}
                     </p>
 
                     <button
@@ -635,6 +790,7 @@ const pageLinks = computed(() => {
                         @click="clearFilters"
                     >
                         <X class="size-4" />
+
                         Reset Filter
                     </button>
                 </div>
@@ -643,9 +799,11 @@ const pageLinks = computed(() => {
             <!-- =====================================================
                  PAGINATION
             ====================================================== -->
+
             <section
-                v-if="props.lowongans.last_page > 1"
-                class="mx-auto mt-8 max-w-6xl"
+                v-if="lowongans.last_page > 1 && !isLoading"
+                class="reveal mx-auto mt-8 max-w-6xl"
+                style="--d: 540"
             >
                 <div
                     class="flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900/70"
@@ -654,31 +812,39 @@ const pageLinks = computed(() => {
                         class="text-center text-xs text-slate-500 sm:text-left dark:text-slate-400"
                     >
                         Menampilkan
+
                         <span
                             class="font-semibold text-slate-700 dark:text-slate-200"
                         >
-                            {{ props.lowongans.from ?? 0 }}
+                            {{ lowongans.from ?? 0 }}
                         </span>
+
                         -
+
                         <span
                             class="font-semibold text-slate-700 dark:text-slate-200"
                         >
-                            {{ props.lowongans.to ?? 0 }}
+                            {{ lowongans.to ?? 0 }}
                         </span>
+
                         dari
+
                         <span
                             class="font-semibold text-slate-700 dark:text-slate-200"
                         >
-                            {{ props.lowongans.total }}
+                            {{ lowongans.total }}
                         </span>
+
                         posisi
                     </div>
 
                     <div class="flex items-center justify-center gap-1.5">
+                        <!-- Previous -->
                         <Link
-                            v-if="previousLink?.url"
-                            :href="previousLink.url"
+                            v-if="lowongans.prev_page_url"
+                            :href="lowongans.prev_page_url"
                             preserve-scroll
+                            aria-label="Halaman sebelumnya"
                             class="flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-900 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
                         >
                             <ChevronLeft class="size-4" />
@@ -691,6 +857,7 @@ const pageLinks = computed(() => {
                             <ChevronLeft class="size-4" />
                         </span>
 
+                        <!-- Pages -->
                         <template
                             v-for="(link, index) in pageLinks"
                             :key="`${link.label}-${index}`"
@@ -707,12 +874,20 @@ const pageLinks = computed(() => {
                                 "
                                 v-html="link.label"
                             />
+
+                            <span
+                                v-else
+                                class="flex size-9 items-center justify-center text-xs text-slate-400"
+                                v-html="link.label"
+                            />
                         </template>
 
+                        <!-- Next -->
                         <Link
-                            v-if="nextLink?.url"
-                            :href="nextLink.url"
+                            v-if="lowongans.next_page_url"
+                            :href="lowongans.next_page_url"
                             preserve-scroll
+                            aria-label="Halaman berikutnya"
                             class="flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-900 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
                         >
                             <ChevronRight class="size-4" />
@@ -731,11 +906,11 @@ const pageLinks = computed(() => {
             <!-- =====================================================
                  BOTTOM CTA
             ====================================================== -->
-            <section class="mx-auto mt-12 max-w-6xl">
+
+            <section class="reveal mx-auto mt-12 max-w-6xl" style="--d: 620">
                 <div
                     class="relative overflow-hidden rounded-[2rem] border border-blue-200/70 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 px-6 py-10 text-center shadow-xl shadow-blue-900/10 sm:px-10 lg:py-12 dark:border-blue-800/50"
                 >
-                    <!-- Subtle decorative circles -->
                     <div
                         class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full border border-white/10"
                     />
@@ -779,3 +954,127 @@ const pageLinks = computed(() => {
         </div>
     </div>
 </template>
+
+<style scoped>
+/* ==========================================================================
+   Fade In
+   ========================================================================== */
+
+.reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: reveal 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    animation-delay: calc(var(--d, 0) * 1ms);
+}
+
+@keyframes reveal {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================================================
+   Blobs
+   ========================================================================== */
+
+.blob {
+    will-change: transform;
+    transform-origin: center;
+}
+
+.blob-a {
+    animation: blob-a 14s ease-in-out infinite;
+}
+
+.blob-b {
+    animation: blob-b 17s ease-in-out infinite;
+}
+
+.blob-c {
+    animation: blob-c 20s ease-in-out infinite;
+}
+
+@keyframes blob-a {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    33% {
+        transform: translate3d(28px, 18px, 0) scale(1.05);
+    }
+
+    66% {
+        transform: translate3d(-16px, 32px, 0) scale(0.96);
+    }
+}
+
+@keyframes blob-b {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    40% {
+        transform: translate3d(-32px, 22px, 0) scale(1.08);
+    }
+
+    75% {
+        transform: translate3d(16px, -16px, 0) scale(0.95);
+    }
+}
+
+@keyframes blob-c {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate3d(0, 36px, 0) scale(1.1);
+    }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .reveal {
+        opacity: 1;
+        transform: none;
+        animation: none;
+    }
+
+    .blob-a,
+    .blob-b,
+    .blob-c {
+        animation: none;
+    }
+}
+
+/* ==========================================================================
+   Mobile
+   ========================================================================== */
+
+@media (max-width: 640px) {
+    .blob-a {
+        left: -9rem;
+        width: 20rem;
+        height: 20rem;
+    }
+
+    .blob-b {
+        right: -8rem;
+        width: 17rem;
+        height: 17rem;
+    }
+
+    .blob-c {
+        left: 25%;
+        width: 18rem;
+        height: 18rem;
+    }
+}
+</style>

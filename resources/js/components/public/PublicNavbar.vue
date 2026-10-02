@@ -2,8 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Link } from "@inertiajs/vue3";
 import { ChevronDown, MapPin, Menu, Phone, X } from "lucide-vue-next";
-
-import { navGroups, visitUrl } from "@/data/publicNavigation";
+import { kontakLink, navGroups, visitUrl } from "@/data/publicNavigation";
 
 const mobileMenuOpen = ref(false);
 const openMobileGroup = ref<string | null>(null);
@@ -173,11 +172,11 @@ onBeforeUnmount(() => {
                         </div>
 
                         <Link
-                            href="/#kontak"
-                            class="nav-trigger inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-700 ..."
+                            :href="kontakLink.href"
+                            class="nav-trigger inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors duration-200 hover:bg-kitb-sand-100 hover:text-kitb-green-800 focus:outline-none focus:ring-2 focus:ring-kitb-green-700/20"
                         >
                             <Phone class="size-3.5" />
-                            <span>Kontak</span>
+                            <span>{{ kontakLink.label }}</span>
                         </Link>
                     </div>
 
@@ -279,11 +278,11 @@ onBeforeUnmount(() => {
 
                             <div class="mt-3 border-t border-slate-100 pt-3">
                                 <Link
-                                    href="/#kontak"
+                                    :href="kontakLink.href"
                                     class="flex items-center rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 transition-colors hover:bg-kitb-sand-50 hover:text-kitb-green-800"
                                     @click="handleNavItemClick"
                                 >
-                                    Kontak
+                                    {{ kontakLink.label }}
                                 </Link>
 
                                 <Link

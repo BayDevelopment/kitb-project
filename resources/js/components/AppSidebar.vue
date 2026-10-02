@@ -6,7 +6,9 @@ import {
     Building,
     Building2,
     Construction,
+    FileUser,
     FolderGit2,
+    Images,
     Landmark,
     LayoutGrid,
     Map,
@@ -15,8 +17,8 @@ import {
     Newspaper,
     Route,
     Target,
+    UserRoundCheck,
     Users,
-    Images,
 } from "lucide-vue-next";
 import { computed } from "vue";
 
@@ -73,22 +75,22 @@ const mainNavItems: NavItem[] = [
         items: [
             {
                 title: "Tentang Kami",
-                href: "/profil-perusahaan/tentang-kami",
+                href: "/admin/profil-perusahaan/tentang-kami",
                 icon: Building2,
             },
             {
                 title: "Visi, Misi & Nilai",
-                href: "/profil-perusahaan/visi-misi",
+                href: "/admin/profil-perusahaan/visi-misi",
                 icon: Target,
             },
             {
                 title: "Struktur Perusahaan",
-                href: "/profil-perusahaan/struktur-perusahaan",
+                href: "/admin/profil-perusahaan/struktur-perusahaan",
                 icon: Network,
             },
             {
                 title: "Anak Usaha",
-                href: "/profil-perusahaan/anak-usaha",
+                href: "/admin/profil-perusahaan/anak-usaha",
                 icon: Users,
             },
         ],
@@ -100,22 +102,22 @@ const mainNavItems: NavItem[] = [
         items: [
             {
                 title: "Profil Kawasan",
-                href: "/kawasan/profil-kawasan",
+                href: "/admin/kawasan/profil-kawasan",
                 icon: Landmark,
             },
             {
                 title: "Infrastruktur",
-                href: "/kawasan/infrastruktur",
+                href: "/admin/kawasan/infrastruktur",
                 icon: Construction,
             },
             {
                 title: "Fasilitas",
-                href: "/kawasan/fasilitas",
+                href: "/admin/kawasan/fasilitas",
                 icon: Building,
             },
             {
                 title: "Peta Kawasan",
-                href: "/kawasan/peta-kawasan",
+                href: "/admin/kawasan/peta-kawasan",
                 icon: MapPinned,
             },
         ],
@@ -127,22 +129,22 @@ const mainNavItems: NavItem[] = [
         items: [
             {
                 title: "Peluang Investasi",
-                href: "/hubungan-investor/peluang-investasi",
+                href: "/admin/hubungan-investor/peluang-investasi",
                 icon: BriefcaseBusiness,
             },
             {
                 title: "Ease of Doing Business",
-                href: "/hubungan-investor/ease-of-doing-business",
+                href: "/admin/hubungan-investor/ease-of-doing-business",
                 icon: Landmark,
             },
             {
                 title: "Kunjungan Lahan",
-                href: "/hubungan-investor/kunjungan-lahan",
+                href: "/admin/hubungan-investor/kunjungan-lahan",
                 icon: MapPinned,
             },
             {
                 title: "Rute Pelayaran & Lokasi",
-                href: "/hubungan-investor/rute-pelayaran-lokasi",
+                href: "/admin/hubungan-investor/rute-pelayaran-lokasi",
                 icon: Route,
             },
         ],
@@ -153,18 +155,29 @@ const mainNavItems: NavItem[] = [
         items: [
             {
                 title: "Berita",
-                href: "/pusat-informasi/berita",
+                href: "/admin/pusat-informasi/berita",
                 icon: Newspaper,
             },
             {
                 title: "Galeri",
-                href: "/pusat-informasi/galeri",
+                href: "/admin/pusat-informasi/galeri",
                 icon: Images,
             },
             {
                 title: "Lowongan",
-                href: "/pusat-informasi/lowongan",
+                href: "/admin/pusat-informasi/lowongan",
                 icon: BriefcaseBusiness,
+            },
+        ],
+    },
+    {
+        title: "Recruitment",
+        icon: UserRoundCheck,
+        items: [
+            {
+                title: "Lamaran",
+                href: "/admin/recruitment/lamaran",
+                icon: FileUser,
             },
         ],
     },

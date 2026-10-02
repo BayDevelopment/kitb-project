@@ -18,7 +18,7 @@ export interface PublicSocialLink {
 /**
  * CTA utama website publik.
  */
-export const visitUrl = "/kunjungan-lahan/buat";
+export const visitUrl = "/ajukan-kunjungan";
 
 /**
  * Navigasi utama website publik KITB.

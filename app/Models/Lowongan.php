@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Lowongan extends Model
 {
@@ -70,14 +71,13 @@ class Lowongan extends Model
     {
         return $query
             ->where('status', 'published')
-            ->where(function (Builder $query) {
-                $query
-                    ->whereNull('tanggal_tutup')
-                    ->orWhereDate(
-                        'tanggal_tutup',
-                        '>=',
-                        now()->toDateString()
-                    );
+            ->where(function (Builder $q) {
+                $q->whereNull('tanggal_mulai')
+                    ->orWhereDate('tanggal_mulai', '<=', now()->toDateString());
+            })
+            ->where(function (Builder $q) {
+                $q->whereNull('tanggal_tutup')
+                    ->orWhereDate('tanggal_tutup', '>=', now()->toDateString());
             });
     }
 
@@ -205,5 +205,20 @@ class Lowongan extends Model
         }
 
         return true;
+    }
+
+    public function lamarans(): HasMany
+    {
+        return $this->hasMany(Lamaran::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Lowongan $lowongan) {
+            // Hapus per model agar hook deleting di Lamaran ikut jalan
+            $lowongan->lamarans()->each(
+                fn(Lamaran $lamaran) => $lamaran->delete()
+            );
+        });
     }
 }
