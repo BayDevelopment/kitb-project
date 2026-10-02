@@ -81,7 +81,7 @@ let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 
 const applyFilter = () => {
     router.get(
-        "/profil-perusahaan/tentang-kami",
+        "/admin/profil-perusahaan/tentang-kami",
         {
             search: search.value || undefined,
             status: status.value || undefined,
@@ -113,7 +113,7 @@ const resetFilter = () => {
     status.value = "";
 
     router.get(
-        "/profil-perusahaan/tentang-kami",
+        "/admin/profil-perusahaan/tentang-kami",
         {},
         {
             preserveState: true,
@@ -389,7 +389,7 @@ const submitForm = () => {
     processingForm.value = true;
 
     if (modalMode.value === "create") {
-        router.post("/profil-perusahaan/tentang-kami", data, {
+        router.post("/admin/profil-perusahaan/tentang-kami", data, {
             forceFormData: true,
             preserveScroll: true,
 
@@ -417,7 +417,7 @@ const submitForm = () => {
     data.append("_method", "PUT");
 
     router.post(
-        `/profil-perusahaan/tentang-kami/${selectedProfile.value.id}`,
+        `/admin/profil-perusahaan/tentang-kami/${selectedProfile.value.id}`,
         data,
         {
             forceFormData: true,
@@ -452,7 +452,7 @@ const deleteProfile = () => {
     processingDelete.value = true;
 
     router.delete(
-        `/profil-perusahaan/tentang-kami/${selectedProfile.value.id}`,
+        `/admin/profil-perusahaan/tentang-kami/${selectedProfile.value.id}`,
         {
             preserveScroll: true,
 

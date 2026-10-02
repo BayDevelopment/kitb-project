@@ -17,6 +17,8 @@ use App\Http\Controllers\Admin\RuteController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Guest\HomeController;
+use App\Http\Controllers\Guest\TentangKamiController;
 use App\Http\Controllers\PublicKunjunganLahanController;
 use App\Http\Controllers\PublicLamaranController;
 use App\Http\Controllers\PublicLowonganKerjaController;
@@ -34,9 +36,15 @@ use Inertia\Inertia;
 |
 */
 
-Route::get('/', function () {
-    return Inertia::render('Index');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
+
+
+
+
+Route::get(
+    '/profil-perusahaan/visi-misi',
+    [VisiMisiController::class, 'index']
+)->name('profil-perusahaan.visi-misi');
 
 // Karier
 Route::get('/karier', [
@@ -71,15 +79,20 @@ Route::post('/ajukan-kunjungan', [PublicKunjunganLahanController::class, 'store'
     ->name('ajukan-kunjungan.store');
 
 // Profil perusahaan
-Route::prefix('profil-perusahaan')->name('public.profil.')->group(function () {
-    Route::get('/tentang-kami', [PublicProfilPerusahaanController::class, 'tentangKami'])
-        ->name('tentang-kami');
+Route::prefix('profil-perusahaan')
+    ->name('public.profil.')
+    ->group(function () {
 
-    // Route::get('/visi-misi', [PublicProfilPerusahaanController::class, 'visiMisi'])->name('visi-misi');
-    // Route::get('/latar-belakang', [PublicProfilPerusahaanController::class, 'latarBelakang'])->name('latar-belakang');
-    // Route::get('/struktur-perusahaan', [PublicProfilPerusahaanController::class, 'struktur'])->name('struktur');
-    // Route::get('/anak-usaha', [PublicProfilPerusahaanController::class, 'anakUsaha'])->name('anak-usaha');
-});
+        Route::get(
+            '/tentang-kami',
+            [TentangKamiController::class, 'index']
+        )->name('tentang-kami');
+
+        Route::get(
+            '/visi-misi',
+            [VisiMisiController::class, 'index']
+        )->name('visi-misi');
+    });
 
 /*
 |--------------------------------------------------------------------------

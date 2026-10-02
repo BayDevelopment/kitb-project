@@ -92,7 +92,7 @@ let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 
 const applyFilter = () => {
     router.get(
-        "/pusat-informasi/berita",
+        "/admin/pusat-informasi/berita",
         {
             search: search.value || undefined,
             status: status.value !== "all" ? status.value : undefined,
@@ -130,7 +130,7 @@ const resetFilter = () => {
     kategori.value = "all";
 
     router.get(
-        "/pusat-informasi/berita",
+        "/admin/pusat-informasi/berita",
         {},
         {
             preserveState: true,
@@ -579,10 +579,6 @@ const submitForm = () => {
 
     data.append("judul", judul);
 
-    if (form.value.slug.trim()) {
-        data.append("slug", form.value.slug.trim());
-    }
-
     data.append("excerpt", form.value.excerpt.trim());
 
     data.append("konten", konten);
@@ -612,7 +608,7 @@ const submitForm = () => {
     */
 
     if (modalMode.value === "create") {
-        router.post("/pusat-informasi/berita", data, {
+        router.post("/admin/pusat-informasi/berita", data, {
             forceFormData: true,
             preserveScroll: true,
 
@@ -650,22 +646,26 @@ const submitForm = () => {
 
     data.append("_method", "PUT");
 
-    router.post(`/pusat-informasi/berita/${selectedBerita.value.id}`, data, {
-        forceFormData: true,
-        preserveScroll: true,
+    router.post(
+        `/admin/pusat-informasi/berita/${selectedBerita.value.id}`,
+        data,
+        {
+            forceFormData: true,
+            preserveScroll: true,
 
-        onSuccess: () => {
-            resetFormState();
-        },
+            onSuccess: () => {
+                resetFormState();
+            },
 
-        onError: (errors) => {
-            console.error("Gagal memperbarui berita:", errors);
-        },
+            onError: (errors) => {
+                console.error("Gagal memperbarui berita:", errors);
+            },
 
-        onFinish: () => {
-            processingForm.value = false;
+            onFinish: () => {
+                processingForm.value = false;
+            },
         },
-    });
+    );
 };
 
 /*
@@ -681,7 +681,7 @@ const deleteBerita = () => {
 
     processingDelete.value = true;
 
-    router.delete(`/pusat-informasi/berita/${selectedBerita.value.id}`, {
+    router.delete(`/admin/pusat-informasi/berita/${selectedBerita.value.id}`, {
         preserveScroll: true,
 
         onSuccess: () => {
@@ -713,7 +713,7 @@ const toggleStatus = (berita: Berita) => {
     togglingStatusId.value = berita.id;
 
     router.patch(
-        `/pusat-informasi/berita/${berita.id}/toggle-status`,
+        `/admin/pusat-informasi/berita/${berita.id}/toggle-status`,
         {},
         {
             preserveScroll: true,
@@ -747,7 +747,7 @@ const toggleFeatured = (berita: Berita) => {
     togglingFeaturedId.value = berita.id;
 
     router.patch(
-        `/pusat-informasi/berita/${berita.id}/toggle-featured`,
+        `/admin/pusat-informasi/berita/${berita.id}/toggle-featured`,
         {},
         {
             preserveScroll: true,
@@ -1338,7 +1338,6 @@ onBeforeUnmount(() => {
                                 />
                             </div>
 
-                            <!-- SLUG -->
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1346,16 +1345,25 @@ onBeforeUnmount(() => {
                                     Slug
                                 </label>
 
-                                <input
-                                    v-model="form.slug"
-                                    type="text"
-                                    maxlength="255"
-                                    placeholder="kitb-dorong-pertumbuhan-investasi"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                />
+                                <div class="relative">
+                                    <input
+                                        :value="form.slug"
+                                        type="text"
+                                        readonly
+                                        disabled
+                                        class="h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 pr-24 text-sm text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400"
+                                    />
+
+                                    <span
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-slate-200 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                                    >
+                                        Otomatis
+                                    </span>
+                                </div>
 
                                 <p class="mt-1.5 text-xs text-slate-400">
-                                    Kosongkan untuk membuat slug otomatis.
+                                    Slug dibuat otomatis berdasarkan judul
+                                    berita.
                                 </p>
                             </div>
 

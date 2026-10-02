@@ -40,10 +40,6 @@ export const navGroups: PublicNavigationGroup[] = [
                 href: "/profil-perusahaan/visi-misi",
             },
             {
-                label: "Latar Belakang",
-                href: "/profil-perusahaan/latar-belakang",
-            },
-            {
                 label: "Struktur Perusahaan",
                 href: "/profil-perusahaan/struktur-perusahaan",
             },

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Berita extends Model
 {
@@ -14,7 +15,6 @@ class Berita extends Model
 
     protected $fillable = [
         'judul',
-        'slug',
         'excerpt',
         'konten',
         'gambar',
@@ -34,6 +34,81 @@ class Berita extends Model
             'views' => 'integer',
         ];
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Model Events
+    |--------------------------------------------------------------------------
+    */
+
+    protected static function booted(): void
+    {
+        static::creating(function (Berita $berita) {
+            $berita->slug = static::generateUniqueSlug(
+                $berita->judul
+            );
+        });
+
+        static::updating(function (Berita $berita) {
+            /*
+             * Slug hanya dibuat ulang jika judul berubah.
+             *
+             * Tujuannya agar URL berita lama tetap stabil
+             * ketika hanya melakukan perubahan konten.
+             */
+            if ($berita->isDirty('judul')) {
+                $berita->slug = static::generateUniqueSlug(
+                    $berita->judul,
+                    $berita->id
+                );
+            }
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Generate Unique Slug
+    |--------------------------------------------------------------------------
+    */
+
+    protected static function generateUniqueSlug(
+        string $judul,
+        ?int $ignoreId = null
+    ): string {
+        $baseSlug = Str::slug($judul);
+
+        /*
+         * Jika judul menghasilkan slug kosong.
+         */
+        if ($baseSlug === '') {
+            $baseSlug = 'berita';
+        }
+
+        $slug = $baseSlug;
+        $counter = 2;
+
+        while (
+            static::query()
+            ->where('slug', $slug)
+            ->when(
+                $ignoreId,
+                fn(Builder $query) =>
+                $query->whereKeyNot($ignoreId)
+            )
+            ->exists()
+        ) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scopes
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * Scope berita yang sudah dipublikasikan.
@@ -63,9 +138,16 @@ class Berita extends Model
     ): Builder {
         return $query->when(
             $category,
-            fn(Builder $query) => $query->where('kategori', $category)
+            fn(Builder $query) =>
+            $query->where('kategori', $category)
         );
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessors
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * URL gambar berita.
@@ -88,6 +170,12 @@ class Berita extends Model
             && $this->published_at !== null
             && $this->published_at->isPast();
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Views
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * Increment jumlah views.
