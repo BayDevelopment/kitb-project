@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import {
     ArrowRight,
+    ChevronRight,
     Building2,
     CheckCircle2,
     Globe2,
@@ -293,50 +294,45 @@ const formatParagraphs = (value: string) =>
         <main
             class="relative z-10 mx-auto w-full max-w-[1440px] px-4 pb-16 pt-24 sm:px-6 sm:pt-28 lg:px-8 lg:pb-20 lg:pt-32"
         >
-            <!-- ==================================================================
-                 BREADCRUMB
-            =================================================================== -->
-
-            <div class="reveal mx-auto mb-8 max-w-6xl" style="--d: 0">
+            <div v-fade-in class="mb-6" style="--d: 0ms">
                 <nav
                     aria-label="Breadcrumb"
-                    class="reveal mx-auto mt-8 flex w-fit max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl border border-slate-200/80 bg-white/70 p-1.5 shadow-sm shadow-slate-900/5 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/60"
-                    style="--delay: 120ms"
+                    class="flex items-center gap-2 text-sm"
                 >
                     <!-- Beranda -->
                     <Link
                         href="/"
-                        class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition-all duration-300 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                        class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
-                        <Home class="h-4 w-4" />
+                        <Home class="size-4 shrink-0" />
                         <span>Beranda</span>
                     </Link>
 
-                    <ChevronRight
-                        class="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600"
-                    />
+                    <!-- Separator -->
+                    <ChevronRight class="size-4 shrink-0 text-slate-400" />
 
-                    <!-- Perusahaan — TIDAK BISA DIKLIK -->
-                    <span
-                        class="inline-flex cursor-default items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-400 dark:text-slate-500"
-                        aria-current="false"
+                    <!-- Perusahaan -->
+                    <Link
+                        href="/profil-perusahaan/tentang-kami"
+                        class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
-                        <Building2 class="h-4 w-4" />
+                        <Building2 class="size-4 shrink-0" />
                         <span>Perusahaan</span>
-                    </span>
+                    </Link>
 
-                    <ChevronRight
-                        class="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600"
-                    />
+                    <!-- Separator -->
+                    <ChevronRight class="size-4 shrink-0 text-slate-400" />
 
-                    <!-- Tentang Kami -->
-                    <a
-                        href="#tentang-kami"
-                        class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-all duration-300 hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/25 dark:bg-blue-500 dark:hover:bg-blue-400"
+                    <!-- Current Page -->
+                    <span
+                        class="inline-flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200"
                         aria-current="page"
                     >
+                        <Building2
+                            class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
+                        />
                         <span>Tentang Kami</span>
-                    </a>
+                    </span>
                 </nav>
             </div>
 

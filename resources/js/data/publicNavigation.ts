@@ -54,19 +54,19 @@ export const navGroups: PublicNavigationGroup[] = [
         label: "Kawasan Industri",
         items: [
             {
-                label: "Master Plan KITB",
+                label: "Profil Kawasan",
                 href: "/kawasan/profil-kawasan",
             },
             {
-                label: "Ketersediaan Lahan",
-                href: "/kawasan/profil-kawasan",
-            },
-            {
-                label: "Pembangunan Tahap 1",
+                label: "Infrastruktur",
                 href: "/kawasan/infrastruktur",
             },
             {
-                label: "Kawasan Pelabuhan",
+                label: "Fasilitas",
+                href: "/kawasan/fasilitas",
+            },
+            {
+                label: "Peta Kawasan",
                 href: "/kawasan/peta-kawasan",
             },
         ],

@@ -310,35 +310,46 @@ onBeforeUnmount(() => {
             <!-- ============================================================
                  BREADCRUMB
             ============================================================= -->
-
+            <!-- ============================================================
+     BREADCRUMB
+============================================================= -->
             <div v-fade-in class="mb-6" style="--d: 0ms">
                 <nav
                     aria-label="Breadcrumb"
                     class="flex items-center gap-2 text-sm"
                 >
+                    <!-- Beranda -->
                     <Link
                         href="/"
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
-                        <Home class="size-4" />
-                        Beranda
+                        <Home class="size-4 shrink-0" />
+                        <span>Beranda</span>
                     </Link>
 
+                    <!-- Separator -->
                     <ChevronRight class="size-4 shrink-0 text-slate-400" />
 
+                    <!-- Perusahaan -->
                     <Link
                         href="/profil-perusahaan/tentang-kami"
-                        class="font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                        class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
-                        Perusahaan
+                        <Building2 class="size-4 shrink-0" />
+                        <span>Perusahaan</span>
                     </Link>
 
+                    <!-- Separator -->
                     <ChevronRight class="size-4 shrink-0 text-slate-400" />
 
+                    <!-- Current Page -->
                     <span
-                        class="font-semibold text-slate-800 dark:text-slate-200"
+                        class="inline-flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200"
                     >
-                        Visi &amp; Misi
+                        <Target
+                            class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
+                        />
+                        <span>Visi &amp; Misi</span>
                     </span>
                 </nav>
             </div>

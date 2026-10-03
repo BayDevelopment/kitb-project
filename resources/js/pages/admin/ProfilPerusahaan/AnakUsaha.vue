@@ -398,7 +398,7 @@ const submitForm = () => {
         formData.append("_method", "PUT");
 
         router.post(
-            `/profil-perusahaan/anak-usaha/${selectedItem.value.id}`,
+            `/admin/profil-perusahaan/anak-usaha/${selectedItem.value.id}`,
             formData,
             {
                 forceFormData: true,
@@ -432,7 +432,7 @@ const submitForm = () => {
     |--------------------------------------------------------------------------
     */
 
-    router.post("/profil-perusahaan/anak-usaha", formData, {
+    router.post("/admin/profil-perusahaan/anak-usaha", formData, {
         forceFormData: true,
 
         preserveScroll: true,
@@ -468,23 +468,26 @@ const deleteItem = () => {
 
     processingDelete.value = true;
 
-    router.delete(`/profil-perusahaan/anak-usaha/${selectedItem.value.id}`, {
-        preserveScroll: true,
+    router.delete(
+        `/admin/profil-perusahaan/anak-usaha/${selectedItem.value.id}`,
+        {
+            preserveScroll: true,
 
-        onSuccess: () => {
-            showDeleteModal.value = false;
+            onSuccess: () => {
+                showDeleteModal.value = false;
 
-            selectedItem.value = null;
+                selectedItem.value = null;
+            },
+
+            onError: (errors) => {
+                console.error("Gagal menghapus anak usaha:", errors);
+            },
+
+            onFinish: () => {
+                processingDelete.value = false;
+            },
         },
-
-        onError: (errors) => {
-            console.error("Gagal menghapus anak usaha:", errors);
-        },
-
-        onFinish: () => {
-            processingDelete.value = false;
-        },
-    });
+    );
 };
 
 /*
@@ -501,7 +504,7 @@ const toggleAktif = (item: AnakUsaha) => {
     processingToggleId.value = item.id;
 
     router.patch(
-        `/profil-perusahaan/anak-usaha/${item.id}/toggle-aktif`,
+        `/admin/profil-perusahaan/anak-usaha/${item.id}/toggle-aktif`,
         {},
         {
             preserveScroll: true,
@@ -539,7 +542,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
     movingId.value = item.id;
 
     router.patch(
-        `/profil-perusahaan/anak-usaha/${item.id}/move`,
+        `/admin/profil-perusahaan/anak-usaha/${item.id}/move`,
         {
             direction,
         },

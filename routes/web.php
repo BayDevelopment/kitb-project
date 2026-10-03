@@ -17,6 +17,10 @@ use App\Http\Controllers\Admin\RuteController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Guest\GuestAnakUsahaController;
+use App\Http\Controllers\Guest\GuestInfrastrukturController;
+use App\Http\Controllers\Guest\GuestProfilKawasanController;
+use App\Http\Controllers\Guest\GuestStrukturPerusahaanController;
 use App\Http\Controllers\Guest\HomeController;
 use App\Http\Controllers\Guest\TentangKamiController;
 use App\Http\Controllers\PublicKunjunganLahanController;
@@ -92,6 +96,30 @@ Route::prefix('profil-perusahaan')
             '/visi-misi',
             [VisiMisiController::class, 'index']
         )->name('visi-misi');
+
+        Route::get(
+            '/struktur-perusahaan',
+            [GuestStrukturPerusahaanController::class, 'index']
+        )->name('struktur-perusahaan');
+
+        Route::get(
+            '/anak-usaha',
+            [GuestAnakUsahaController::class, 'index']
+        )->name('anak-usaha');
+    });
+
+Route::prefix('kawasan')
+    ->name('public.kawasan.')
+    ->group(function () {
+        Route::get(
+            '/profil-kawasan',
+            [GuestProfilKawasanController::class, 'index']
+        )->name('profil-kawasan');
+
+        Route::get(
+            '/infrastruktur',
+            [GuestInfrastrukturController::class, 'index']
+        )->name('infrastruktur');
     });
 
 /*

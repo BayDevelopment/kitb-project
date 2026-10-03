@@ -357,7 +357,7 @@ const submitForm = () => {
         formData.append("_method", "PUT");
 
         router.post(
-            `/profil-perusahaan/struktur-perusahaan/${selectedItem.value.id}`,
+            `/admin/profil-perusahaan/struktur-perusahaan/${selectedItem.value.id}`,
             formData,
             {
                 forceFormData: true,
@@ -393,7 +393,7 @@ const submitForm = () => {
     |--------------------------------------------------------------------------
     */
 
-    router.post("/profil-perusahaan/struktur-perusahaan", formData, {
+    router.post("/admin/profil-perusahaan/struktur-perusahaan", formData, {
         forceFormData: true,
         preserveScroll: true,
 
@@ -429,7 +429,7 @@ const deleteItem = () => {
     processingDelete.value = true;
 
     router.delete(
-        `/profil-perusahaan/struktur-perusahaan/${selectedItem.value.id}`,
+        `/admin/profil-perusahaan/struktur-perusahaan/${selectedItem.value.id}`,
         {
             preserveScroll: true,
 
@@ -463,7 +463,7 @@ const toggleAktif = (item: Struktur) => {
     processingToggleId.value = item.id;
 
     router.patch(
-        `/profil-perusahaan/struktur-perusahaan/${item.id}/toggle-aktif`,
+        `/admin/profil-perusahaan/struktur-perusahaan/${item.id}/toggle-aktif`,
         {},
         {
             preserveScroll: true,
@@ -501,7 +501,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
     movingId.value = item.id;
 
     router.patch(
-        `/profil-perusahaan/struktur-perusahaan/${item.id}/move`,
+        `/admin/profil-perusahaan/struktur-perusahaan/${item.id}/move`,
         {
             direction,
         },

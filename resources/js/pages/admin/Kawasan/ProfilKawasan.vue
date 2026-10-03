@@ -223,7 +223,7 @@ const submitSearch = (): void => {
 
     searchTimer = setTimeout(() => {
         router.get(
-            "/kawasan/profil-kawasan",
+            "/admin/kawasan/profil-kawasan",
             {
                 search: search.value.trim() || undefined,
             },
@@ -245,7 +245,7 @@ const clearSearch = (): void => {
     search.value = "";
 
     router.get(
-        "/kawasan/profil-kawasan",
+        "/admin/kawasan/profil-kawasan",
         {},
         {
             preserveState: true,
@@ -738,8 +738,8 @@ const submit = (): void => {
      * URL endpoint.
      */
     const url = isEdit
-        ? `/kawasan/profil-kawasan/${selectedKawasan.value!.id}`
-        : "/kawasan/profil-kawasan";
+        ? `/admin/kawasan/profil-kawasan/${selectedKawasan.value!.id}`
+        : `/admin/kawasan/profil-kawasan`;
 
     /**
      * Lock button sebelum request.
@@ -842,7 +842,7 @@ const deleteKawasan = (): void => {
 
     processingDelete.value = true;
 
-    router.delete(`/kawasan/profil-kawasan/${selectedKawasan.value.id}`, {
+    router.delete(`/admin/kawasan/profil-kawasan/${selectedKawasan.value.id}`, {
         preserveScroll: true,
 
         onSuccess: () => {
@@ -879,7 +879,7 @@ const toggleStatus = (kawasan: Kawasan): void => {
     processingToggleId.value = kawasan.id;
 
     router.patch(
-        `/kawasan/profil-kawasan/${kawasan.id}/toggle-aktif`,
+        `/admin/kawasan/profil-kawasan/${kawasan.id}/toggle-aktif`,
         {},
         {
             preserveScroll: true,
