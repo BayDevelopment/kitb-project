@@ -10,97 +10,163 @@ use App\Http\Controllers\Admin\KunjunganLahanController;
 use App\Http\Controllers\Admin\LamaranController;
 use App\Http\Controllers\Admin\LowonganController;
 use App\Http\Controllers\Admin\PeluangInvestasiController as AdminPeluangInvestasiController;
+use App\Http\Controllers\Admin\PengaturanKontakController;
+use App\Http\Controllers\Admin\PesanKontakController;
 use App\Http\Controllers\Admin\PetaKawasanController;
 use App\Http\Controllers\Admin\ProfilKawasanController;
 use App\Http\Controllers\Admin\ProfilPerusahaanController;
 use App\Http\Controllers\Admin\RuteController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
+
 use App\Http\Controllers\DashboardController;
+
 use App\Http\Controllers\Guest\GuestAnakUsahaController;
+use App\Http\Controllers\Guest\GuestBeritaController;
+use App\Http\Controllers\Guest\GuestEaseOfDoingBusinessController;
+use App\Http\Controllers\Guest\GuestFasilitasController;
+use App\Http\Controllers\Guest\GuestGaleriController;
 use App\Http\Controllers\Guest\GuestInfrastrukturController;
+use App\Http\Controllers\Guest\GuestKontakController;
+use App\Http\Controllers\Guest\GuestPeluangInvestasiController;
+use App\Http\Controllers\Guest\GuestPetaKawasanController;
 use App\Http\Controllers\Guest\GuestProfilKawasanController;
+use App\Http\Controllers\Guest\GuestRuteController;
 use App\Http\Controllers\Guest\GuestStrukturPerusahaanController;
+use App\Http\Controllers\Guest\GuestVisiMisiController;
 use App\Http\Controllers\Guest\HomeController;
 use App\Http\Controllers\Guest\TentangKamiController;
+
 use App\Http\Controllers\PublicKunjunganLahanController;
 use App\Http\Controllers\PublicLamaranController;
 use App\Http\Controllers\PublicLowonganKerjaController;
-use App\Http\Controllers\PublicProfilPerusahaanController;
+
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
-| Public (guest)
+| Public / Guest
 |--------------------------------------------------------------------------
 |
-| URL publik tidak memakai awalan, sesuai publicNavigation.ts.
-| Seluruh route admin berada di bawah awalan /admin (lihat bagian bawah).
+| Seluruh halaman publik tidak menggunakan prefix /admin.
 |
 */
 
-Route::get('/', [HomeController::class, 'index'])->name('home');
-
-
-
+/*
+|--------------------------------------------------------------------------
+| Home
+|--------------------------------------------------------------------------
+*/
 
 Route::get(
-    '/profil-perusahaan/visi-misi',
-    [VisiMisiController::class, 'index']
-)->name('profil-perusahaan.visi-misi');
+    '/',
+    [HomeController::class, 'index']
+)->name('home');
 
-// Karier
-Route::get('/karier', [
-    PublicLowonganKerjaController::class,
-    'index',
-])->name('karier');
+/*
+|--------------------------------------------------------------------------
+| Karier
+|--------------------------------------------------------------------------
+*/
 
-Route::get('/karier/{lowongan:slug}', [
-    PublicLowonganKerjaController::class,
-    'show',
-])->name('karier.detail');
+Route::get(
+    '/karier',
+    [PublicLowonganKerjaController::class, 'index']
+)->name('karier');
 
-// Lamaran
-Route::get('/karier/{lowongan:slug}/lamar', [
-    PublicLamaranController::class,
-    'create',
-])->name('karier.lamar');
+Route::get(
+    '/karier/{lowongan:slug}',
+    [PublicLowonganKerjaController::class, 'show']
+)->name('karier.detail');
 
-Route::post('/karier/{lowongan:slug}/lamar', [
-    PublicLamaranController::class,
-    'store',
-])
+/*
+|--------------------------------------------------------------------------
+| Lamaran
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/karier/{lowongan:slug}/lamar',
+    [PublicLamaranController::class, 'create']
+)->name('karier.lamar');
+
+Route::post(
+    '/karier/{lowongan:slug}/lamar',
+    [PublicLamaranController::class, 'store']
+)
     ->middleware('throttle:5,1')
     ->name('karier.lamar.store');
 
-// Ajukan kunjungan lahan
-Route::get('/ajukan-kunjungan', [PublicKunjunganLahanController::class, 'index'])
-    ->name('ajukan-kunjungan.index');
+/*
+|--------------------------------------------------------------------------
+| Ajukan Kunjungan Lahan
+|--------------------------------------------------------------------------
+*/
 
-Route::post('/ajukan-kunjungan', [PublicKunjunganLahanController::class, 'store'])
+Route::get(
+    '/ajukan-kunjungan',
+    [PublicKunjunganLahanController::class, 'index']
+)->name('ajukan-kunjungan.index');
+
+Route::post(
+    '/ajukan-kunjungan',
+    [PublicKunjunganLahanController::class, 'store']
+)
     ->middleware('throttle:5,1')
     ->name('ajukan-kunjungan.store');
 
-// Profil perusahaan
+/*
+|--------------------------------------------------------------------------
+| Profil Perusahaan - Public
+|--------------------------------------------------------------------------
+*/
+
 Route::prefix('profil-perusahaan')
     ->name('public.profil.')
     ->group(function () {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Tentang Kami
+        |--------------------------------------------------------------------------
+        */
 
         Route::get(
             '/tentang-kami',
             [TentangKamiController::class, 'index']
         )->name('tentang-kami');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Visi & Misi
+        |--------------------------------------------------------------------------
+        |
+        | Public menggunakan GuestVisiMisiController.
+        | Tidak menggunakan Admin\VisiMisiController.
+        |
+        */
+
         Route::get(
             '/visi-misi',
-            [VisiMisiController::class, 'index']
+            [GuestVisiMisiController::class, 'index']
         )->name('visi-misi');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Struktur Perusahaan
+        |--------------------------------------------------------------------------
+        */
 
         Route::get(
             '/struktur-perusahaan',
             [GuestStrukturPerusahaanController::class, 'index']
         )->name('struktur-perusahaan');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Anak Usaha
+        |--------------------------------------------------------------------------
+        */
 
         Route::get(
             '/anak-usaha',
@@ -108,18 +174,126 @@ Route::prefix('profil-perusahaan')
         )->name('anak-usaha');
     });
 
+/*
+|--------------------------------------------------------------------------
+| Kawasan - Public
+|--------------------------------------------------------------------------
+*/
+
 Route::prefix('kawasan')
     ->name('public.kawasan.')
     ->group(function () {
+
         Route::get(
             '/profil-kawasan',
             [GuestProfilKawasanController::class, 'index']
         )->name('profil-kawasan');
 
         Route::get(
+            '/peta-kawasan',
+            [GuestPetaKawasanController::class, 'index']
+        )->name('peta-kawasan');
+
+        Route::get(
             '/infrastruktur',
             [GuestInfrastrukturController::class, 'index']
         )->name('infrastruktur');
+
+        Route::get(
+            '/fasilitas',
+            [GuestFasilitasController::class, 'index']
+        )->name('fasilitas.index');
+
+        Route::get(
+            '/fasilitas/{slug}',
+            [GuestFasilitasController::class, 'show']
+        )->name('fasilitas.show');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Hubungan Investor - Public
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('hubungan-investor')
+    ->name('public.hubungan-investor.')
+    ->group(function () {
+
+        Route::get(
+            '/peluang-investasi',
+            [GuestPeluangInvestasiController::class, 'index']
+        )->name('peluang-investasi');
+
+        Route::get(
+            '/ease-of-doing-business',
+            [GuestEaseOfDoingBusinessController::class, 'index']
+        )->name('ease-of-doing-business');
+
+        Route::get(
+            '/rute-pelayaran-lokasi',
+            [GuestRuteController::class, 'index']
+        )->name('rute-pelayaran-lokasi');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Berita - Public
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('berita')
+    ->name('berita.')
+    ->group(function () {
+
+        Route::get(
+            '/',
+            [GuestBeritaController::class, 'index']
+        )->name('index');
+
+        Route::get(
+            '/{berita:slug}',
+            [GuestBeritaController::class, 'show']
+        )->name('show');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Galeri - Public
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('galeri')
+    ->name('public.galeri.')
+    ->group(function () {
+
+        Route::get(
+            '/',
+            [GuestGaleriController::class, 'index']
+        )->name('index');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Kontak - Public
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('kontak')
+    ->name('kontak.')
+    ->group(function () {
+
+        Route::get(
+            '/',
+            [GuestKontakController::class, 'index']
+        )->name('index');
+
+        Route::post(
+            '/',
+            [GuestKontakController::class, 'store']
+        )
+            ->middleware('throttle:5,1')
+            ->name('store');
     });
 
 /*
@@ -127,14 +301,23 @@ Route::prefix('kawasan')
 | Admin
 |--------------------------------------------------------------------------
 |
-| Dashboard tetap di /dashboard (tujuan redirect setelah login).
-| Semua menu admin lain berada di /admin/...
+| Seluruh route admin berada di bawah /admin
+| dan membutuhkan auth + verified.
 |
 */
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::get('dashboard', DashboardController::class)->name('dashboard');
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/dashboard',
+        DashboardController::class
+    )->name('dashboard');
 
     Route::prefix('admin')->group(function () {
 
@@ -168,6 +351,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         |--------------------------------------------------------------------------
         | Profil Perusahaan - Visi & Misi
         |--------------------------------------------------------------------------
+        |
+        | ADMIN menggunakan Admin\VisiMisiController.
+        |
         */
 
         Route::get(
@@ -394,15 +580,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             '/hubungan-investor/kunjungan-lahan/{kunjunganLahan}/complete',
             [KunjunganLahanController::class, 'complete']
         )->name('hubungan-investor.kunjungan-lahan.complete');
-
-        // NONAKTIF: KunjunganLahanController tidak punya method cancel()
-        // dan status "dibatalkan" tidak ada di migrasi. Aktifkan kembali
-        // setelah method dan statusnya dibuat.
-        //
-        // Route::patch(
-        //     '/hubungan-investor/kunjungan-lahan/{kunjunganLahan}/cancel',
-        //     [KunjunganLahanController::class, 'cancel']
-        // )->name('hubungan-investor.kunjungan-lahan.cancel');
 
         /*
         |--------------------------------------------------------------------------
@@ -737,6 +914,48 @@ Route::middleware(['auth', 'verified'])->group(function () {
             '/recruitment/lamaran/{lamaran}/surat',
             [LamaranController::class, 'downloadSurat']
         )->name('recruitment.lamaran.surat');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Kontak - Pesan Masuk
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/kontak/pesan',
+            [PesanKontakController::class, 'index']
+        )->name('kontak.pesan.index');
+
+        Route::patch(
+            '/kontak/pesan/{pesan}/status',
+            [PesanKontakController::class, 'updateStatus']
+        )->name('kontak.pesan.status');
+
+        Route::post(
+            '/kontak/pesan/{pesan}/reply',
+            [PesanKontakController::class, 'reply']
+        )->name('kontak.pesan.reply');
+
+        Route::delete(
+            '/kontak/pesan/{pesan}',
+            [PesanKontakController::class, 'destroy']
+        )->name('kontak.pesan.destroy');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Kontak - Pengaturan Kontak
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/kontak/pengaturan',
+            [PengaturanKontakController::class, 'edit']
+        )->name('kontak.pengaturan.edit');
+
+        Route::put(
+            '/kontak/pengaturan',
+            [PengaturanKontakController::class, 'update']
+        )->name('kontak.pengaturan.update');
     });
 });
 

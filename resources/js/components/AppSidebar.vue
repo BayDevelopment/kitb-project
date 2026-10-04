@@ -19,6 +19,9 @@ import {
     Target,
     UserRoundCheck,
     Users,
+    Contact,
+    Inbox,
+    SlidersHorizontal,
 } from "lucide-vue-next";
 import { computed } from "vue";
 
@@ -178,6 +181,22 @@ const mainNavItems: NavItem[] = [
                 title: "Lamaran",
                 href: "/admin/recruitment/lamaran",
                 icon: FileUser,
+            },
+        ],
+    },
+    {
+        title: "Kontak",
+        icon: Contact,
+        items: [
+            {
+                title: "Pesan Masuk",
+                href: "/admin/kontak/pesan",
+                icon: Inbox,
+            },
+            {
+                title: "Pengaturan Kontak",
+                href: "/admin/kontak/pengaturan",
+                icon: SlidersHorizontal,
             },
         ],
     },

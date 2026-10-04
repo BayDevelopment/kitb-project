@@ -19,6 +19,13 @@ return new class extends Migration
             $table->decimal('luas_kawasan', 15, 2)->nullable();
             $table->string('lokasi')->nullable();
 
+            // Koordinat titik kawasan (untuk peta Leaflet)
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->decimal('longitude', 10, 7)->nullable();
+
+            // Batas kawasan dalam format GeoJSON (opsional)
+            $table->json('batas_kawasan')->nullable();
+
             $table->unsignedSmallInteger('tahun_berdiri')->nullable();
 
             $table->boolean('status')->default(true);

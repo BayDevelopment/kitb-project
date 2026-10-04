@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from "vue";
 
 import { Head, Link } from "@inertiajs/vue3";
 
@@ -13,6 +20,8 @@ import {
     Landmark,
     MapPin,
     Maximize2,
+    Pause,
+    Play,
 } from "lucide-vue-next";
 
 import PublicLayout from "@/layouts/PublicLayout.vue";
@@ -22,7 +31,7 @@ defineOptions({
 });
 
 /* ============================================================
-   TYPES
+   TYPES & PROPS
 ============================================================= */
 
 interface ProfilKawasan {
@@ -40,8 +49,21 @@ const props = defineProps<{
     profilKawasans: ProfilKawasan[];
 }>();
 
+const kawasans = computed<ProfilKawasan[]>(() => {
+    return Array.isArray(props.profilKawasans) ? props.profilKawasans : [];
+});
+
 /* ============================================================
-   REVEAL / FADE IN
+   SKELETON
+============================================================= */
+
+// Jika data kosong, langsung tampilkan empty state tanpa skeleton
+const isLoading = ref(kawasans.value.length > 0);
+
+let skeletonTimer: ReturnType<typeof setTimeout> | null = null;
+
+/* ============================================================
+   REDUCED MOTION + REVEAL
 ============================================================= */
 
 const prefersReducedMotion = ref(false);
@@ -51,28 +73,18 @@ let mediaQuery: MediaQueryList | null = null;
 
 const handleMotionChange = (event: MediaQueryListEvent) => {
     prefersReducedMotion.value = event.matches;
+    scheduleAutoplay();
 };
 
-onMounted(() => {
-    if (typeof window === "undefined") {
-        return;
-    }
-
-    mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-    prefersReducedMotion.value = mediaQuery.matches;
-
-    mediaQuery.addEventListener("change", handleMotionChange);
-
+const setupReveal = () => {
     const elements = document.querySelectorAll<HTMLElement>("[data-reveal]");
 
     if (prefersReducedMotion.value) {
-        elements.forEach((element) => {
-            element.classList.add("is-visible");
-        });
-
+        elements.forEach((element) => element.classList.add("is-visible"));
         return;
     }
+
+    revealObserver?.disconnect();
 
     revealObserver = new IntersectionObserver(
         (entries) => {
@@ -82,101 +94,112 @@ onMounted(() => {
                 }
 
                 entry.target.classList.add("is-visible");
-
                 revealObserver?.unobserve(entry.target);
             });
         },
-        {
-            threshold: 0.08,
-            rootMargin: "0px 0px -40px 0px",
-        },
+        { threshold: 0.08, rootMargin: "0px 0px -40px 0px" },
     );
 
-    elements.forEach((element) => {
-        revealObserver?.observe(element);
-    });
+    elements.forEach((element) => revealObserver?.observe(element));
+};
+
+/* ============================================================
+   CAROUSEL STATE
+============================================================= */
+
+const AUTOPLAY_MS = 6500;
+
+const currentIndex = ref(0);
+
+const isHovering = ref(false);
+const isFocusWithin = ref(false);
+const isDragging = ref(false);
+const userPaused = ref(false);
+
+let autoplayTimer: ReturnType<typeof setTimeout> | null = null;
+
+const totalSlides = computed(() => kawasans.value.length);
+
+const currentKawasan = computed<ProfilKawasan | null>(() => {
+    return kawasans.value[currentIndex.value] ?? null;
 });
 
-onBeforeUnmount(() => {
-    revealObserver?.disconnect();
+const hasMultipleSlides = computed(() => totalSlides.value > 1);
 
-    mediaQuery?.removeEventListener("change", handleMotionChange);
-
-    stopAutoplay();
+const autoplayEnabled = computed(() => {
+    return (
+        !prefersReducedMotion.value &&
+        hasMultipleSlides.value &&
+        !userPaused.value
+    );
 });
 
 /* ============================================================
-   CAROUSEL
+   AUTOPLAY
+   (timer di-reset setiap pindah slide, jadi klik manual tidak
+   langsung diikuti pindah otomatis)
 ============================================================= */
 
-const currentIndex = ref(0);
-const isPaused = ref(false);
-const isDragging = ref(false);
+const clearAutoplay = () => {
+    if (autoplayTimer) {
+        clearTimeout(autoplayTimer);
+        autoplayTimer = null;
+    }
+};
 
-let autoplayTimer: ReturnType<typeof setInterval> | null = null;
+function scheduleAutoplay(): void {
+    clearAutoplay();
 
-const totalSlides = computed(() => {
-    return props.profilKawasans.length;
-});
+    if (!autoplayEnabled.value) {
+        return;
+    }
 
-const currentKawasan = computed(() => {
-    return props.profilKawasans[currentIndex.value] ?? null;
-});
+    autoplayTimer = setTimeout(() => {
+        const busy =
+            isHovering.value || isFocusWithin.value || isDragging.value;
 
-const hasMultipleSlides = computed(() => {
-    return totalSlides.value > 1;
-});
+        if (busy) {
+            scheduleAutoplay();
+            return;
+        }
+
+        goToSlide(currentIndex.value + 1);
+    }, AUTOPLAY_MS);
+}
+
+const toggleAutoplay = () => {
+    userPaused.value = !userPaused.value;
+    scheduleAutoplay();
+};
 
 /* ============================================================
    CAROUSEL ACTIONS
 ============================================================= */
 
-const goToSlide = (index: number) => {
+function goToSlide(index: number): void {
     if (!totalSlides.value) {
         return;
     }
 
     currentIndex.value = (index + totalSlides.value) % totalSlides.value;
-};
 
-const nextSlide = () => {
-    goToSlide(currentIndex.value + 1);
-};
+    scheduleAutoplay();
+}
 
-const previousSlide = () => {
-    goToSlide(currentIndex.value - 1);
-};
+const nextSlide = () => goToSlide(currentIndex.value + 1);
+const previousSlide = () => goToSlide(currentIndex.value - 1);
 
-const startAutoplay = () => {
-    if (
-        prefersReducedMotion.value ||
-        !hasMultipleSlides.value ||
-        autoplayTimer
-    ) {
-        return;
+watch(totalSlides, (total) => {
+    if (currentIndex.value >= total) {
+        currentIndex.value = 0;
     }
 
-    autoplayTimer = setInterval(() => {
-        if (!isPaused.value && !isDragging.value) {
-            nextSlide();
-        }
-    }, 6500);
-};
+    scheduleAutoplay();
+});
 
-const stopAutoplay = () => {
-    if (autoplayTimer) {
-        clearInterval(autoplayTimer);
-        autoplayTimer = null;
-    }
-};
-
-const pauseAutoplay = () => {
-    isPaused.value = true;
-};
-
-const resumeAutoplay = () => {
-    isPaused.value = false;
-};
+/* ============================================================
+   KEYBOARD (hanya saat carousel punya fokus)
+============================================================= */
 
 const handleKeydown = (event: KeyboardEvent) => {
     if (!hasMultipleSlides.value) {
@@ -194,94 +217,75 @@ const handleKeydown = (event: KeyboardEvent) => {
     }
 };
 
+const handleFocusIn = () => {
+    isFocusWithin.value = true;
+};
+
+const handleFocusOut = (event: FocusEvent) => {
+    const container = event.currentTarget as HTMLElement | null;
+    const next = event.relatedTarget as Node | null;
+
+    if (!container || !next || !container.contains(next)) {
+        isFocusWithin.value = false;
+    }
+};
+
 /* ============================================================
-   TOUCH / SWIPE
+   SWIPE / DRAG (pointer events untuk sentuh + mouse)
 ============================================================= */
 
-const touchStartX = ref<number | null>(null);
-const touchCurrentX = ref<number | null>(null);
+let pointerStartX: number | null = null;
+let pointerStartY: number | null = null;
 
-const handleTouchStart = (event: TouchEvent) => {
+const handlePointerDown = (event: PointerEvent) => {
     if (!hasMultipleSlides.value) {
         return;
     }
 
-    touchStartX.value = event.touches[0]?.clientX ?? null;
-    touchCurrentX.value = touchStartX.value;
-    isDragging.value = true;
-};
-
-const handleTouchMove = (event: TouchEvent) => {
-    if (!hasMultipleSlides.value || touchStartX.value === null) {
+    // Abaikan klik mouse selain tombol kiri
+    if (event.pointerType === "mouse" && event.button !== 0) {
         return;
     }
 
-    touchCurrentX.value = event.touches[0]?.clientX ?? touchCurrentX.value;
+    // Jangan mulai swipe dari tombol / link
+    if ((event.target as HTMLElement).closest("a, button")) {
+        return;
+    }
+
+    pointerStartX = event.clientX;
+    pointerStartY = event.clientY;
+    isDragging.value = true;
 };
 
-const handleTouchEnd = () => {
-    if (touchStartX.value === null || touchCurrentX.value === null) {
+const finishPointer = (event: PointerEvent, cancelled = false) => {
+    if (pointerStartX === null || pointerStartY === null) {
         isDragging.value = false;
         return;
     }
 
-    const distance = touchCurrentX.value - touchStartX.value;
+    const dx = event.clientX - pointerStartX;
+    const dy = event.clientY - pointerStartY;
 
-    const threshold = 50;
+    pointerStartX = null;
+    pointerStartY = null;
+    isDragging.value = false;
 
-    if (Math.abs(distance) >= threshold) {
-        if (distance < 0) {
+    if (cancelled) {
+        return;
+    }
+
+    // Hanya geser horizontal yang jelas (bukan scroll vertikal)
+    if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) {
             nextSlide();
         } else {
             previousSlide();
         }
     }
-
-    touchStartX.value = null;
-    touchCurrentX.value = null;
-    isDragging.value = false;
 };
 
-/* ============================================================
-   MOUSE DRAG
-============================================================= */
-
-const mouseStartX = ref<number | null>(null);
-
-const handleMouseDown = (event: MouseEvent) => {
-    if (!hasMultipleSlides.value) {
-        return;
-    }
-
-    mouseStartX.value = event.clientX;
-    isDragging.value = true;
-};
-
-const handleMouseUp = (event: MouseEvent) => {
-    if (mouseStartX.value === null) {
-        isDragging.value = false;
-        return;
-    }
-
-    const distance = event.clientX - mouseStartX.value;
-
-    if (Math.abs(distance) >= 60) {
-        if (distance < 0) {
-            nextSlide();
-        } else {
-            previousSlide();
-        }
-    }
-
-    mouseStartX.value = null;
-    isDragging.value = false;
-};
-
-const handleMouseLeave = () => {
-    resumeAutoplay();
-    mouseStartX.value = null;
-    isDragging.value = false;
-};
+const handlePointerUp = (event: PointerEvent) => finishPointer(event);
+const handlePointerCancel = (event: PointerEvent) => finishPointer(event, true);
 
 /* ============================================================
    HELPERS
@@ -300,12 +304,34 @@ const getImageUrl = (gambar: string | null): string | null => {
         return gambar;
     }
 
+    if (gambar.startsWith("storage/")) {
+        return `/${gambar}`;
+    }
+
     return `/storage/${gambar}`;
 };
 
-const formatLuas = (luas: string | number | null): string => {
+// Deskripsi longText bisa berisi HTML: ubah ke teks, jeda paragraf dijaga
+const htmlToText = (value: string | null | undefined): string => {
+    if (!value) {
+        return "";
+    }
+
+    return value
+        .replace(/<\s*br\s*\/?>/gi, "\n")
+        .replace(/<\/(p|div|li|h[1-6])>/gi, "\n\n")
+        .replace(/<[^>]*>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+};
+
+const formatLuas = (
+    luas: string | number | null | undefined,
+): string | null => {
     if (luas === null || luas === undefined || luas === "") {
-        return "—";
+        return null;
     }
 
     const value = Number(luas);
@@ -319,46 +345,98 @@ const formatLuas = (luas: string | number | null): string => {
     }).format(value);
 };
 
-const formatTahun = (tahun: number | null): string => {
-    return tahun ? String(tahun) : "—";
+const currentImageUrl = computed(() =>
+    getImageUrl(currentKawasan.value?.gambar ?? null),
+);
+
+const currentLuas = computed(() =>
+    formatLuas(currentKawasan.value?.luas_kawasan),
+);
+
+const currentTahun = computed(() =>
+    currentKawasan.value?.tahun_berdiri
+        ? String(currentKawasan.value.tahun_berdiri)
+        : null,
+);
+
+const currentLokasi = computed(
+    () => currentKawasan.value?.lokasi?.trim() || null,
+);
+
+const currentDeskripsi = computed(() =>
+    htmlToText(currentKawasan.value?.deskripsi),
+);
+
+// Tombol "Detail" hanya berguna jika deskripsi lebih panjang dari
+// ringkasan di dalam slide (sekitar 3 baris).
+const hasDetail = computed(() => currentDeskripsi.value.length > 220);
+
+// Slug dikirim agar halaman peta bisa langsung fokus ke kawasan ini.
+const petaUrl = computed(() => {
+    const slug = currentKawasan.value?.slug;
+
+    return slug
+        ? `/kawasan/peta-kawasan?kawasan=${encodeURIComponent(slug)}`
+        : "/kawasan/peta-kawasan";
+});
+
+/* ============================================================
+   DETAIL (scroll ke Informasi Lengkap)
+============================================================= */
+
+const detailRef = ref<HTMLElement | null>(null);
+const detailId = "informasi-lengkap";
+
+const scrollToDetail = async () => {
+    // Pengguna mulai membaca: hentikan autoplay agar isi tidak berganti
+    userPaused.value = true;
+    scheduleAutoplay();
+
+    await nextTick();
+
+    detailRef.value?.scrollIntoView({
+        behavior: prefersReducedMotion.value ? "auto" : "smooth",
+        block: "start",
+    });
+
+    detailRef.value?.focus({ preventScroll: true });
 };
-
-const formatLokasi = (lokasi: string | null): string => {
-    return lokasi?.trim() || "—";
-};
-
-const currentImageUrl = computed(() => {
-    return getImageUrl(currentKawasan.value?.gambar ?? null);
-});
-
-const currentLuas = computed(() => {
-    return formatLuas(currentKawasan.value?.luas_kawasan ?? null);
-});
-
-const currentTahun = computed(() => {
-    return formatTahun(currentKawasan.value?.tahun_berdiri ?? null);
-});
-
-const currentLokasi = computed(() => {
-    return formatLokasi(currentKawasan.value?.lokasi ?? null);
-});
-
-const currentDeskripsi = computed(() => {
-    return currentKawasan.value?.deskripsi?.trim() || "";
-});
 
 /* ============================================================
    LIFECYCLE
 ============================================================= */
 
 onMounted(() => {
-    window.addEventListener("keydown", handleKeydown);
+    mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    prefersReducedMotion.value = mediaQuery.matches;
+    mediaQuery.addEventListener("change", handleMotionChange);
 
-    startAutoplay();
+    setupReveal();
+
+    if (!isLoading.value) {
+        scheduleAutoplay();
+        return;
+    }
+
+    skeletonTimer = setTimeout(async () => {
+        isLoading.value = false;
+
+        // Konten carousel baru dirender setelah skeleton hilang,
+        // jadi observer reveal dipasang ulang dan autoplay baru dimulai.
+        await nextTick();
+        setupReveal();
+        scheduleAutoplay();
+    }, 450);
 });
 
 onBeforeUnmount(() => {
-    window.removeEventListener("keydown", handleKeydown);
+    if (skeletonTimer) {
+        clearTimeout(skeletonTimer);
+    }
+
+    revealObserver?.disconnect();
+    mediaQuery?.removeEventListener("change", handleMotionChange);
+    clearAutoplay();
 });
 </script>
 
@@ -402,9 +480,7 @@ onBeforeUnmount(() => {
     <main
         class="relative min-h-screen overflow-hidden bg-slate-50/50 dark:bg-slate-950"
     >
-        <!-- ====================================================
-             DECORATIVE BLOBS
-        ===================================================== -->
+        <!-- Decorative blobs -->
 
         <div
             aria-hidden="true"
@@ -429,29 +505,35 @@ onBeforeUnmount(() => {
             <div data-reveal class="mb-6" style="--d: 0ms">
                 <nav
                     aria-label="Breadcrumb"
-                    class="flex items-center gap-2 text-sm"
+                    class="flex flex-wrap items-center gap-2 text-sm"
                 >
                     <Link
                         href="/"
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
-                        <Home class="size-4 shrink-0" />
+                        <Home class="size-4 shrink-0" aria-hidden="true" />
 
                         <span>Beranda</span>
                     </Link>
 
-                    <ChevronRight class="size-4 shrink-0 text-slate-400" />
+                    <ChevronRight
+                        class="size-4 shrink-0 text-slate-400"
+                        aria-hidden="true"
+                    />
 
-                    <Link
-                        href="/kawasan/profil-kawasan"
-                        class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                    <!-- Bukan link: sebelumnya menaut ke halaman ini sendiri -->
+                    <span
+                        class="inline-flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400"
                     >
-                        <Landmark class="size-4 shrink-0" />
+                        <Landmark class="size-4 shrink-0" aria-hidden="true" />
 
                         <span>Kawasan Industri</span>
-                    </Link>
+                    </span>
 
-                    <ChevronRight class="size-4 shrink-0 text-slate-400" />
+                    <ChevronRight
+                        class="size-4 shrink-0 text-slate-400"
+                        aria-hidden="true"
+                    />
 
                     <span
                         aria-current="page"
@@ -459,6 +541,7 @@ onBeforeUnmount(() => {
                     >
                         <Landmark
                             class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
+                            aria-hidden="true"
                         />
 
                         <span>Profil Kawasan</span>
@@ -471,7 +554,7 @@ onBeforeUnmount(() => {
             ================================================== -->
 
             <section
-                v-if="!profilKawasans.length"
+                v-if="!kawasans.length"
                 data-reveal
                 class="py-20 text-center"
                 style="--d: 80ms"
@@ -480,7 +563,7 @@ onBeforeUnmount(() => {
                     <div
                         class="flex size-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
                     >
-                        <Landmark class="size-8" />
+                        <Landmark class="size-8" aria-hidden="true" />
                     </div>
 
                     <h1
@@ -492,18 +575,94 @@ onBeforeUnmount(() => {
                     <p
                         class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Informasi profil kawasan industri saat ini belum
-                        tersedia untuk ditampilkan.
+                        Informasi profil kawasan industri belum tersedia atau
+                        sedang diperbarui. Silakan kembali lagi nanti.
                     </p>
 
                     <Link
                         href="/"
                         class="mt-7 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-600 dark:bg-white dark:text-slate-900 dark:hover:bg-blue-400"
                     >
-                        <Home class="size-4" />
+                        <Home class="size-4" aria-hidden="true" />
 
                         Kembali ke Beranda
                     </Link>
+                </div>
+            </section>
+
+            <!-- =================================================
+                 SKELETON
+            ================================================== -->
+
+            <section
+                v-else-if="isLoading"
+                aria-label="Memuat profil kawasan"
+                aria-busy="true"
+            >
+                <div class="mb-6 space-y-3">
+                    <div
+                        class="skeleton-shimmer h-4 w-32 rounded bg-slate-200 dark:bg-slate-800"
+                    />
+
+                    <div
+                        class="skeleton-shimmer h-9 w-64 rounded-lg bg-slate-200 dark:bg-slate-800"
+                    />
+
+                    <div
+                        class="skeleton-shimmer h-4 w-full max-w-xl rounded bg-slate-200 dark:bg-slate-800"
+                    />
+                </div>
+
+                <div
+                    class="grid overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm lg:grid-cols-2 dark:border-slate-800 dark:bg-slate-900"
+                >
+                    <div
+                        class="skeleton-shimmer min-h-[300px] bg-slate-200 sm:min-h-[420px] lg:min-h-[520px] dark:bg-slate-800"
+                    />
+
+                    <div class="space-y-5 p-7 sm:p-10 lg:p-12">
+                        <div
+                            class="skeleton-shimmer h-7 w-36 rounded-full bg-slate-200 dark:bg-slate-800"
+                        />
+
+                        <div
+                            class="skeleton-shimmer h-9 w-3/4 rounded-lg bg-slate-200 dark:bg-slate-800"
+                        />
+
+                        <div class="space-y-2">
+                            <div
+                                class="skeleton-shimmer h-3.5 w-full rounded bg-slate-200 dark:bg-slate-800"
+                            />
+
+                            <div
+                                class="skeleton-shimmer h-3.5 w-11/12 rounded bg-slate-200 dark:bg-slate-800"
+                            />
+
+                            <div
+                                class="skeleton-shimmer h-3.5 w-2/3 rounded bg-slate-200 dark:bg-slate-800"
+                            />
+                        </div>
+
+                        <div
+                            class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3"
+                        >
+                            <div
+                                v-for="index in 3"
+                                :key="index"
+                                class="skeleton-shimmer h-20 rounded-2xl bg-slate-200 dark:bg-slate-800"
+                            />
+                        </div>
+
+                        <div class="flex flex-wrap gap-3">
+                            <div
+                                class="skeleton-shimmer h-11 w-44 rounded-xl bg-slate-200 dark:bg-slate-800"
+                            />
+
+                            <div
+                                class="skeleton-shimmer h-11 w-32 rounded-xl bg-slate-200 dark:bg-slate-800"
+                            />
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -512,9 +671,7 @@ onBeforeUnmount(() => {
             ================================================== -->
 
             <template v-else>
-                <!-- =================================================
-                     SECTION HEADING
-                ================================================== -->
+                <!-- Heading -->
 
                 <section data-reveal class="mb-6" style="--d: 80ms">
                     <div
@@ -524,7 +681,7 @@ onBeforeUnmount(() => {
                             <div
                                 class="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400"
                             >
-                                <Globe2 class="size-4" />
+                                <Globe2 class="size-4" aria-hidden="true" />
 
                                 Kawasan Industri
                             </div>
@@ -544,13 +701,39 @@ onBeforeUnmount(() => {
                             </p>
                         </div>
 
-                        <div
-                            class="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-                        >
-                            {{ currentIndex + 1 }}
-                            /
-                            {{ totalSlides }}
-                            Kawasan
+                        <div class="flex items-center gap-2">
+                            <div
+                                class="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                            >
+                                {{ currentIndex + 1 }} / {{ totalSlides }}
+                                Kawasan
+                            </div>
+
+                            <!-- Kontrol jeda autoplay -->
+                            <button
+                                v-if="
+                                    hasMultipleSlides && !prefersReducedMotion
+                                "
+                                type="button"
+                                :aria-label="
+                                    userPaused
+                                        ? 'Putar otomatis slide'
+                                        : 'Jeda putar otomatis slide'
+                                "
+                                class="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-blue-300"
+                                @click="toggleAutoplay"
+                            >
+                                <Play
+                                    v-if="userPaused"
+                                    class="size-4"
+                                    aria-hidden="true"
+                                />
+                                <Pause
+                                    v-else
+                                    class="size-4"
+                                    aria-hidden="true"
+                                />
+                            </button>
                         </div>
                     </div>
                 </section>
@@ -561,25 +744,32 @@ onBeforeUnmount(() => {
 
                 <section
                     data-reveal
-                    class="relative"
+                    class="relative touch-pan-y outline-none"
                     style="--d: 120ms"
-                    @mouseenter="pauseAutoplay"
-                    @touchstart.passive="handleTouchStart"
-                    @touchmove.passive="handleTouchMove"
-                    @touchend="handleTouchEnd"
-                    @mousedown="handleMouseDown"
-                    @mouseup="handleMouseUp"
-                    @mouseleave="handleMouseLeave"
+                    role="region"
+                    aria-roledescription="carousel"
+                    aria-label="Profil kawasan"
+                    tabindex="0"
+                    @mouseenter="isHovering = true"
+                    @mouseleave="isHovering = false"
+                    @focusin="handleFocusIn"
+                    @focusout="handleFocusOut"
+                    @keydown="handleKeydown"
+                    @pointerdown="handlePointerDown"
+                    @pointerup="handlePointerUp"
+                    @pointercancel="handlePointerCancel"
                 >
                     <div
                         class="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                     >
-                        <!-- Slide -->
-
                         <Transition name="kawasan-slide" mode="out-in">
                             <div
                                 :key="currentKawasan?.id"
-                                class="grid select-none lg:grid-cols-[1fr_1fr]"
+                                class="grid lg:grid-cols-2"
+                                role="group"
+                                aria-roledescription="slide"
+                                :aria-label="`${currentIndex + 1} dari ${totalSlides}`"
+                                :aria-live="autoplayEnabled ? 'off' : 'polite'"
                             >
                                 <!-- Image -->
 
@@ -589,8 +779,8 @@ onBeforeUnmount(() => {
                                     <img
                                         v-if="currentImageUrl"
                                         :src="currentImageUrl"
-                                        :alt="currentKawasan?.judul"
-                                        class="absolute inset-0 size-full object-cover"
+                                        :alt="`Foto ${currentKawasan?.judul}`"
+                                        class="absolute inset-0 size-full select-none object-cover"
                                         loading="eager"
                                         decoding="async"
                                         draggable="false"
@@ -603,31 +793,22 @@ onBeforeUnmount(() => {
                                         <div
                                             class="flex size-24 items-center justify-center rounded-3xl bg-white/80 text-blue-600 shadow-lg backdrop-blur dark:bg-slate-900/70 dark:text-blue-400"
                                         >
-                                            <Landmark class="size-12" />
+                                            <Landmark
+                                                class="size-12"
+                                                aria-hidden="true"
+                                            />
                                         </div>
                                     </div>
 
                                     <div
-                                        class="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent"
+                                        class="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent"
                                     />
 
-                                    <!-- Image Label -->
-
-                                    <div
-                                        class="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4"
-                                    >
+                                    <div class="absolute bottom-5 left-5">
                                         <div
                                             class="rounded-xl border border-white/20 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-white backdrop-blur-md"
                                         >
                                             Kawasan Industri
-                                        </div>
-
-                                        <div
-                                            class="rounded-xl border border-white/20 bg-slate-950/40 px-3 py-2 text-xs font-medium text-white backdrop-blur-md"
-                                        >
-                                            {{ currentIndex + 1 }}
-                                            /
-                                            {{ totalSlides }}
                                         </div>
                                     </div>
                                 </div>
@@ -640,7 +821,10 @@ onBeforeUnmount(() => {
                                     <div
                                         class="inline-flex w-fit items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300"
                                     >
-                                        <Landmark class="size-3.5" />
+                                        <Landmark
+                                            class="size-3.5"
+                                            aria-hidden="true"
+                                        />
 
                                         Profil Kawasan
                                     </div>
@@ -651,115 +835,119 @@ onBeforeUnmount(() => {
                                         {{ currentKawasan?.judul }}
                                     </h2>
 
+                                    <!-- Ringkasan (versi lengkap ada di "Informasi Lengkap") -->
                                     <p
                                         v-if="currentDeskripsi"
-                                        class="mt-5 line-clamp-5 text-sm leading-7 text-slate-600 dark:text-slate-300"
+                                        class="mt-5 line-clamp-3 text-sm leading-7 text-slate-600 dark:text-slate-300"
                                     >
                                         {{ currentDeskripsi }}
                                     </p>
 
                                     <!-- Info -->
 
-                                    <div
+                                    <dl
                                         class="mt-7 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3"
                                     >
-                                        <!-- Luas -->
-
                                         <div
                                             class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
                                         >
-                                            <div
+                                            <dt
                                                 class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400"
                                             >
                                                 <Maximize2
                                                     class="size-4 text-blue-600 dark:text-blue-400"
+                                                    aria-hidden="true"
                                                 />
 
                                                 Luas Kawasan
-                                            </div>
+                                            </dt>
 
-                                            <p
+                                            <dd
                                                 class="mt-2 text-lg font-bold text-slate-900 dark:text-white"
                                             >
-                                                {{ currentLuas }}
+                                                {{ currentLuas ?? "—" }}
 
                                                 <span
-                                                    v-if="
-                                                        currentKawasan?.luas_kawasan !==
-                                                        null
-                                                    "
+                                                    v-if="currentLuas"
                                                     class="text-xs font-semibold text-slate-500 dark:text-slate-400"
                                                 >
                                                     Ha
                                                 </span>
-                                            </p>
+                                            </dd>
                                         </div>
-
-                                        <!-- Lokasi -->
 
                                         <div
                                             class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
                                         >
-                                            <div
+                                            <dt
                                                 class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400"
                                             >
                                                 <MapPin
                                                     class="size-4 text-blue-600 dark:text-blue-400"
+                                                    aria-hidden="true"
                                                 />
 
                                                 Lokasi
-                                            </div>
+                                            </dt>
 
-                                            <p
+                                            <dd
                                                 class="mt-2 line-clamp-2 text-sm font-bold leading-5 text-slate-900 dark:text-white"
                                             >
-                                                {{ currentLokasi }}
-                                            </p>
+                                                {{ currentLokasi ?? "—" }}
+                                            </dd>
                                         </div>
-
-                                        <!-- Tahun -->
 
                                         <div
                                             class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
                                         >
-                                            <div
+                                            <dt
                                                 class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400"
                                             >
                                                 <CalendarDays
                                                     class="size-4 text-blue-600 dark:text-blue-400"
+                                                    aria-hidden="true"
                                                 />
 
                                                 Tahun Berdiri
-                                            </div>
+                                            </dt>
 
-                                            <p
+                                            <dd
                                                 class="mt-2 text-lg font-bold text-slate-900 dark:text-white"
                                             >
-                                                {{ currentTahun }}
-                                            </p>
+                                                {{ currentTahun ?? "—" }}
+                                            </dd>
                                         </div>
-                                    </div>
+                                    </dl>
 
                                     <!-- Actions -->
 
                                     <div class="mt-8 flex flex-wrap gap-3">
                                         <Link
-                                            href="/kawasan/peta-kawasan"
+                                            :href="petaUrl"
                                             class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                                         >
-                                            <MapPin class="size-4" />
+                                            <MapPin
+                                                class="size-4"
+                                                aria-hidden="true"
+                                            />
 
                                             Lihat Peta Kawasan
                                         </Link>
 
-                                        <a
-                                            href="#informasi-lengkap"
-                                            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-800 dark:hover:bg-blue-950/30 dark:hover:text-blue-300"
+                                        <button
+                                            v-if="hasDetail"
+                                            type="button"
+                                            :aria-controls="detailId"
+                                            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-800 dark:hover:bg-blue-950/30 dark:hover:text-blue-300 dark:focus:ring-offset-slate-900"
+                                            @click="scrollToDetail"
                                         >
-                                            Detail
+                                            Baca Detail
 
-                                            <ChevronRight class="size-4" />
-                                        </a>
+                                            <ChevronRight
+                                                class="size-4"
+                                                aria-hidden="true"
+                                            />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -772,9 +960,9 @@ onBeforeUnmount(() => {
                             type="button"
                             aria-label="Profil kawasan sebelumnya"
                             class="absolute left-3 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/90 text-slate-700 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:left-5 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-900"
-                            @click.stop="previousSlide"
+                            @click="previousSlide"
                         >
-                            <ChevronLeft class="size-5" />
+                            <ChevronLeft class="size-5" aria-hidden="true" />
                         </button>
 
                         <!-- Next -->
@@ -784,33 +972,31 @@ onBeforeUnmount(() => {
                             type="button"
                             aria-label="Profil kawasan berikutnya"
                             class="absolute right-3 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/90 text-slate-700 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:right-5 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-900"
-                            @click.stop="nextSlide"
+                            @click="nextSlide"
                         >
-                            <ChevronRight class="size-5" />
+                            <ChevronRight class="size-5" aria-hidden="true" />
                         </button>
                     </div>
 
-                    <!-- =================================================
-                         DOTS
-                    ================================================== -->
+                    <!-- Dots -->
 
                     <div
                         v-if="hasMultipleSlides"
                         class="mt-5 flex items-center justify-center gap-2"
                     >
                         <button
-                            v-for="(kawasan, index) in profilKawasans"
+                            v-for="(kawasan, index) in kawasans"
                             :key="kawasan.id"
                             type="button"
                             :aria-label="`Lihat ${kawasan.judul}`"
                             :aria-current="
                                 index === currentIndex ? 'true' : undefined
                             "
-                            class="group flex h-6 items-center justify-center"
+                            class="group flex h-6 items-center justify-center focus:outline-none"
                             @click="goToSlide(index)"
                         >
                             <span
-                                class="block rounded-full transition-all duration-300"
+                                class="block rounded-full transition-all duration-300 group-focus-visible:ring-2 group-focus-visible:ring-blue-500 group-focus-visible:ring-offset-2"
                                 :class="
                                     index === currentIndex
                                         ? 'h-2 w-8 bg-blue-600 dark:bg-blue-400'
@@ -822,15 +1008,18 @@ onBeforeUnmount(() => {
                 </section>
 
                 <!-- =================================================
-                     FULL DESCRIPTION
+                     INFORMASI LENGKAP
                 ================================================== -->
 
                 <section
-                    v-if="currentDeskripsi"
-                    id="informasi-lengkap"
+                    v-if="hasDetail"
+                    :id="detailId"
+                    ref="detailRef"
                     data-reveal
-                    class="mt-10"
+                    class="mt-10 scroll-mt-24 outline-none"
                     style="--d: 160ms"
+                    tabindex="-1"
+                    aria-live="polite"
                 >
                     <div
                         class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -842,7 +1031,10 @@ onBeforeUnmount(() => {
                                 <div
                                     class="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
                                 >
-                                    <Building2 class="size-5" />
+                                    <Building2
+                                        class="size-5"
+                                        aria-hidden="true"
+                                    />
                                 </div>
 
                                 <div>
@@ -867,6 +1059,19 @@ onBeforeUnmount(() => {
                             >
                                 {{ currentDeskripsi }}
                             </p>
+
+                            <div
+                                class="mt-8 flex flex-wrap gap-3 border-t border-slate-100 pt-6 dark:border-slate-800"
+                            >
+                                <Link
+                                    :href="petaUrl"
+                                    class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                                >
+                                    <MapPin class="size-4" aria-hidden="true" />
+
+                                    Lihat Peta Kawasan
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -911,7 +1116,10 @@ onBeforeUnmount(() => {
                             >
                                 Infrastruktur
 
-                                <ChevronRight class="size-4" />
+                                <ChevronRight
+                                    class="size-4"
+                                    aria-hidden="true"
+                                />
                             </Link>
 
                             <Link
@@ -920,7 +1128,10 @@ onBeforeUnmount(() => {
                             >
                                 Fasilitas
 
-                                <ChevronRight class="size-4" />
+                                <ChevronRight
+                                    class="size-4"
+                                    aria-hidden="true"
+                                />
                             </Link>
                         </div>
                     </div>
@@ -984,6 +1195,41 @@ onBeforeUnmount(() => {
     .kawasan-slide-enter-active,
     .kawasan-slide-leave-active {
         transition: none;
+    }
+}
+
+/* ============================================================
+   SKELETON SHIMMER
+============================================================= */
+
+.skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.55),
+        transparent
+    );
+    animation: skeleton-shimmer 1.35s infinite;
+}
+
+@keyframes skeleton-shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer::after {
+        animation: none;
     }
 }
 </style>

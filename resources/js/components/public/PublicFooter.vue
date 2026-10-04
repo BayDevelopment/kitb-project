@@ -1,38 +1,144 @@
 <script setup lang="ts">
-import { Link } from "@inertiajs/vue3";
+import { computed } from "vue";
+
+import { Link, usePage } from "@inertiajs/vue3";
+
 import {
     ArrowUpRight,
+    Facebook,
     Instagram,
+    Linkedin,
     Mail,
     MapPin,
-    Music2,
     Youtube,
 } from "lucide-vue-next";
-import {
-    kontakLink,
-    navGroups,
-    socials,
-    visitUrl,
-} from "@/data/publicNavigation";
 
-const socialIcons = {
+import { kontakLink, navGroups, visitUrl } from "@/data/publicNavigation";
+
+/* =========================================================
+   Types
+========================================================= */
+
+interface PengaturanKontak {
+    nama_perusahaan: string | null;
+    alamat: string | null;
+    telepon: string | null;
+    whatsapp: string | null;
+    email: string | null;
+    email_investor: string | null;
+    jam_operasional: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    maps_embed_url: string | null;
+    facebook: string | null;
+    instagram: string | null;
+    linkedin: string | null;
+    youtube: string | null;
+}
+
+interface SharedPageProps {
+    pengaturanKontak?: PengaturanKontak | null;
+}
+
+/* =========================================================
+   Inertia Shared Props
+========================================================= */
+
+const page = usePage();
+
+const sharedProps = computed(
+    () => page.props as typeof page.props & SharedPageProps,
+);
+
+const pengaturan = computed(() => sharedProps.value.pengaturanKontak ?? null);
+
+/* =========================================================
+   Contact
+========================================================= */
+
+const emailHref = computed(() => {
+    const email = pengaturan.value?.email?.trim();
+
+    return email ? `mailto:${email}` : "#";
+});
+
+/* =========================================================
+   Social Media
+========================================================= */
+
+type SocialType = "facebook" | "instagram" | "linkedin" | "youtube";
+
+const socialIcons: Record<SocialType, typeof Facebook> = {
+    facebook: Facebook,
     instagram: Instagram,
-    tiktok: Music2,
+    linkedin: Linkedin,
     youtube: Youtube,
 };
+
+const socialLinks = computed(() => {
+    const data = pengaturan.value;
+
+    if (!data) {
+        return [];
+    }
+
+    const links: Array<{
+        type: SocialType;
+        label: string;
+        href: string;
+    }> = [];
+
+    if (data.facebook?.trim()) {
+        links.push({
+            type: "facebook",
+            label: "Facebook",
+            href: data.facebook.trim(),
+        });
+    }
+
+    if (data.instagram?.trim()) {
+        links.push({
+            type: "instagram",
+            label: "Instagram",
+            href: data.instagram.trim(),
+        });
+    }
+
+    if (data.linkedin?.trim()) {
+        links.push({
+            type: "linkedin",
+            label: "LinkedIn",
+            href: data.linkedin.trim(),
+        });
+    }
+
+    if (data.youtube?.trim()) {
+        links.push({
+            type: "youtube",
+            label: "YouTube",
+            href: data.youtube.trim(),
+        });
+    }
+
+    return links;
+});
 </script>
 
 <template>
     <footer id="kontak" class="bg-kitb-navy-900 text-white">
         <div
-            class="mx-auto w-full max-w-[1440px] px-5 py-14 sm:px-6 lg:px-8 lg:py-16"
+            class="mx-auto w-full max-w-[1440px] px-5 py-14 sm:px-6 md:py-16 lg:px-8 lg:py-20"
         >
             <!-- Main Footer -->
-            <div class="grid gap-10 lg:grid-cols-12 lg:gap-8">
+            <div class="grid gap-12 sm:gap-14 lg:grid-cols-12 lg:gap-8">
                 <!-- Brand -->
                 <div class="lg:col-span-4">
-                    <Link href="/" class="inline-flex items-center gap-3">
-                        <div class="flex items-center gap-2">
+                    <Link
+                        href="/"
+                        aria-label="Kembali ke halaman utama KITB"
+                        class="inline-flex items-center gap-3"
+                    >
+                        <div class="flex shrink-0 items-center gap-2">
                             <img
                                 src="/images/siak-kabupaten.png"
                                 alt="Kabupaten Siak"
@@ -40,7 +146,7 @@ const socialIcons = {
                             />
 
                             <div
-                                class="h-9 w-px bg-white/15"
+                                class="h-9 w-px bg-white/15 sm:h-10"
                                 aria-hidden="true"
                             />
 
@@ -51,9 +157,9 @@ const socialIcons = {
                             />
                         </div>
 
-                        <div>
+                        <div class="min-w-0">
                             <p
-                                class="text-base font-semibold leading-none tracking-tight"
+                                class="truncate text-base font-semibold leading-none tracking-tight sm:text-[17px]"
                             >
                                 Tanjung Buton
                             </p>
@@ -66,48 +172,62 @@ const socialIcons = {
                         </div>
                     </Link>
 
-                    <p class="mt-6 max-w-md text-sm leading-7 text-white/65">
-                        PT. Kawasan Industri Tanjung Buton merupakan kawasan
-                        industri strategis di Kabupaten Siak, Provinsi Riau,
-                        yang dikembangkan untuk mendukung pertumbuhan industri
-                        dan investasi berkelanjutan.
+                    <p class="mt-6 max-w-lg text-sm leading-7 text-white/65">
+                        {{
+                            pengaturan?.nama_perusahaan ||
+                            "PT. Kawasan Industri Tanjung Buton"
+                        }}
+                        merupakan kawasan industri strategis di Kabupaten Siak,
+                        Provinsi Riau, yang dikembangkan untuk mendukung
+                        pertumbuhan industri dan investasi berkelanjutan.
                     </p>
 
-                    <div class="mt-6 space-y-3">
+                    <!-- Contact Information -->
+                    <div class="mt-6 space-y-3.5">
+                        <!-- Address -->
                         <div
+                            v-if="pengaturan?.alamat"
                             class="flex items-start gap-3 text-sm text-white/65"
                         >
                             <MapPin
                                 class="mt-0.5 size-4 shrink-0 text-kitb-teal-300"
+                                aria-hidden="true"
                             />
 
-                            <span class="leading-6">
-                                Kampung Mengkapan &amp; Kampung Sungai Rawa,
-                                Kecamatan Sungai Apit, Kabupaten Siak, Provinsi
-                                Riau
+                            <span class="min-w-0 leading-6">
+                                {{ pengaturan.alamat }}
                             </span>
                         </div>
 
+                        <!-- Email -->
                         <a
-                            href="mailto:info@tanjungbuton-industrial.co.id"
-                            class="flex items-center gap-3 text-sm text-white/65 transition-colors hover:text-white"
+                            v-if="pengaturan?.email"
+                            :href="emailHref"
+                            class="flex min-w-0 items-center gap-3 text-sm text-white/65 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                         >
-                            <Mail class="size-4 shrink-0 text-kitb-teal-300" />
+                            <Mail
+                                class="size-4 shrink-0 text-kitb-teal-300"
+                                aria-hidden="true"
+                            />
 
-                            <span> info@tanjungbuton-industrial.co.id </span>
+                            <span class="truncate">
+                                {{ pengaturan.email }}
+                            </span>
                         </a>
                     </div>
                 </div>
 
                 <!-- Navigation -->
                 <div
-                    class="grid gap-8 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-2"
+                    class="grid gap-10 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-2 lg:gap-x-8 lg:gap-y-10"
                 >
                     <div
                         v-for="group in navGroups.slice(0, 2)"
                         :key="group.label"
                     >
-                        <h3 class="text-sm font-semibold text-white">
+                        <h3
+                            class="text-sm font-semibold tracking-tight text-white"
+                        >
                             {{ group.label }}
                         </h3>
 
@@ -115,15 +235,15 @@ const socialIcons = {
                             <li v-for="item in group.items" :key="item.label">
                                 <Link
                                     :href="item.href"
-                                    class="inline-flex items-center gap-1.5 text-sm text-white/55 transition-colors hover:text-white"
+                                    class="group inline-flex max-w-full items-center gap-1.5 text-sm text-white/55 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                                 >
-                                    <span>
+                                    <span class="truncate">
                                         {{ item.label }}
                                     </span>
 
                                     <span
                                         v-if="item.badge"
-                                        class="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-kitb-teal-300"
+                                        class="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-kitb-teal-300 transition-colors group-hover:bg-kitb-teal-300/10"
                                     >
                                         {{ item.badge }}
                                     </span>
@@ -133,7 +253,9 @@ const socialIcons = {
                     </div>
 
                     <div v-for="group in navGroups.slice(2)" :key="group.label">
-                        <h3 class="text-sm font-semibold text-white">
+                        <h3
+                            class="text-sm font-semibold tracking-tight text-white"
+                        >
                             {{ group.label }}
                         </h3>
 
@@ -141,15 +263,15 @@ const socialIcons = {
                             <li v-for="item in group.items" :key="item.label">
                                 <Link
                                     :href="item.href"
-                                    class="inline-flex items-center gap-1.5 text-sm text-white/55 transition-colors hover:text-white"
+                                    class="group inline-flex max-w-full items-center gap-1.5 text-sm text-white/55 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                                 >
-                                    <span>
+                                    <span class="truncate">
                                         {{ item.label }}
                                     </span>
 
                                     <span
                                         v-if="item.badge"
-                                        class="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-kitb-teal-300"
+                                        class="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-kitb-teal-300 transition-colors group-hover:bg-kitb-teal-300/10"
                                     >
                                         {{ item.badge }}
                                     </span>
@@ -161,11 +283,11 @@ const socialIcons = {
 
                 <!-- Contact / CTA -->
                 <div class="lg:col-span-3">
-                    <h3 class="text-sm font-semibold text-white">
+                    <h3 class="text-sm font-semibold tracking-tight text-white">
                         Kontak Kami
                     </h3>
 
-                    <p class="mt-4 text-sm leading-6 text-white/55">
+                    <p class="mt-4 max-w-sm text-sm leading-6 text-white/55">
                         Hubungi tim KITB untuk informasi kawasan, peluang
                         investasi, maupun kunjungan lahan.
                     </p>
@@ -174,51 +296,50 @@ const socialIcons = {
                     <div class="mt-5">
                         <Link
                             :href="visitUrl"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-kitb-navy-900 transition-all duration-200 hover:-translate-y-0.5 hover:bg-kitb-sand-50 sm:w-auto"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-kitb-navy-900 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-kitb-sand-50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900 sm:w-auto"
                         >
                             <span>Ajukan Kunjungan</span>
-                            <ArrowUpRight class="size-4" />
+
+                            <ArrowUpRight class="size-4" aria-hidden="true" />
                         </Link>
                     </div>
 
                     <!-- Contact Link -->
                     <div class="mt-4">
-                        <a
+                        <Link
                             :href="kontakLink.href"
-                            class="inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm font-medium text-white/65 transition-colors hover:text-white"
+                            class="inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm font-medium text-white/65 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                         >
-                            <span>{{ kontakLink.label }}</span>
-                            <ArrowUpRight class="size-3.5" />
-                        </a>
+                            <span>
+                                {{ kontakLink.label }}
+                            </span>
+
+                            <ArrowUpRight class="size-3.5" aria-hidden="true" />
+                        </Link>
                     </div>
 
-                    <!-- Social -->
-                    <div class="mt-8">
+                    <!-- Social Media -->
+                    <div v-if="socialLinks.length > 0" class="mt-8">
                         <p
                             class="text-xs font-semibold uppercase tracking-[0.16em] text-white/40"
                         >
                             Ikuti Kami
                         </p>
 
-                        <div class="mt-3 flex items-center gap-2">
+                        <div class="mt-3 flex flex-wrap items-center gap-2">
                             <a
-                                v-for="social in socials"
+                                v-for="social in socialLinks"
                                 :key="social.type"
                                 :href="social.href"
                                 :aria-label="social.label"
-                                class="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/65 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10 hover:text-white"
-                                :target="
-                                    social.href === '#' ? undefined : '_blank'
-                                "
-                                :rel="
-                                    social.href === '#'
-                                        ? undefined
-                                        : 'noopener noreferrer'
-                                "
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/65 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                             >
                                 <component
                                     :is="socialIcons[social.type]"
                                     class="size-4"
+                                    aria-hidden="true"
                                 />
                             </a>
                         </div>
@@ -228,29 +349,33 @@ const socialIcons = {
 
             <!-- Bottom -->
             <div
-                class="mt-12 flex flex-col gap-4 border-t border-white/10 pt-6 lg:flex-row lg:items-center lg:justify-between"
+                class="mt-12 flex flex-col gap-5 border-t border-white/10 pt-6 sm:mt-14 lg:mt-16 lg:flex-row lg:items-center lg:justify-between"
             >
                 <p class="text-xs leading-5 text-white/40">
-                    © 2026 PT. Kawasan Industri Tanjung Buton. Badan Usaha Milik
-                    Daerah, Kabupaten Siak.
+                    © {{ new Date().getFullYear() }}
+
+                    {{
+                        pengaturan?.nama_perusahaan ||
+                        "PT. Kawasan Industri Tanjung Buton"
+                    }}. Badan Usaha Milik Daerah, Kabupaten Siak.
                 </p>
 
                 <div
                     class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/40"
                 >
-                    <a
+                    <Link
                         href="/kebijakan-privasi"
-                        class="transition-colors hover:text-white"
+                        class="transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                     >
                         Kebijakan Privasi
-                    </a>
+                    </Link>
 
-                    <a
+                    <Link
                         href="/pengaduan"
-                        class="transition-colors hover:text-white"
+                        class="transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                     >
                         Pengaduan
-                    </a>
+                    </Link>
 
                     <span
                         class="hidden h-3.5 w-px bg-white/15 sm:block"

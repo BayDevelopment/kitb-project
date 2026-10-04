@@ -30,7 +30,7 @@ class VisiMisiController extends Controller
             : null;
 
         return Inertia::render(
-            'ProfilPerusahaan/VisiMisi',
+            'admin/ProfilPerusahaan/VisiMisi',
             [
                 'visi' => $visi,
                 'misis' => $misis,

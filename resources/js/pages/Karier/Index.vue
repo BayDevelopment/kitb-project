@@ -140,6 +140,17 @@ const clearFilters = () => {
     searchQuery.value = "";
     selectedDepartment.value = "";
     selectedType.value = "";
+
+    router.get(
+        "/karier",
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ["lowongans", "filters"],
+        },
+    );
 };
 
 /*
@@ -179,7 +190,7 @@ const getTypeIcon = (type: string | null) => {
         : BriefcaseBusiness;
 };
 
-const jakartaDateKey = (value: Date) =>
+const getJakartaDateKey = (value: Date) =>
     new Intl.DateTimeFormat("en-CA", {
         timeZone: "Asia/Jakarta",
     }).format(value);
@@ -193,12 +204,15 @@ const isDeadlineNear = (date: string | null) => {
         return false;
     }
 
-    const days =
-        (new Date(jakartaDateKey(deadline)).getTime() -
-            new Date(jakartaDateKey(new Date())).getTime()) /
-        86_400_000;
+    const todayKey = getJakartaDateKey(new Date());
+    const deadlineKey = getJakartaDateKey(deadline);
 
-    return days >= 0 && days <= 7;
+    const today = new Date(`${todayKey}T00:00:00`);
+    const deadlineDate = new Date(`${deadlineKey}T00:00:00`);
+
+    const difference = (deadlineDate.getTime() - today.getTime()) / 86_400_000;
+
+    return difference >= 0 && difference <= 7;
 };
 
 const getDescription = (description: string | null) =>
@@ -260,6 +274,11 @@ onBeforeUnmount(() => {
             property="og:url"
             content="https://tanjungbuton-industrial.co.id/karier"
         />
+
+        <link
+            rel="canonical"
+            href="https://tanjungbuton-industrial.co.id/karier"
+        />
     </Head>
 
     <div
@@ -274,26 +293,31 @@ onBeforeUnmount(() => {
             aria-hidden="true"
         >
             <!-- Top fade -->
+
             <div
                 class="absolute inset-x-0 top-0 h-60 bg-gradient-to-b from-blue-100/70 via-blue-50/40 to-transparent dark:from-blue-950/30 dark:via-blue-950/10"
             />
 
             <!-- Blob kiri -->
+
             <div
                 class="blob blob-a absolute left-[2%] top-0 size-[26rem] rounded-full bg-gradient-to-br from-blue-400/35 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/15"
             />
 
             <!-- Blob kanan -->
+
             <div
                 class="blob blob-b absolute right-[2%] top-4 size-[22rem] rounded-full bg-gradient-to-tr from-sky-300/35 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10"
             />
 
             <!-- Blob tengah -->
+
             <div
                 class="blob blob-c absolute left-1/3 top-56 size-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/10"
             />
 
             <!-- Grid -->
+
             <div
                 class="absolute inset-0 opacity-[0.18] dark:opacity-[0.08]"
                 style="
@@ -324,6 +348,7 @@ onBeforeUnmount(() => {
             />
 
             <!-- Fade ke background -->
+
             <div
                 class="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-b from-transparent to-slate-50/90 dark:to-slate-950/90"
             />
@@ -342,16 +367,18 @@ onBeforeUnmount(() => {
 
             <section class="mx-auto max-w-4xl text-center">
                 <!-- Badge -->
+
                 <div
                     class="reveal mb-5 inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-blue-700 shadow-sm shadow-blue-900/5 backdrop-blur-sm dark:border-blue-900/60 dark:bg-slate-900/70 dark:text-blue-300"
                     style="--d: 0"
                 >
-                    <BriefcaseBusiness class="size-3.5" />
+                    <BriefcaseBusiness class="size-3.5" aria-hidden="true" />
 
                     <span>Peluang Karier di KITB</span>
                 </div>
 
                 <!-- Heading -->
+
                 <h1
                     class="reveal text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl dark:text-white"
                     style="--d: 100"
@@ -366,6 +393,7 @@ onBeforeUnmount(() => {
                 </h1>
 
                 <!-- Description -->
+
                 <p
                     class="reveal mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base sm:leading-8 dark:text-slate-400"
                     style="--d: 200"
@@ -376,6 +404,7 @@ onBeforeUnmount(() => {
                 </p>
 
                 <!-- Stats -->
+
                 <div
                     class="reveal mx-auto mt-8 flex w-fit flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/75 p-1.5 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/70"
                     style="--d: 300"
@@ -386,7 +415,10 @@ onBeforeUnmount(() => {
                         <div
                             class="flex size-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
                         >
-                            <BriefcaseBusiness class="size-3.5" />
+                            <BriefcaseBusiness
+                                class="size-3.5"
+                                aria-hidden="true"
+                            />
                         </div>
 
                         <span> {{ lowongans.total }} Posisi Tersedia </span>
@@ -394,6 +426,7 @@ onBeforeUnmount(() => {
 
                     <div
                         class="hidden h-5 w-px bg-slate-200 sm:block dark:bg-slate-700"
+                        aria-hidden="true"
                     />
 
                     <div
@@ -402,7 +435,7 @@ onBeforeUnmount(() => {
                         <div
                             class="flex size-7 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400"
                         >
-                            <Building2 class="size-3.5" />
+                            <Building2 class="size-3.5" aria-hidden="true" />
                         </div>
 
                         <span>Lingkungan Profesional</span>
@@ -414,7 +447,11 @@ onBeforeUnmount(() => {
                  SEARCH & FILTER
             ====================================================== -->
 
-            <section class="reveal mx-auto mt-10 max-w-6xl" style="--d: 380">
+            <section
+                class="reveal mx-auto mt-10 max-w-6xl"
+                style="--d: 380"
+                aria-label="Pencarian dan filter lowongan"
+            >
                 <div
                     class="rounded-3xl border border-slate-200/80 bg-white/90 p-3 shadow-xl shadow-slate-900/[0.04] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
                 >
@@ -422,26 +459,41 @@ onBeforeUnmount(() => {
                         class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_180px_auto]"
                     >
                         <!-- Search -->
+
                         <div class="relative">
                             <Search
                                 class="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                                aria-hidden="true"
                             />
 
+                            <label for="career-search" class="sr-only">
+                                Cari lowongan
+                            </label>
+
                             <input
+                                id="career-search"
                                 v-model="searchQuery"
                                 type="search"
+                                autocomplete="off"
                                 placeholder="Cari posisi, departemen, atau lokasi..."
                                 class="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-950"
                             />
                         </div>
 
                         <!-- Department -->
+
                         <div class="relative">
                             <SlidersHorizontal
                                 class="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                                aria-hidden="true"
                             />
 
+                            <label for="career-department" class="sr-only">
+                                Filter departemen
+                            </label>
+
                             <select
+                                id="career-department"
                                 v-model="selectedDepartment"
                                 class="h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50/80 pl-11 pr-8 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-200 dark:focus:border-blue-500 dark:focus:bg-slate-950"
                             >
@@ -458,12 +510,19 @@ onBeforeUnmount(() => {
                         </div>
 
                         <!-- Type -->
+
                         <div class="relative">
                             <BriefcaseBusiness
                                 class="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                                aria-hidden="true"
                             />
 
+                            <label for="career-type" class="sr-only">
+                                Filter tipe pekerjaan
+                            </label>
+
                             <select
+                                id="career-type"
                                 v-model="selectedType"
                                 class="h-12 w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50/80 pl-11 pr-8 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-200 dark:focus:border-blue-500 dark:focus:bg-slate-950"
                             >
@@ -480,21 +539,25 @@ onBeforeUnmount(() => {
                         </div>
 
                         <!-- Reset -->
+
                         <button
                             v-if="hasFilter"
                             type="button"
-                            class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-red-900/60 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                            class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-4 focus:ring-red-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-red-900/60 dark:hover:bg-red-950/30 dark:hover:text-red-400"
                             @click="clearFilters"
                         >
-                            <X class="size-4" />
+                            <X class="size-4" aria-hidden="true" />
 
                             <span class="hidden sm:inline"> Reset </span>
+
+                            <span class="sr-only"> pencarian dan filter </span>
                         </button>
                     </div>
 
                     <div
                         v-if="hasFilter"
                         class="mt-3 flex items-center gap-2 px-2 text-xs text-slate-500 dark:text-slate-400"
+                        aria-live="polite"
                     >
                         <span>
                             Ditemukan
@@ -515,7 +578,11 @@ onBeforeUnmount(() => {
                  JOB LIST
             ====================================================== -->
 
-            <section class="reveal mx-auto mt-8 max-w-6xl" style="--d: 460">
+            <section
+                class="reveal mx-auto mt-8 max-w-6xl"
+                style="--d: 460"
+                aria-label="Daftar lowongan pekerjaan"
+            >
                 <!-- =================================================
                      SKELETON
                 ================================================== -->
@@ -530,6 +597,7 @@ onBeforeUnmount(() => {
                         v-for="index in 4"
                         :key="`skeleton-${index}`"
                         class="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900"
+                        aria-hidden="true"
                     >
                         <div
                             class="absolute inset-x-0 top-0 h-1 bg-slate-200 dark:bg-slate-800"
@@ -537,6 +605,7 @@ onBeforeUnmount(() => {
 
                         <div class="animate-pulse">
                             <!-- Header -->
+
                             <div class="flex items-start justify-between gap-4">
                                 <div
                                     class="size-12 shrink-0 rounded-2xl bg-slate-200 dark:bg-slate-800"
@@ -554,6 +623,7 @@ onBeforeUnmount(() => {
                             </div>
 
                             <!-- Title -->
+
                             <div class="mt-5 space-y-3">
                                 <div
                                     class="h-6 w-3/4 rounded-lg bg-slate-200 dark:bg-slate-800"
@@ -573,6 +643,7 @@ onBeforeUnmount(() => {
                             </div>
 
                             <!-- Meta -->
+
                             <div
                                 class="mt-5 space-y-3 border-t border-slate-100 pt-5 dark:border-slate-800"
                             >
@@ -608,6 +679,7 @@ onBeforeUnmount(() => {
                             </div>
 
                             <!-- Button -->
+
                             <div
                                 class="mt-6 h-11 w-full rounded-2xl bg-slate-200 dark:bg-slate-800"
                             />
@@ -629,12 +701,15 @@ onBeforeUnmount(() => {
                         class="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-900/[0.07] dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-900/70"
                     >
                         <!-- Top accent -->
+
                         <div
                             class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400 opacity-80"
+                            aria-hidden="true"
                         />
 
                         <div class="p-5 sm:p-6">
                             <!-- Header -->
+
                             <div class="flex items-start justify-between gap-4">
                                 <div
                                     class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition duration-300 group-hover:scale-105 group-hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-400 dark:group-hover:bg-blue-950"
@@ -644,6 +719,7 @@ onBeforeUnmount(() => {
                                             getTypeIcon(lowongan.tipe_pekerjaan)
                                         "
                                         class="size-5"
+                                        aria-hidden="true"
                                     />
                                 </div>
 
@@ -673,6 +749,7 @@ onBeforeUnmount(() => {
                             </div>
 
                             <!-- Title -->
+
                             <div class="mt-5">
                                 <h2
                                     class="text-xl font-bold tracking-tight text-slate-900 transition group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-400"
@@ -688,41 +765,45 @@ onBeforeUnmount(() => {
                             </div>
 
                             <!-- Meta -->
+
                             <div
                                 class="mt-5 grid gap-2.5 border-t border-slate-100 pt-5 dark:border-slate-800"
                             >
                                 <div
                                     v-if="lowongan.departemen"
-                                    class="flex items-center gap-2.5 text-sm text-slate-600 dark:text-slate-300"
+                                    class="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300"
                                 >
                                     <Building2
-                                        class="size-4 shrink-0 text-slate-400"
+                                        class="mt-0.5 size-4 shrink-0 text-slate-400"
+                                        aria-hidden="true"
                                     />
 
-                                    <span>
+                                    <span class="min-w-0 break-words">
                                         {{ lowongan.departemen }}
                                     </span>
                                 </div>
 
                                 <div
                                     v-if="lowongan.lokasi"
-                                    class="flex items-center gap-2.5 text-sm text-slate-600 dark:text-slate-300"
+                                    class="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300"
                                 >
                                     <MapPin
-                                        class="size-4 shrink-0 text-slate-400"
+                                        class="mt-0.5 size-4 shrink-0 text-slate-400"
+                                        aria-hidden="true"
                                     />
 
-                                    <span>
+                                    <span class="min-w-0 break-words">
                                         {{ lowongan.lokasi }}
                                     </span>
                                 </div>
 
                                 <div
                                     v-if="lowongan.tanggal_tutup"
-                                    class="flex items-center gap-2.5 text-sm text-slate-600 dark:text-slate-300"
+                                    class="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300"
                                 >
                                     <CalendarDays
-                                        class="size-4 shrink-0 text-slate-400"
+                                        class="mt-0.5 size-4 shrink-0 text-slate-400"
+                                        aria-hidden="true"
                                     />
 
                                     <span>
@@ -733,6 +814,7 @@ onBeforeUnmount(() => {
                             </div>
 
                             <!-- Action -->
+
                             <div class="mt-6">
                                 <Link
                                     :href="`/karier/${lowongan.slug}`"
@@ -742,6 +824,7 @@ onBeforeUnmount(() => {
 
                                     <ArrowRight
                                         class="size-4 transition-transform duration-300 group-hover/button:translate-x-1"
+                                        aria-hidden="true"
                                     />
                                 </Link>
                             </div>
@@ -756,9 +839,12 @@ onBeforeUnmount(() => {
                 <div
                     v-else
                     class="rounded-3xl border border-dashed border-slate-300 bg-white/80 px-6 py-16 text-center dark:border-slate-700 dark:bg-slate-900/70"
+                    role="status"
+                    aria-live="polite"
                 >
                     <div
                         class="mx-auto flex size-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                        aria-hidden="true"
                     >
                         <Search class="size-7" />
                     </div>
@@ -786,10 +872,10 @@ onBeforeUnmount(() => {
                     <button
                         v-if="hasFilter"
                         type="button"
-                        class="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 dark:bg-white dark:text-slate-900"
+                        class="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:bg-white dark:text-slate-900"
                         @click="clearFilters"
                     >
-                        <X class="size-4" />
+                        <X class="size-4" aria-hidden="true" />
 
                         Reset Filter
                     </button>
@@ -804,6 +890,7 @@ onBeforeUnmount(() => {
                 v-if="lowongans.last_page > 1 && !isLoading"
                 class="reveal mx-auto mt-8 max-w-6xl"
                 style="--d: 540"
+                aria-label="Navigasi halaman lowongan"
             >
                 <div
                     class="flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900/70"
@@ -840,24 +927,27 @@ onBeforeUnmount(() => {
 
                     <div class="flex items-center justify-center gap-1.5">
                         <!-- Previous -->
+
                         <Link
                             v-if="lowongans.prev_page_url"
                             :href="lowongans.prev_page_url"
                             preserve-scroll
                             aria-label="Halaman sebelumnya"
-                            class="flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-900 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
+                            class="flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-900 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
                         >
-                            <ChevronLeft class="size-4" />
+                            <ChevronLeft class="size-4" aria-hidden="true" />
                         </Link>
 
                         <span
                             v-else
                             class="flex size-9 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-700"
+                            aria-hidden="true"
                         >
                             <ChevronLeft class="size-4" />
                         </span>
 
                         <!-- Pages -->
+
                         <template
                             v-for="(link, index) in pageLinks"
                             :key="`${link.label}-${index}`"
@@ -866,7 +956,13 @@ onBeforeUnmount(() => {
                                 v-if="link.url"
                                 :href="link.url"
                                 preserve-scroll
-                                class="flex size-9 items-center justify-center rounded-xl border text-xs font-semibold transition"
+                                :aria-current="link.active ? 'page' : undefined"
+                                :aria-label="
+                                    link.active
+                                        ? `Halaman ${link.label}, saat ini`
+                                        : `Halaman ${link.label}`
+                                "
+                                class="flex size-9 items-center justify-center rounded-xl border text-xs font-semibold transition focus:outline-none focus:ring-4 focus:ring-blue-500/20"
                                 :class="
                                     link.active
                                         ? 'border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-600/20'
@@ -878,24 +974,27 @@ onBeforeUnmount(() => {
                             <span
                                 v-else
                                 class="flex size-9 items-center justify-center text-xs text-slate-400"
+                                aria-hidden="true"
                                 v-html="link.label"
                             />
                         </template>
 
                         <!-- Next -->
+
                         <Link
                             v-if="lowongans.next_page_url"
                             :href="lowongans.next_page_url"
                             preserve-scroll
                             aria-label="Halaman berikutnya"
-                            class="flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-900 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
+                            class="flex size-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-900 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
                         >
-                            <ChevronRight class="size-4" />
+                            <ChevronRight class="size-4" aria-hidden="true" />
                         </Link>
 
                         <span
                             v-else
                             class="flex size-9 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-700"
+                            aria-hidden="true"
                         >
                             <ChevronRight class="size-4" />
                         </span>
@@ -913,15 +1012,18 @@ onBeforeUnmount(() => {
                 >
                     <div
                         class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full border border-white/10"
+                        aria-hidden="true"
                     />
 
                     <div
                         class="pointer-events-none absolute -bottom-32 -left-20 size-72 rounded-full border border-white/10"
+                        aria-hidden="true"
                     />
 
                     <div class="relative">
                         <div
                             class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/20"
+                            aria-hidden="true"
                         >
                             <Clock3 class="size-5" />
                         </div>
@@ -941,12 +1043,12 @@ onBeforeUnmount(() => {
                         </p>
 
                         <a
-                            href="#"
-                            class="mt-6 inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/10 transition hover:-translate-y-0.5 hover:bg-blue-50"
+                            href="/karier"
+                            class="mt-6 inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/10 transition hover:-translate-y-0.5 hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-white/40"
                         >
-                            Ikuti Informasi KITB
+                            Lihat Semua Lowongan
 
-                            <ArrowRight class="size-4" />
+                            <ArrowRight class="size-4" aria-hidden="true" />
                         </a>
                     </div>
                 </div>
@@ -1051,6 +1153,15 @@ onBeforeUnmount(() => {
     .blob-b,
     .blob-c {
         animation: none;
+    }
+
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
     }
 }
 

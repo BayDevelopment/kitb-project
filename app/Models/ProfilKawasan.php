@@ -18,6 +18,9 @@ class ProfilKawasan extends Model
         'deskripsi',
         'luas_kawasan',
         'lokasi',
+        'latitude',
+        'longitude',
+        'batas_kawasan',
         'tahun_berdiri',
         'status',
         'gambar',
@@ -27,6 +30,9 @@ class ProfilKawasan extends Model
     {
         return [
             'luas_kawasan' => 'decimal:2',
+            'latitude' => 'float',
+            'longitude' => 'float',
+            'batas_kawasan' => 'array',
             'tahun_berdiri' => 'integer',
             'status' => 'boolean',
         ];

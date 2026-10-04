@@ -76,16 +76,16 @@ export const navGroups: PublicNavigationGroup[] = [
         label: "Hubungan Investor",
         items: [
             {
-                label: "Ajukan Kunjungan Lahan",
-                href: visitUrl,
-            },
-            {
                 label: "Peluang Investasi",
                 href: "/hubungan-investor/peluang-investasi",
             },
             {
                 label: "Ease of Doing Business",
                 href: "/hubungan-investor/ease-of-doing-business",
+            },
+            {
+                label: "Kunjungan Lahan",
+                href: visitUrl,
             },
             {
                 label: "Rute Pelayaran & Lokasi",
@@ -106,11 +106,7 @@ export const navGroups: PublicNavigationGroup[] = [
                 href: "/galeri",
             },
             {
-                label: "Publikasi",
-                href: "/publikasi",
-            },
-            {
-                label: "Karier",
+                label: "Lowongan",
                 href: "/karier",
                 badge: "Join Us",
             },
@@ -119,13 +115,13 @@ export const navGroups: PublicNavigationGroup[] = [
 ];
 
 /**
- * Link kontak.
+ * Link kontak publik.
  *
- * Menggunakan /#kontak agar tetap dapat menuju section
- * kontak ketika user sedang berada di halaman selain homepage.
+ * Mengarah langsung ke halaman Kontak agar dapat
+ * diakses dari halaman mana pun di website.
  */
 export const kontakLink = {
-    href: "/#kontak",
+    href: "/kontak",
     label: "Kontak",
 };
 

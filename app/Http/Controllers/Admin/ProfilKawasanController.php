@@ -54,10 +54,7 @@ class ProfilKawasanController extends Controller
     {
         $validated = $this->validateProfilKawasan($request);
 
-        DB::transaction(function () use (
-            $request,
-            &$validated
-        ): void {
+        DB::transaction(function () use ($request, &$validated): void {
             $validated['slug'] = ProfilKawasan::generateUniqueSlug(
                 $validated['judul']
             );
@@ -98,8 +95,6 @@ class ProfilKawasanController extends Controller
         ): void {
             /**
              * Slug hanya dibuat ulang jika judul berubah.
-             * Ini menjaga URL tetap stabil ketika hanya data
-             * lainnya yang diperbarui.
              */
             if ($profilKawasan->judul !== $validated['judul']) {
                 $validated['slug'] = ProfilKawasan::generateUniqueSlug(
@@ -221,6 +216,12 @@ class ProfilKawasanController extends Controller
         Request $request
     ): array {
         return $request->validate([
+            /*
+             * =========================================================
+             * INFORMASI UTAMA
+             * =========================================================
+             */
+
             'judul' => [
                 'required',
                 'string',
@@ -246,6 +247,38 @@ class ProfilKawasanController extends Controller
                 'max:255',
             ],
 
+            /*
+             * =========================================================
+             * KOORDINAT KAWASAN
+             * =========================================================
+             */
+
+            'latitude' => [
+                'nullable',
+                'numeric',
+                'between:-90,90',
+            ],
+
+            'longitude' => [
+                'nullable',
+                'numeric',
+                'between:-180,180',
+            ],
+
+            /*
+             * =========================================================
+             * BATAS KAWASAN
+             *
+             * Disimpan dalam kolom JSON.
+             * Frontend dapat mengirim object/array GeoJSON.
+             * =========================================================
+             */
+
+            'batas_kawasan' => [
+                'nullable',
+                'json',
+            ],
+
             'tahun_berdiri' => [
                 'nullable',
                 'integer',
@@ -257,6 +290,12 @@ class ProfilKawasanController extends Controller
                 'nullable',
                 'boolean',
             ],
+
+            /*
+             * =========================================================
+             * GAMBAR
+             * =========================================================
+             */
 
             'gambar' => [
                 'nullable',

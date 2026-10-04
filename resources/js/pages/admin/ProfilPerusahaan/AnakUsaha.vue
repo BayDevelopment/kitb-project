@@ -4,6 +4,7 @@ import {
     ArrowUp,
     Building2,
     Eye,
+    ExternalLink,
     ImagePlus,
     Pencil,
     Plus,
@@ -11,11 +12,8 @@ import {
     Trash2,
     Upload,
     X,
-    ExternalLink,
 } from "lucide-vue-next";
-
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-
 import { router } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
 
@@ -75,7 +73,6 @@ const isPageLoading = ref(true);
 let initialLoadingTimer: ReturnType<typeof setTimeout> | null = null;
 
 let removeRouterStartListener: (() => void) | null = null;
-
 let removeRouterFinishListener: (() => void) | null = null;
 
 onMounted(() => {
@@ -190,9 +187,7 @@ const previewUrl = ref<string | null>(null);
 
 const processingForm = ref(false);
 const processingDelete = ref(false);
-
 const processingToggleId = ref<number | null>(null);
-
 const movingId = ref<number | null>(null);
 
 /*
@@ -205,10 +200,14 @@ const formTitle = computed(() =>
     modalMode.value === "create" ? "Tambah Anak Usaha" : "Edit Anak Usaha",
 );
 
-const resetForm = () => {
+const revokePreview = () => {
     if (previewUrl.value?.startsWith("blob:")) {
         URL.revokeObjectURL(previewUrl.value);
     }
+};
+
+const resetForm = () => {
+    revokePreview();
 
     form.value = {
         nama: "",
@@ -225,16 +224,12 @@ const openCreate = () => {
     resetForm();
 
     modalMode.value = "create";
-
     selectedItem.value = null;
-
     showFormModal.value = true;
 };
 
 const openEdit = (item: AnakUsaha) => {
-    if (previewUrl.value?.startsWith("blob:")) {
-        URL.revokeObjectURL(previewUrl.value);
-    }
+    revokePreview();
 
     selectedItem.value = item;
 
@@ -254,6 +249,10 @@ const openEdit = (item: AnakUsaha) => {
 };
 
 const closeForm = () => {
+    if (processingForm.value) {
+        return;
+    }
+
     showFormModal.value = false;
 
     resetForm();
@@ -263,19 +262,16 @@ const closeForm = () => {
 
 const openDetail = (item: AnakUsaha) => {
     selectedItem.value = item;
-
     showDetailModal.value = true;
 };
 
 const closeDetail = () => {
     showDetailModal.value = false;
-
     selectedItem.value = null;
 };
 
 const openDelete = (item: AnakUsaha) => {
     selectedItem.value = item;
-
     showDeleteModal.value = true;
 };
 
@@ -285,7 +281,6 @@ const closeDelete = () => {
     }
 
     showDeleteModal.value = false;
-
     selectedItem.value = null;
 };
 
@@ -304,17 +299,10 @@ const handleFile = (event: Event) => {
         return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Maksimal 1 MB
-    |--------------------------------------------------------------------------
-    */
-
     const maxSize = 1024 * 1024;
 
     if (file.size > maxSize) {
         target.value = "";
-
         form.value.logo = null;
 
         alert("Ukuran logo maksimal 1 MB.");
@@ -322,17 +310,10 @@ const handleFile = (event: Event) => {
         return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Format
-    |--------------------------------------------------------------------------
-    */
-
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
     if (!allowedTypes.includes(file.type)) {
         target.value = "";
-
         form.value.logo = null;
 
         alert("Format logo harus JPG, JPEG, PNG, atau WEBP.");
@@ -340,18 +321,9 @@ const handleFile = (event: Event) => {
         return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Preview
-    |--------------------------------------------------------------------------
-    */
-
-    if (previewUrl.value?.startsWith("blob:")) {
-        URL.revokeObjectURL(previewUrl.value);
-    }
+    revokePreview();
 
     form.value.logo = file;
-
     previewUrl.value = URL.createObjectURL(file);
 };
 
@@ -377,22 +349,13 @@ const submitForm = () => {
     const formData = new FormData();
 
     formData.append("nama", form.value.nama.trim());
-
     formData.append("deskripsi", form.value.deskripsi.trim());
-
     formData.append("website", form.value.website.trim());
-
     formData.append("aktif", form.value.aktif ? "1" : "0");
 
     if (form.value.logo) {
         formData.append("logo", form.value.logo);
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | EDIT
-    |--------------------------------------------------------------------------
-    */
 
     if (modalMode.value === "edit" && selectedItem.value) {
         formData.append("_method", "PUT");
@@ -402,7 +365,6 @@ const submitForm = () => {
             formData,
             {
                 forceFormData: true,
-
                 preserveScroll: true,
 
                 onStart: () => {
@@ -410,7 +372,9 @@ const submitForm = () => {
                 },
 
                 onSuccess: () => {
-                    closeForm();
+                    showFormModal.value = false;
+                    resetForm();
+                    selectedItem.value = null;
                 },
 
                 onError: (errors) => {
@@ -426,15 +390,8 @@ const submitForm = () => {
         return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | TAMBAH
-    |--------------------------------------------------------------------------
-    */
-
     router.post("/admin/profil-perusahaan/anak-usaha", formData, {
         forceFormData: true,
-
         preserveScroll: true,
 
         onStart: () => {
@@ -442,7 +399,9 @@ const submitForm = () => {
         },
 
         onSuccess: () => {
-            closeForm();
+            showFormModal.value = false;
+            resetForm();
+            selectedItem.value = null;
         },
 
         onError: (errors) => {
@@ -475,7 +434,6 @@ const deleteItem = () => {
 
             onSuccess: () => {
                 showDeleteModal.value = false;
-
                 selectedItem.value = null;
             },
 
@@ -563,70 +521,100 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 
 <template>
     <div
-        class="relative min-h-full overflow-hidden bg-slate-50 transition-colors duration-300 dark:bg-[#07111f]"
+        class="relative min-h-full overflow-hidden bg-slate-50/50 transition-colors duration-300 dark:bg-slate-950/50"
         :aria-busy="isPageLoading"
     >
         <!-- ========================================================= -->
         <!-- BACKGROUND DECORATION -->
         <!-- ========================================================= -->
+
         <div
             class="pointer-events-none absolute inset-0 overflow-hidden"
             aria-hidden="true"
         >
-            <!-- Light -->
+            <!-- LIGHT BLOBS -->
+
             <div
-                class="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#0b1f3a]/8 blur-3xl transition-opacity duration-500 dark:opacity-0"
+                class="blob-shape absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-blue-500/[0.055] blur-3xl transition-opacity duration-500 dark:opacity-0"
             />
 
             <div
-                class="absolute -right-40 top-16 h-[28rem] w-[28rem] rounded-full bg-[#12345b]/8 blur-3xl transition-opacity duration-500 dark:opacity-0"
+                class="blob-shape-delayed absolute -right-48 top-8 h-[34rem] w-[34rem] rounded-full bg-indigo-500/[0.05] blur-3xl transition-opacity duration-500 dark:opacity-0"
             />
 
             <div
-                class="absolute -bottom-48 left-1/3 h-[30rem] w-[30rem] rounded-full bg-[#0b1f3a]/6 blur-3xl transition-opacity duration-500 dark:opacity-0"
+                class="blob-shape-slow absolute -bottom-52 left-1/3 h-[34rem] w-[34rem] rounded-full bg-sky-500/[0.045] blur-3xl transition-opacity duration-500 dark:opacity-0"
             />
 
             <div
-                class="absolute left-[7%] top-[42%] h-32 w-32 rounded-full bg-blue-500/5 blur-2xl transition-opacity duration-500 dark:opacity-0"
-            />
-
-            <!-- Dark -->
-            <div
-                class="absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-[#163b68]/35 blur-3xl opacity-0 transition-opacity duration-500 dark:opacity-100"
+                class="blob-shape absolute -left-12 top-[42%] h-40 w-40 rounded-full bg-blue-500/[0.035] blur-3xl transition-opacity duration-500 dark:opacity-0"
             />
 
             <div
-                class="absolute -right-44 top-0 h-[34rem] w-[34rem] rounded-full bg-blue-600/15 blur-3xl opacity-0 transition-opacity duration-500 dark:opacity-100"
+                class="blob-shape-delayed absolute -right-16 top-[58%] h-48 w-48 rounded-full bg-slate-400/[0.04] blur-3xl transition-opacity duration-500 dark:opacity-0"
+            />
+
+            <!-- DARK BLOBS -->
+
+            <div
+                class="blob-shape absolute -left-44 -top-44 h-[34rem] w-[34rem] rounded-full bg-blue-600/[0.10] opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
             />
 
             <div
-                class="absolute -bottom-48 left-1/3 h-[34rem] w-[34rem] rounded-full bg-cyan-600/10 blur-3xl opacity-0 transition-opacity duration-500 dark:opacity-100"
-            />
-
-            <!-- Decorative circles -->
-            <div
-                class="absolute left-[7%] top-[45%] h-20 w-20 rounded-full bg-[#163b68]/10 shadow-xl shadow-[#0b1f3a]/10 dark:bg-blue-400/10 dark:shadow-blue-500/10"
+                class="blob-shape-delayed absolute -right-48 -top-12 h-[36rem] w-[36rem] rounded-full bg-indigo-500/[0.075] opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
             />
 
             <div
-                class="absolute left-[4%] top-[54%] h-4 w-4 rounded-full bg-[#0b1f3a]/20 dark:bg-blue-300/30"
+                class="blob-shape-slow absolute -bottom-56 left-1/3 h-[36rem] w-[36rem] rounded-full bg-sky-500/[0.06] opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
             />
 
             <div
-                class="absolute right-[8%] top-[30%] h-4 w-4 rounded-full bg-[#0b1f3a]/20 dark:bg-blue-300/30"
+                class="blob-shape absolute -left-16 top-[44%] h-44 w-44 rounded-full bg-blue-500/[0.045] opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
+            />
+
+            <!-- GRID -->
+
+            <div
+                class="absolute inset-0 bg-[linear-gradient(to_right,#64748b12_1px,transparent_1px),linear-gradient(to_bottom,#64748b12_1px,transparent_1px)] bg-[size:32px_32px] opacity-40 dark:opacity-20"
+            />
+
+            <!-- DECORATIVE CIRCLES -->
+
+            <div
+                class="absolute left-[7%] top-[45%] h-20 w-20 rounded-full border border-blue-500/[0.07] bg-blue-500/[0.045] shadow-xl shadow-blue-500/[0.05] dark:border-blue-400/[0.08] dark:bg-blue-400/[0.06] dark:shadow-blue-500/[0.06]"
+            />
+
+            <div
+                class="absolute left-[4%] top-[54%] h-4 w-4 rounded-full bg-blue-500/[0.12] dark:bg-blue-300/[0.22]"
+            />
+
+            <div
+                class="absolute right-[8%] top-[30%] h-4 w-4 rounded-full bg-indigo-500/[0.12] dark:bg-indigo-300/[0.22]"
+            />
+
+            <div
+                class="absolute bottom-[18%] right-[13%] h-6 w-6 rounded-full border border-indigo-500/[0.07] bg-indigo-500/[0.035] dark:border-blue-400/[0.08] dark:bg-blue-400/[0.06]"
+            />
+
+            <!-- BOTTOM FADE -->
+
+            <div
+                class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-slate-50/90 dark:to-slate-950/90"
             />
         </div>
 
         <!-- ========================================================= -->
         <!-- CONTENT -->
         <!-- ========================================================= -->
+
         <div
             class="relative mx-auto flex w-full max-w-[1600px] flex-1 flex-col p-4 sm:p-5 lg:p-6 xl:p-8"
         >
             <Transition name="page-fade" mode="out-in">
-                <!-- ================================================= -->
+                <!-- ===================================================== -->
                 <!-- SKELETON -->
-                <!-- ================================================= -->
+                <!-- ===================================================== -->
+
                 <div
                     v-if="isPageLoading"
                     key="skeleton"
@@ -634,7 +622,8 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                     role="status"
                     aria-label="Memuat data anak usaha"
                 >
-                    <!-- Header skeleton -->
+                    <!-- Header -->
+
                     <div
                         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                     >
@@ -647,6 +636,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                 <div
                                     class="h-5 w-44 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
                                 />
+
                                 <div
                                     class="h-4 w-64 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
                                 />
@@ -658,11 +648,11 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         />
                     </div>
 
-                    <!-- Main card skeleton -->
+                    <!-- Card -->
+
                     <div
                         class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                     >
-                        <!-- Card header -->
                         <div
                             class="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 dark:border-slate-800 sm:px-6 lg:flex-row lg:items-center lg:justify-between"
                         >
@@ -687,7 +677,6 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             </div>
                         </div>
 
-                        <!-- Table skeleton -->
                         <div class="overflow-x-auto">
                             <div class="min-w-[850px]">
                                 <div
@@ -696,15 +685,19 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                     <div
                                         class="h-3 w-14 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
                                     />
+
                                     <div
                                         class="h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
                                     />
+
                                     <div
                                         class="h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
                                     />
+
                                     <div
                                         class="h-3 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
                                     />
+
                                     <div
                                         class="ml-auto h-3 w-12 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
                                     />
@@ -728,6 +721,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                             <div
                                                 class="h-4 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
                                             />
+
                                             <div
                                                 class="h-3 w-28 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
                                             />
@@ -749,7 +743,6 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             </div>
                         </div>
 
-                        <!-- Pagination skeleton -->
                         <div
                             class="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                         >
@@ -761,12 +754,15 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                 <div
                                     class="h-9 w-20 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
                                 />
+
                                 <div
                                     class="h-9 w-9 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
                                 />
+
                                 <div
                                     class="h-9 w-9 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
                                 />
+
                                 <div
                                     class="h-9 w-20 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
                                 />
@@ -777,11 +773,13 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                     <span class="sr-only"> Memuat data anak usaha... </span>
                 </div>
 
-                <!-- ================================================= -->
+                <!-- ===================================================== -->
                 <!-- CONTENT -->
-                <!-- ================================================= -->
+                <!-- ===================================================== -->
+
                 <div v-else key="content" class="relative space-y-5">
                     <!-- HEADER -->
+
                     <div
                         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                     >
@@ -815,7 +813,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 
                         <button
                             type="button"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#0b1f3a]/15 transition duration-200 hover:-translate-y-0.5 hover:bg-[#163b68] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:bg-white dark:text-[#0b1f3a] dark:hover:bg-slate-100 sm:w-auto"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/15 transition duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-auto"
                             @click="openCreate"
                         >
                             <Plus class="size-4" />
@@ -824,10 +822,12 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                     </div>
 
                     <!-- MAIN CARD -->
+
                     <div
                         class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.04] backdrop-blur-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
                     >
                         <!-- CARD HEADER -->
+
                         <div
                             class="flex flex-col gap-4 border-b border-slate-200/80 px-5 py-5 dark:border-slate-800 sm:px-6 lg:flex-row lg:items-center lg:justify-between"
                         >
@@ -858,6 +858,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                 class="flex w-full flex-col gap-2 sm:flex-row lg:w-auto"
                             >
                                 <!-- SEARCH -->
+
                                 <div class="relative w-full sm:w-64">
                                     <Search
                                         class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
@@ -867,13 +868,16 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                         v-model="search"
                                         type="text"
                                         placeholder="Cari anak usaha..."
+                                        aria-label="Cari anak usaha"
                                         class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-800"
                                     />
                                 </div>
 
                                 <!-- FILTER -->
+
                                 <select
                                     v-model="statusFilter"
+                                    aria-label="Filter status"
                                     class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:focus:border-blue-500 dark:focus:bg-slate-800 sm:w-36"
                                 >
                                     <option value="all">Semua Status</option>
@@ -886,6 +890,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </div>
 
                         <!-- EMPTY -->
+
                         <div
                             v-if="filteredAnakUsaha.length === 0"
                             class="px-6 py-20 text-center"
@@ -915,7 +920,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             <button
                                 v-if="!search && statusFilter === 'all'"
                                 type="button"
-                                class="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163b68] dark:bg-white dark:text-[#0b1f3a] dark:hover:bg-slate-100"
+                                class="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                                 @click="openCreate"
                             >
                                 <Plus class="size-4" />
@@ -924,6 +929,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </div>
 
                         <!-- TABLE -->
+
                         <div v-else class="overflow-x-auto">
                             <table class="w-full min-w-[950px] text-left">
                                 <thead
@@ -971,6 +977,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                         class="group transition-colors duration-150 hover:bg-blue-50/40 dark:hover:bg-blue-950/10"
                                     >
                                         <!-- URUTAN -->
+
                                         <td class="px-6 py-4">
                                             <div
                                                 class="flex items-center gap-1.5"
@@ -984,6 +991,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                                 <div class="flex flex-col">
                                                     <button
                                                         type="button"
+                                                        title="Naikkan urutan"
                                                         :disabled="
                                                             item.urutan <= 1 ||
                                                             movingId !== null
@@ -1000,6 +1008,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 
                                                     <button
                                                         type="button"
+                                                        title="Turunkan urutan"
                                                         :disabled="
                                                             item.urutan >=
                                                                 props.anakUsaha
@@ -1023,6 +1032,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                         </td>
 
                                         <!-- ANAK USAHA -->
+
                                         <td class="px-6 py-4">
                                             <div
                                                 class="flex items-center gap-3"
@@ -1069,6 +1079,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                         </td>
 
                                         <!-- WEBSITE -->
+
                                         <td class="px-6 py-4">
                                             <a
                                                 v-if="item.website"
@@ -1095,6 +1106,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                         </td>
 
                                         <!-- STATUS -->
+
                                         <td class="px-6 py-4">
                                             <button
                                                 type="button"
@@ -1102,6 +1114,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                                     processingToggleId ===
                                                     item.id
                                                 "
+                                                :aria-label="`Ubah status ${item.nama}`"
                                                 class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold transition"
                                                 :class="
                                                     item.aktif
@@ -1119,14 +1132,13 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                         </td>
 
                                         <!-- AKSI -->
+
                                         <td class="px-6 py-4">
-                                            <div
-                                                class="flex justify-end gap-1 opacity-100 transition-opacity"
-                                            >
+                                            <div class="flex justify-end gap-1">
                                                 <button
                                                     type="button"
                                                     title="Lihat detail"
-                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                                                     @click="openDetail(item)"
                                                 >
                                                     <Eye class="size-4" />
@@ -1135,7 +1147,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                                 <button
                                                     type="button"
                                                     title="Edit"
-                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
+                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-amber-50 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
                                                     @click="openEdit(item)"
                                                 >
                                                     <Pencil class="size-4" />
@@ -1144,7 +1156,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                                 <button
                                                     type="button"
                                                     title="Hapus"
-                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                                                     @click="openDelete(item)"
                                                 >
                                                     <Trash2 class="size-4" />
@@ -1157,6 +1169,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </div>
 
                         <!-- PAGINATION -->
+
                         <div
                             v-if="props.anakUsaha.last_page > 1"
                             class="flex flex-col gap-4 border-t border-slate-200/80 px-5 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between sm:px-6"
@@ -1209,7 +1222,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                         class="min-w-9 shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition"
                                         :class="
                                             link.active
-                                                ? 'bg-[#0b1f3a] text-white shadow-sm dark:bg-white dark:text-[#0b1f3a]'
+                                                ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-700'
                                                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
                                         "
                                         @click="goToPage(link.url)"
@@ -1241,18 +1254,20 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
         <!-- ========================================================= -->
         <!-- MODAL FORM -->
         <!-- ========================================================= -->
+
         <Transition name="modal-fade">
             <div
                 v-if="showFormModal"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-md"
                 @click.self="closeForm"
             >
                 <div
-                    class="modal-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+                    class="modal-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <!-- HEADER -->
+
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-6 py-4 dark:border-slate-800 dark:bg-slate-950/30"
                     >
                         <div>
                             <h2
@@ -1270,8 +1285,9 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 
                         <button
                             type="button"
+                            title="Tutup"
                             :disabled="processingForm"
-                            class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                             @click="closeForm"
                         >
                             <X class="size-5" />
@@ -1279,8 +1295,10 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                     </div>
 
                     <!-- FORM -->
+
                     <form class="space-y-5 p-6" @submit.prevent="submitForm">
                         <!-- NAMA -->
+
                         <div>
                             <label
                                 class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1291,12 +1309,14 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             <input
                                 v-model="form.nama"
                                 type="text"
+                                required
                                 placeholder="Contoh: PT KITB Properti"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-800"
                             />
                         </div>
 
                         <!-- LOGO -->
+
                         <div>
                             <label
                                 class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1305,7 +1325,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             </label>
 
                             <label
-                                class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-5 py-7 transition hover:border-blue-400 hover:bg-blue-50/30 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-blue-500 dark:hover:bg-blue-950/20"
+                                class="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-5 py-7 transition hover:border-blue-400 hover:bg-blue-50/30 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-blue-500 dark:hover:bg-blue-950/20"
                             >
                                 <Upload class="size-6 text-slate-400" />
 
@@ -1332,7 +1352,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                 class="mt-4 flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/40"
                             >
                                 <div
-                                    class="flex size-16 items-center justify-center overflow-hidden rounded-xl bg-white dark:bg-slate-800"
+                                    class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white dark:bg-slate-800"
                                 >
                                     <img
                                         :src="previewUrl"
@@ -1341,9 +1361,9 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                     />
                                 </div>
 
-                                <div>
+                                <div class="min-w-0">
                                     <p
-                                        class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                                        class="truncate text-sm font-medium text-slate-700 dark:text-slate-200"
                                     >
                                         {{ form.logo?.name ?? "Logo saat ini" }}
                                     </p>
@@ -1356,6 +1376,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </div>
 
                         <!-- DESKRIPSI -->
+
                         <div>
                             <label
                                 class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1367,11 +1388,12 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                 v-model="form.deskripsi"
                                 rows="4"
                                 placeholder="Masukkan deskripsi anak usaha..."
-                                class="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-800"
                             />
                         </div>
 
                         <!-- WEBSITE -->
+
                         <div>
                             <label
                                 class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1383,7 +1405,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                 v-model="form.website"
                                 type="url"
                                 placeholder="https://www.example.com"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-800"
                             />
 
                             <p class="mt-1.5 text-xs text-slate-400">
@@ -1393,6 +1415,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </div>
 
                         <!-- STATUS -->
+
                         <label
                             class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800/40 dark:hover:bg-slate-800"
                         >
@@ -1416,8 +1439,9 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </label>
 
                         <!-- BUTTON -->
+
                         <div
-                            class="flex flex-col-reverse gap-2 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800"
+                            class="flex flex-col-reverse gap-2 border-t border-slate-200 pt-5 dark:border-slate-800 sm:flex-row sm:justify-end"
                         >
                             <button
                                 type="button"
@@ -1431,8 +1455,13 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             <button
                                 type="submit"
                                 :disabled="processingForm || !form.nama.trim()"
-                                class="rounded-xl bg-[#0b1f3a] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#163b68] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-[#0b1f3a] dark:hover:bg-slate-100"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
+                                <span
+                                    v-if="processingForm"
+                                    class="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                                />
+
                                 {{
                                     processingForm
                                         ? "Menyimpan..."
@@ -1450,17 +1479,18 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
         <!-- ========================================================= -->
         <!-- MODAL DETAIL -->
         <!-- ========================================================= -->
+
         <Transition name="modal-fade">
             <div
                 v-if="showDetailModal && selectedItem"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-md"
                 @click.self="closeDetail"
             >
                 <div
-                    class="modal-panel max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+                    class="modal-panel max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
+                        class="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-6 py-4 dark:border-slate-800 dark:bg-slate-950/30"
                     >
                         <div>
                             <h2
@@ -1478,7 +1508,8 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 
                         <button
                             type="button"
-                            class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                            title="Tutup"
+                            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                             @click="closeDetail"
                         >
                             <X class="size-5" />
@@ -1487,6 +1518,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 
                     <div class="space-y-5 p-6">
                         <!-- LOGO -->
+
                         <div class="flex justify-center">
                             <div
                                 class="flex size-32 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-800"
@@ -1503,6 +1535,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </div>
 
                         <!-- NAMA -->
+
                         <div class="text-center">
                             <h3
                                 class="text-lg font-semibold tracking-tight text-slate-900 dark:text-white"
@@ -1512,6 +1545,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </div>
 
                         <!-- WEBSITE -->
+
                         <div
                             v-if="selectedItem.website"
                             class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
@@ -1535,6 +1569,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </div>
 
                         <!-- DESKRIPSI -->
+
                         <div
                             v-if="selectedItem.deskripsi"
                             class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
@@ -1553,6 +1588,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         </div>
 
                         <!-- INFO -->
+
                         <div class="grid grid-cols-2 gap-3">
                             <div
                                 class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
@@ -1584,7 +1620,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                     :class="
                                         selectedItem.aktif
                                             ? 'text-emerald-600 dark:text-emerald-400'
-                                            : 'text-slate-500'
+                                            : 'text-slate-500 dark:text-slate-400'
                                     "
                                 >
                                     {{
@@ -1603,14 +1639,15 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
         <!-- ========================================================= -->
         <!-- MODAL DELETE -->
         <!-- ========================================================= -->
+
         <Transition name="modal-fade">
             <div
                 v-if="showDeleteModal && selectedItem"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-md"
                 @click.self="closeDelete"
             >
                 <div
-                    class="modal-panel w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+                    class="modal-panel w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
                         class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
@@ -1663,9 +1700,14 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         <button
                             type="button"
                             :disabled="processingDelete"
-                            class="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                             @click="deleteItem"
                         >
+                            <span
+                                v-if="processingDelete"
+                                class="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                            />
+
                             {{
                                 processingDelete ? "Menghapus..." : "Ya, Hapus"
                             }}
@@ -1721,15 +1763,82 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 }
 
 /* =========================================================
+   BLOB ANIMATION
+   ========================================================= */
+
+.blob-shape {
+    animation: blob-float 12s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
+}
+
+.blob-shape-delayed {
+    animation: blob-float-delayed 15s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
+}
+
+.blob-shape-slow {
+    animation: blob-float-slow 18s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
+}
+
+@keyframes blob-float {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    33% {
+        transform: translate3d(25px, 15px, 0) scale(1.05);
+    }
+
+    66% {
+        transform: translate3d(-15px, 30px, 0) scale(0.96);
+    }
+}
+
+@keyframes blob-float-delayed {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    40% {
+        transform: translate3d(-30px, 20px, 0) scale(1.08);
+    }
+
+    75% {
+        transform: translate3d(15px, -15px, 0) scale(0.95);
+    }
+}
+
+@keyframes blob-float-slow {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate3d(0, 35px, 0) scale(1.1);
+    }
+}
+
+/* =========================================================
    ACCESSIBILITY
    ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
+    .blob-shape,
+    .blob-shape-delayed,
+    .blob-shape-slow,
     .page-fade-enter-active,
     .page-fade-leave-active,
     .modal-fade-enter-active,
     .modal-fade-leave-active,
     .modal-panel {
+        animation: none;
         transition: none;
     }
 }
@@ -1739,6 +1848,21 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
    ========================================================= */
 
 @media (max-width: 640px) {
+    .blob-shape {
+        width: 24rem;
+        height: 24rem;
+    }
+
+    .blob-shape-delayed {
+        width: 26rem;
+        height: 26rem;
+    }
+
+    .blob-shape-slow {
+        width: 25rem;
+        height: 25rem;
+    }
+
     .page-fade-enter-from,
     .page-fade-leave-to {
         transform: none;

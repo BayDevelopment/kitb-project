@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Guest;
 
 use App\Http\Controllers\Controller;
 use App\Models\Visi;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class VisiMisiController extends Controller
+class GuestVisiMisiController extends Controller
 {
     public function index(): Response
     {

@@ -64,10 +64,10 @@ const form = useForm({
 });
 
 const inputClass =
-    "h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
+    "h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950/50 dark:text-white";
 
 const plainInputClass =
-    "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
+    "h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950/50 dark:text-white";
 
 /*
 |--------------------------------------------------------------------------
@@ -143,7 +143,7 @@ const formatDateLong = (value: string): string => {
 
 /*
 |--------------------------------------------------------------------------
-| Submit
+| Submit & Success Modal
 |--------------------------------------------------------------------------
 */
 
@@ -185,8 +185,13 @@ const closeSuccessModal = () => {
 };
 
 const copyNumber = async () => {
+    if (!submittedNumber.value) {
+        return;
+    }
+
     try {
         await navigator.clipboard.writeText(submittedNumber.value);
+
         copied.value = true;
 
         setTimeout(() => {
@@ -203,8 +208,116 @@ const handleEscape = (event: KeyboardEvent) => {
     }
 };
 
-onMounted(() => window.addEventListener("keydown", handleEscape));
-onBeforeUnmount(() => window.removeEventListener("keydown", handleEscape));
+/*
+|--------------------------------------------------------------------------
+| Fade-in on scroll
+|--------------------------------------------------------------------------
+*/
+
+let revealObserver: IntersectionObserver | null = null;
+
+const setupReveal = () => {
+    if (typeof window === "undefined") {
+        return;
+    }
+
+    const elements = Array.from(
+        document.querySelectorAll<HTMLElement>(".reveal"),
+    );
+
+    if (!elements.length) {
+        return;
+    }
+
+    const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reduced motion
+    |--------------------------------------------------------------------------
+    */
+
+    if (prefersReducedMotion) {
+        elements.forEach((element) => {
+            element.classList.add("is-visible");
+        });
+
+        return;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Bersihkan observer lama
+    |--------------------------------------------------------------------------
+    */
+
+    revealObserver?.disconnect();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Intersection Observer
+    |--------------------------------------------------------------------------
+    */
+
+    revealObserver = new IntersectionObserver(
+        (entries) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) {
+                    return;
+                }
+
+                const element = entry.target as HTMLElement;
+
+                element.classList.add("is-visible");
+
+                /*
+                |--------------------------------------------------------------------------
+                | Stop observe setelah element tampil
+                |--------------------------------------------------------------------------
+                */
+
+                revealObserver?.unobserve(element);
+            });
+        },
+        {
+            threshold: 0.08,
+            rootMargin: "0px 0px -40px 0px",
+        },
+    );
+
+    elements.forEach((element) => {
+        revealObserver?.observe(element);
+    });
+};
+
+/*
+|--------------------------------------------------------------------------
+| Lifecycle
+|--------------------------------------------------------------------------
+*/
+
+onMounted(() => {
+    window.addEventListener("keydown", handleEscape);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tunggu DOM selesai dirender
+    |--------------------------------------------------------------------------
+    */
+
+    requestAnimationFrame(() => {
+        setupReveal();
+    });
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener("keydown", handleEscape);
+
+    revealObserver?.disconnect();
+    revealObserver = null;
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -213,6 +326,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleEscape));
 */
 
 const canonicalUrl = "https://tanjungbuton-industrial.co.id/ajukan-kunjungan";
+
 const ogImage = "https://tanjungbuton-industrial.co.id/logoside.png";
 </script>
 
@@ -1259,11 +1373,38 @@ const ogImage = "https://tanjungbuton-industrial.co.id/logoside.png";
 </template>
 
 <style scoped>
+/*
+|--------------------------------------------------------------------------
+| Fade-in reveal
+|--------------------------------------------------------------------------
+*/
+
+.reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+        opacity 700ms ease,
+        transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: calc(var(--d, 0) * 1ms);
+    will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Success modal
+|--------------------------------------------------------------------------
+*/
+
 .modal-enter-active,
 .modal-leave-active {
     transition:
-        opacity 0.2s ease,
-        transform 0.2s ease;
+        opacity 220ms ease,
+        transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .modal-enter-from,
@@ -1273,13 +1414,36 @@ const ogImage = "https://tanjungbuton-industrial.co.id/logoside.png";
 
 .modal-enter-from > div,
 .modal-leave-to > div {
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(10px) scale(0.98);
 }
 
+/*
+|--------------------------------------------------------------------------
+| Reduced motion
+|--------------------------------------------------------------------------
+*/
+
 @media (prefers-reduced-motion: reduce) {
+    .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+        will-change: auto;
+    }
+
     .modal-enter-active,
     .modal-leave-active {
         transition: none;
+    }
+
+    .modal-enter-from,
+    .modal-leave-to {
+        opacity: 0;
+    }
+
+    .modal-enter-from > div,
+    .modal-leave-to > div {
+        transform: none;
     }
 }
 </style>
