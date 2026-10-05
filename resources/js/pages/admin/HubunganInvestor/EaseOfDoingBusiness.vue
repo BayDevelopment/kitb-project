@@ -138,7 +138,7 @@ const props = defineProps<{
  * IMPORTANT:
  * Harus sama dengan route Laravel.
  */
-const BASE_URL = "/hubungan-investor/ease-of-doing-business";
+const BASE_URL = "/admin/hubungan-investor/ease-of-doing-business";
 
 const iconOptions: IconOption[] = [
     { key: "file-text", label: "Dokumen", component: FileText },

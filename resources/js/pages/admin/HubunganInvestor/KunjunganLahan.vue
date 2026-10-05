@@ -37,7 +37,7 @@ import {
  * PATCH   /hubungan-investor/kunjungan-lahan/{id}/cancel
  */
 
-const BASE_URL = "/hubungan-investor/kunjungan-lahan";
+const BASE_URL = "/admin/hubungan-investor/kunjungan-lahan";
 
 type Status = "pending" | "disetujui" | "ditolak" | "selesai";
 

@@ -43,7 +43,7 @@ import {
  * PATCH   /hubungan-investor/rute-pelayaran-lokasi/{id}/toggle-aktif
  * PATCH   /hubungan-investor/rute-pelayaran-lokasi/{id}/move
  */
-const BASE_URL = "/hubungan-investor/rute-pelayaran-lokasi";
+const BASE_URL = "/admin/hubungan-investor/rute-pelayaran-lokasi";
 
 const page = usePage();
 
