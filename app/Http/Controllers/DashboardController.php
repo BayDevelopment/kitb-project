@@ -94,7 +94,7 @@ class DashboardController extends Controller
                         'key' => 'kunjungan',
                         'label' => 'Kunjungan Lahan',
                         'count' => KunjunganLahan::query()->count(),
-                        'href' => '/hubungan-investor/kunjungan-lahan',
+                        'href' => '/kunjungan-lahan',
                     ],
                     [
                         'key' => 'rute',
