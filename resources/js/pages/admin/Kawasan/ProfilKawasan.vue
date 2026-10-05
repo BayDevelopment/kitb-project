@@ -235,6 +235,11 @@ const gambarInputRef = ref<HTMLInputElement | null>(null);
 
 const imageError = ref("");
 
+const isProcessingImage = ref(false);
+
+const MAX_IMAGE_SIZE = 1024 * 1024; // 1 MB
+const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+
 const hasImage = computed(
     () => !!gambarPreview.value || !!existingGambar.value,
 );
@@ -458,6 +463,7 @@ function resetForm() {
     gambarFile.value = null;
     removeGambar.value = false;
     imageError.value = "";
+    isProcessingImage.value = false;
 
     if (gambarInputRef.value) {
         gambarInputRef.value.value = "";
@@ -663,6 +669,7 @@ function openEdit(kawasan: Kawasan) {
     gambarFile.value = null;
     removeGambar.value = false;
     imageError.value = "";
+    isProcessingImage.value = false;
     errors.value = {};
 
     if (gambarInputRef.value) {
@@ -712,26 +719,118 @@ watch(
    IMAGE HANDLING
    ========================================================= */
 
-function handleImageChange(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-
-    imageError.value = "";
-
-    if (!file) {
+/*
+ * Input file disembunyikan (class "hidden"), dan dibuka lewat
+ * tombol + .click(). Cara ini lebih stabil di dalam modal yang
+ * bisa di-scroll dibanding input "sr-only" yang membuat layout
+ * modal melompat saat dipilih (terutama di HP).
+ */
+function openFilePicker() {
+    if (isProcessingImage.value) {
         return;
     }
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    gambarInputRef.value?.click();
+}
 
-    if (!allowedTypes.includes(file.type)) {
+function loadImage(file: File): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(img);
+        };
+
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error("Gagal membaca gambar."));
+        };
+
+        img.src = url;
+    });
+}
+
+/*
+ * Foto kamera HP biasanya 2-8 MB (atau HEIC di iPhone).
+ * Kompres & konversi ke JPEG di browser sebelum dicek batas ukuran.
+ */
+async function compressImage(file: File): Promise<File> {
+    if (allowedImageTypes.includes(file.type) && file.size <= MAX_IMAGE_SIZE) {
+        return file;
+    }
+
+    try {
+        const img = await loadImage(file);
+
+        let maxWidth = 1600;
+        let quality = 0.85;
+
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const scale = Math.min(1, maxWidth / img.width);
+            const canvas = document.createElement("canvas");
+
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+
+            const ctx = canvas.getContext("2d");
+
+            if (!ctx) {
+                return file;
+            }
+
+            // Latar putih agar PNG transparan tidak menjadi hitam di JPEG.
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const blob = await new Promise<Blob | null>((resolve) =>
+                canvas.toBlob(resolve, "image/jpeg", quality),
+            );
+
+            if (blob && blob.size <= MAX_IMAGE_SIZE) {
+                return new File(
+                    [blob],
+                    file.name.replace(/\.\w+$/, "") + ".jpg",
+                    { type: "image/jpeg" },
+                );
+            }
+
+            maxWidth = Math.round(maxWidth * 0.8);
+            quality = Math.max(0.6, quality - 0.08);
+        }
+
+        return file;
+    } catch {
+        return file;
+    }
+}
+
+async function handleImageChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const selected = target.files?.[0];
+
+    imageError.value = "";
+
+    if (!selected) {
+        return;
+    }
+
+    isProcessingImage.value = true;
+
+    const file = await compressImage(selected);
+
+    isProcessingImage.value = false;
+
+    if (!allowedImageTypes.includes(file.type)) {
         imageError.value = "Format gambar harus JPG, JPEG, PNG, atau WEBP.";
 
         target.value = "";
         return;
     }
 
-    if (file.size > 1024 * 1024) {
+    if (file.size > MAX_IMAGE_SIZE) {
         imageError.value = "Ukuran gambar maksimal 1 MB.";
 
         target.value = "";
@@ -849,7 +948,7 @@ function validateForm(): boolean {
         }
     }
 
-    if (gambarFile.value && gambarFile.value.size > 1024 * 1024) {
+    if (gambarFile.value && gambarFile.value.size > MAX_IMAGE_SIZE) {
         imageError.value = "Ukuran gambar maksimal 1 MB.";
         return false;
     }
@@ -862,7 +961,7 @@ function validateForm(): boolean {
    ========================================================= */
 
 function submitForm() {
-    if (isSubmitting.value) {
+    if (isSubmitting.value || isProcessingImage.value) {
         return;
     }
 
@@ -1726,7 +1825,7 @@ onBeforeUnmount(() => {
 
                     <!-- Body -->
                     <form
-                        class="min-h-0 overflow-y-auto"
+                        class="relative min-h-0 flex-1 overflow-y-auto overscroll-contain"
                         @submit.prevent="submitForm"
                     >
                         <div class="space-y-6 p-5 sm:p-6">
@@ -2135,19 +2234,18 @@ onBeforeUnmount(() => {
 
                                     <!-- Image -->
                                     <div class="md:col-span-2">
-                                        <label
-                                            for="gambar"
+                                        <span
                                             class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                         >
                                             Gambar Kawasan
-                                        </label>
+                                        </span>
 
                                         <input
                                             id="gambar"
                                             ref="gambarInputRef"
                                             type="file"
                                             accept="image/jpeg,image/png,image/webp"
-                                            class="sr-only"
+                                            class="hidden"
                                             @change="handleImageChange"
                                         />
 
@@ -2167,15 +2265,23 @@ onBeforeUnmount(() => {
                                                 <div
                                                     class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-black/70 to-transparent px-4 pb-4 pt-10"
                                                 >
-                                                    <label
-                                                        for="gambar"
-                                                        class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white/95 px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:bg-white"
+                                                    <button
+                                                        type="button"
+                                                        :disabled="
+                                                            isProcessingImage
+                                                        "
+                                                        class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white/95 px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                                                        @click="openFilePicker"
                                                     >
                                                         <ImageIcon
                                                             class="h-4 w-4"
                                                         />
-                                                        Ganti Gambar
-                                                    </label>
+                                                        {{
+                                                            isProcessingImage
+                                                                ? "Memproses..."
+                                                                : "Ganti Gambar"
+                                                        }}
+                                                    </button>
 
                                                     <button
                                                         v-if="!removeGambar"
@@ -2214,10 +2320,12 @@ onBeforeUnmount(() => {
                                                 </div>
                                             </div>
 
-                                            <label
+                                            <button
                                                 v-else
-                                                for="gambar"
-                                                class="flex min-h-48 cursor-pointer flex-col items-center justify-center px-6 py-10 text-center transition hover:bg-white dark:hover:bg-slate-900"
+                                                type="button"
+                                                :disabled="isProcessingImage"
+                                                class="flex min-h-48 w-full cursor-pointer flex-col items-center justify-center px-6 py-10 text-center transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-slate-900"
+                                                @click="openFilePicker"
                                             >
                                                 <div
                                                     class="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm dark:bg-slate-800"
@@ -2230,16 +2338,20 @@ onBeforeUnmount(() => {
                                                 <span
                                                     class="text-sm font-semibold text-slate-700 dark:text-slate-200"
                                                 >
-                                                    Pilih gambar
+                                                    {{
+                                                        isProcessingImage
+                                                            ? "Memproses gambar..."
+                                                            : "Pilih gambar"
+                                                    }}
                                                 </span>
 
                                                 <span
                                                     class="mt-1 text-xs text-slate-400"
                                                 >
-                                                    JPG, JPEG, PNG, WEBP · Maks.
-                                                    1 MB
+                                                    JPG, JPEG, PNG, WEBP · Foto
+                                                    besar dikompres otomatis
                                                 </span>
-                                            </label>
+                                            </button>
                                         </div>
 
                                         <p
@@ -2319,7 +2431,7 @@ onBeforeUnmount(() => {
 
                             <button
                                 type="submit"
-                                :disabled="isSubmitting"
+                                :disabled="isSubmitting || isProcessingImage"
                                 :aria-busy="isSubmitting"
                                 class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
                             >
