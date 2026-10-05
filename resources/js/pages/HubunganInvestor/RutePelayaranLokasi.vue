@@ -852,7 +852,7 @@ onBeforeUnmount(() => {
                         </div>
 
                         <Link
-                            href="/hubungan-investor/ajukan-kunjungan"
+                            href="/ajukan-kunjungan"
                             class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950"
                         >
                             Ajukan Kunjungan Lahan
