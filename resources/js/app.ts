@@ -35,6 +35,11 @@ void createInertiaApp({
             case name === "Welcome":
             case name === "Index":
             case name === "auth/Login":
+            case name === "auth/ForgotPassword":
+            case name === "auth/ConfirmPassword":
+            case name === "auth/ResetPassword":
+            case name === "auth/TwoFactorChallenge":
+            case name === "auth/VerifyEmail":
                 return null;
 
             // Halaman settings
