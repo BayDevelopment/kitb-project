@@ -7,10 +7,12 @@ use App\Models\AnakUsaha;
 use App\Models\Berita;
 use App\Models\CompanyProfile;
 use App\Models\Lowongan;
+use App\Models\MitraPerusahaan;
 use App\Models\PeluangInvestasi;
 use App\Models\PetaKawasan;
 use App\Models\ProfilKawasan;
 use App\Models\Rute;
+use App\Models\SambutanDirektur;
 use App\Models\Visi;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -76,6 +78,12 @@ class HomeController extends Controller
             ->limit(3)
             ->get();
 
+        $mitraPerusahaans = MitraPerusahaan::query()
+            ->where('aktif', true)
+            ->orderBy('urutan')
+            ->orderBy('id')
+            ->get();
+
         $lowongans = Lowongan::query()
             ->where('status', 'published')
             ->where(function ($query) {
@@ -94,16 +102,29 @@ class HomeController extends Controller
             ->limit(4)
             ->get();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Sambutan Direktur
+        |--------------------------------------------------------------------------
+        | Hanya data dengan status aktif yang dikirim ke halaman publik.
+        | Jika status false atau data belum tersedia, hasilnya null.
+        */
+        $sambutanDirektur = SambutanDirektur::query()
+            ->where('status', true)
+            ->first();
+
         return Inertia::render('Index', [
             'companyProfile' => $companyProfile,
             'visi' => $visi,
             'anakUsahas' => $anakUsahas,
+            'mitraPerusahaans' => $mitraPerusahaans,
             'profilKawasan' => $profilKawasan,
             'petaKawasan' => $petaKawasan,
             'peluangInvestasi' => $peluangInvestasi,
             'rutes' => $rutes,
             'beritas' => $beritas,
             'lowongans' => $lowongans,
+            'sambutanDirektur' => $sambutanDirektur,
         ]);
     }
 }

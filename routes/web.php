@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\Kawasan\InfrastrukturController;
 use App\Http\Controllers\Admin\KunjunganLahanController;
 use App\Http\Controllers\Admin\LamaranController;
 use App\Http\Controllers\Admin\LowonganController;
+use App\Http\Controllers\Admin\MitraPerusahaanController;
 use App\Http\Controllers\Admin\PeluangInvestasiController as AdminPeluangInvestasiController;
 use App\Http\Controllers\Admin\PengaturanKontakController;
 use App\Http\Controllers\Admin\PesanKontakController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Admin\PetaKawasanController;
 use App\Http\Controllers\Admin\ProfilKawasanController;
 use App\Http\Controllers\Admin\ProfilPerusahaanController;
 use App\Http\Controllers\Admin\RuteController;
+use App\Http\Controllers\Admin\SambutanDirekturController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
 
@@ -348,6 +350,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         )->name('profil-perusahaan.tentang-kami.destroy');
 
         /*
+            |--------------------------------------------------------------------------
+            | Profil Perusahaan - Sambutan
+            |--------------------------------------------------------------------------
+            */
+
+        Route::get(
+            '/profil-perusahaan/sambutan',
+            [SambutanDirekturController::class, 'index']
+        )->name('profil-perusahaan.sambutan');
+
+        Route::put(
+            '/profil-perusahaan/sambutan',
+            [SambutanDirekturController::class, 'update']
+        )->name('profil-perusahaan.sambutan.update');
+
+        /*
         |--------------------------------------------------------------------------
         | Profil Perusahaan - Visi & Misi
         |--------------------------------------------------------------------------
@@ -462,6 +480,47 @@ Route::middleware(['auth', 'verified'])->group(function () {
             '/profil-perusahaan/anak-usaha/{anakUsaha}/move',
             [AnakUsahaController::class, 'move']
         )->name('profil-perusahaan.anak-usaha.move');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Profil Perusahaan - Mitra Perusahaan
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/profil-perusahaan/mitra-perusahaan',
+            [MitraPerusahaanController::class, 'index']
+        )->name('profil-perusahaan.mitra-perusahaan');
+
+        Route::post(
+            '/profil-perusahaan/mitra-perusahaan',
+            [MitraPerusahaanController::class, 'store']
+        )->name('profil-perusahaan.mitra-perusahaan.store');
+
+        Route::put(
+            '/profil-perusahaan/mitra-perusahaan/{mitraPerusahaan}',
+            [MitraPerusahaanController::class, 'update']
+        )->name('profil-perusahaan.mitra-perusahaan.update');
+
+        Route::delete(
+            '/profil-perusahaan/mitra-perusahaan/{mitraPerusahaan}',
+            [MitraPerusahaanController::class, 'destroy']
+        )->name('profil-perusahaan.mitra-perusahaan.destroy');
+
+        Route::patch(
+            '/profil-perusahaan/mitra-perusahaan/{mitraPerusahaan}/toggle-aktif',
+            [MitraPerusahaanController::class, 'toggleAktif']
+        )->name('profil-perusahaan.mitra-perusahaan.toggle-aktif');
+
+        Route::patch(
+            '/profil-perusahaan/mitra-perusahaan/{mitraPerusahaan}/move',
+            [MitraPerusahaanController::class, 'move']
+        )->name('profil-perusahaan.mitra-perusahaan.move');
+
+        Route::patch(
+            '/profil-perusahaan/mitra-perusahaan/{mitraPerusahaan}/reorder',
+            [MitraPerusahaanController::class, 'reorder']
+        )->name('profil-perusahaan.mitra-perusahaan.reorder');
 
         /*
         |--------------------------------------------------------------------------

@@ -68,8 +68,8 @@ class StrukturPerusahaanController extends Controller
                  * Simpan data.
                  */
                 StrukturPerusahaan::create([
-                    'nama' => $validated['nama'],
-                    'jabatan' => $validated['jabatan'],
+                    'nama' => trim($validated['nama']),
+                    'jabatan' => trim($validated['jabatan']),
                     'gambar' => $gambarPath,
                     'urutan' => $nextUrutan,
                     'aktif' => $validated['aktif'] ?? true,
@@ -77,8 +77,8 @@ class StrukturPerusahaanController extends Controller
             });
         } catch (\Throwable $e) {
             /*
-             * Jika database gagal,
-             * hapus gambar yang sudah ter-upload.
+             * Jika database gagal, hapus gambar
+             * yang sudah berhasil di-upload.
              */
             if ($gambarPath) {
                 Storage::disk('public')->delete($gambarPath);
@@ -135,8 +135,8 @@ class StrukturPerusahaanController extends Controller
                  * gunakan gambar lama.
                  */
                 $strukturPerusahaan->update([
-                    'nama' => $validated['nama'],
-                    'jabatan' => $validated['jabatan'],
+                    'nama' => trim($validated['nama']),
+                    'jabatan' => trim($validated['jabatan']),
                     'gambar' => $newGambar
                         ?? $strukturPerusahaan->gambar,
                     'aktif' => $validated['aktif']
@@ -159,7 +159,8 @@ class StrukturPerusahaanController extends Controller
         /*
          * Database sudah berhasil di-update.
          *
-         * Baru hapus gambar lama.
+         * Baru hapus gambar lama agar tidak terjadi
+         * broken image jika proses update gagal.
          */
         if ($newGambar && $oldGambar) {
             Storage::disk('public')->delete($oldGambar);
@@ -229,8 +230,8 @@ class StrukturPerusahaanController extends Controller
         return back()->with('toast', [
             'type' => 'success',
             'message' => $strukturPerusahaan->aktif
-                ? 'Struktur perusahaan diaktifkan.'
-                : 'Struktur perusahaan dinonaktifkan.',
+                ? 'Struktur perusahaan berhasil diaktifkan.'
+                : 'Struktur perusahaan berhasil dinonaktifkan.',
         ]);
     }
 

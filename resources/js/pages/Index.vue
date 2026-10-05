@@ -1,22 +1,27 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+
 import { Head, Link } from "@inertiajs/vue3";
+
 import {
     ArrowRight,
     BriefcaseBusiness,
     Building2,
     CalendarDays,
+    ChevronDown,
     ChevronRight,
+    Clock3,
     ExternalLink,
     Factory,
     Globe2,
+    Handshake,
     MapPin,
     MoveRight,
     Navigation,
+    Quote,
     Ship,
     Sparkles,
     TrendingUp,
-    Clock3,
 } from "lucide-vue-next";
 
 import PublicLayout from "@/layouts/PublicLayout.vue";
@@ -27,8 +32,8 @@ defineOptions({
 });
 
 /* =========================================================
-   TYPES
-   ========================================================= */
+ * TYPES
+ * ========================================================= */
 
 interface CompanyProfile {
     id?: number;
@@ -39,6 +44,16 @@ interface CompanyProfile {
     tentang?: string;
     logo?: string;
     logo_path?: string;
+    [key: string]: unknown;
+}
+
+interface SambutanDirektur {
+    id?: number;
+    nama_direktur?: string;
+    jabatan_direktur?: string;
+    sambutan_direktur?: string;
+    foto_direktur?: string;
+    status?: boolean;
     [key: string]: unknown;
 }
 
@@ -75,6 +90,17 @@ interface AnakUsaha {
     gambar_path?: string;
     website?: string;
     aktif?: boolean;
+    [key: string]: unknown;
+}
+
+interface MitraPerusahaan {
+    id: number;
+    nama_perusahaan: string;
+    slug?: string;
+    logo?: string | null;
+    website?: string | null;
+    aktif?: boolean;
+    urutan?: number;
     [key: string]: unknown;
 }
 
@@ -166,14 +192,16 @@ interface Lowongan {
 }
 
 /* =========================================================
-   PROPS
-   ========================================================= */
+ * PROPS
+ * ========================================================= */
 
 const props = withDefaults(
     defineProps<{
         companyProfile?: CompanyProfile | null;
+        sambutanDirektur?: SambutanDirektur | null;
         visi?: Visi | null;
         anakUsahas?: AnakUsaha[];
+        mitraPerusahaans?: MitraPerusahaan[];
         profilKawasan?: ProfilKawasan | null;
         petaKawasan?: PetaKawasan | null;
         peluangInvestasi?: PeluangInvestasi[];
@@ -183,8 +211,10 @@ const props = withDefaults(
     }>(),
     {
         companyProfile: null,
+        sambutanDirektur: null,
         visi: null,
         anakUsahas: () => [],
+        mitraPerusahaans: () => [],
         profilKawasan: null,
         petaKawasan: null,
         peluangInvestasi: () => [],
@@ -195,8 +225,8 @@ const props = withDefaults(
 );
 
 /* =========================================================
-   MOTION
-   ========================================================= */
+ * MOTION
+ * ========================================================= */
 
 const prefersReducedMotion =
     typeof window !== "undefined" &&
@@ -240,25 +270,32 @@ const vFadeIn = {
     },
 };
 
-/* =========================================================
-   COUNT UP
-   ========================================================= */
-
 type CountElement = HTMLElement & {
     __countObserver?: IntersectionObserver;
     __countTimeout?: ReturnType<typeof setTimeout>;
     __countFrame?: number;
 };
 
-function formatId(num: number, decimals = 0) {
-    return num.toLocaleString("id-ID", {
+function formatNumber(value: number | string | undefined, decimals = 0) {
+    const number = Number(value ?? 0);
+
+    if (Number.isNaN(number)) {
+        return "0";
+    }
+
+    return number.toLocaleString("id-ID", {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
     });
 }
 
 const vCountUp = {
-    mounted(el: CountElement, binding: { value?: Record<string, unknown> }) {
+    mounted(
+        el: CountElement,
+        binding: {
+            value?: Record<string, unknown>;
+        },
+    ) {
         const {
             target,
             decimals = 0,
@@ -266,15 +303,13 @@ const vCountUp = {
             delay = 0,
         } = binding.value || {};
 
-        const numericTarget =
-            typeof target === "number" ? target : Number(target ?? 0);
-
+        const numericTarget = Number(target ?? 0);
         const decimalPlaces = Number(decimals);
 
-        el.textContent = formatId(0, decimalPlaces);
+        el.textContent = formatNumber(0, decimalPlaces);
 
         if (prefersReducedMotion || Number.isNaN(numericTarget)) {
-            el.textContent = formatId(
+            el.textContent = formatNumber(
                 Number.isNaN(numericTarget) ? 0 : numericTarget,
                 decimalPlaces,
             );
@@ -300,7 +335,7 @@ const vCountUp = {
 
                             const eased = 1 - Math.pow(1 - progress, 3);
 
-                            el.textContent = formatId(
+                            el.textContent = formatNumber(
                                 numericTarget * eased,
                                 decimalPlaces,
                             );
@@ -308,7 +343,7 @@ const vCountUp = {
                             if (progress < 1) {
                                 el.__countFrame = requestAnimationFrame(tick);
                             } else {
-                                el.textContent = formatId(
+                                el.textContent = formatNumber(
                                     numericTarget,
                                     decimalPlaces,
                                 );
@@ -347,8 +382,8 @@ const vCountUp = {
 };
 
 /* =========================================================
-   HELPERS
-   ========================================================= */
+ * HELPERS
+ * ========================================================= */
 
 function firstValue(
     object: Record<string, unknown> | null | undefined,
@@ -396,11 +431,22 @@ function numericValue(
     return fallback;
 }
 
-function imageUrl(
-    object: Record<string, unknown> | null | undefined,
-    keys: string[],
-): string {
-    return firstValue(object, keys, "");
+/**
+ * Ubah path relatif disk "public" menjadi URL browser.
+ *
+ * Contoh:
+ * mitra-perusahaan/logo.png
+ * menjadi:
+ * /storage/mitra-perusahaan/logo.png
+ */
+function storageUrl(path?: string) {
+    if (!path) return "";
+
+    if (/^(https?:)?\/\//i.test(path) || path.startsWith("/storage/")) {
+        return path;
+    }
+
+    return `/storage/${path.replace(/^\/+/, "")}`;
 }
 
 function truncate(text: string, length = 150) {
@@ -425,17 +471,6 @@ function formatDate(date?: string | null) {
     });
 }
 
-function formatNumber(value: number | string | undefined, decimals = 0) {
-    const number = Number(value ?? 0);
-
-    if (Number.isNaN(number)) return "0";
-
-    return number.toLocaleString("id-ID", {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-    });
-}
-
 function jobTypeLabel(type?: string) {
     if (!type) return "Posisi tersedia";
 
@@ -451,8 +486,364 @@ function jobTypeLabel(type?: string) {
 }
 
 /* =========================================================
-   COMPANY
-   ========================================================= */
+ * MITRA PERUSAHAAN
+ * ========================================================= */
+
+const displayedMitraPerusahaans = computed(() =>
+    props.mitraPerusahaans.filter((mitra) => mitra.aktif !== false),
+);
+
+const hasMitraPerusahaan = computed(
+    () => displayedMitraPerusahaans.value.length > 0,
+);
+
+const mitraCarousel = ref<HTMLElement | null>(null);
+
+const mitraAutoplayPaused = ref(false);
+
+let mitraAutoplayTimer: ReturnType<typeof setInterval> | null = null;
+
+function mitraPerusahaanName(mitra: MitraPerusahaan) {
+    return firstValue(mitra, ["nama_perusahaan"], "Mitra perusahaan");
+}
+
+function mitraPerusahaanImage(mitra: MitraPerusahaan) {
+    return storageUrl(mitra.logo ?? "");
+}
+
+function normalizeWebsite(website?: string | null) {
+    if (!website) return "";
+
+    const value = website.trim();
+
+    if (!value) return "";
+
+    if (
+        /^https?:\/\//i.test(value) ||
+        /^mailto:/i.test(value) ||
+        /^tel:/i.test(value)
+    ) {
+        return value;
+    }
+
+    return `https://${value}`;
+}
+
+/**
+ * Mengambil jarak scroll berdasarkan lebar card pertama.
+ * Jadi tetap responsif saat ukuran card berubah di desktop,
+ * tablet, maupun mobile.
+ */
+function getMitraScrollAmount(): number {
+    const container = mitraCarousel.value;
+
+    if (!container) {
+        return 0;
+    }
+
+    const card = container.querySelector<HTMLElement>("[data-mitra-card]");
+
+    if (!card) {
+        return Math.max(container.clientWidth * 0.85, 280);
+    }
+
+    const computedStyle = window.getComputedStyle(container);
+
+    const gap =
+        Number.parseFloat(computedStyle.columnGap) ||
+        Number.parseFloat(computedStyle.gap) ||
+        24;
+
+    return card.getBoundingClientRect().width + gap;
+}
+
+/**
+ * Carousel kanan / kiri.
+ *
+ * Jika sudah sampai paling kanan:
+ * next -> kembali ke awal.
+ *
+ * Jika berada di awal:
+ * prev -> lompat ke item terakhir.
+ */
+function scrollMitra(direction: "next" | "prev"): void {
+    const container = mitraCarousel.value;
+
+    if (!container) {
+        return;
+    }
+
+    const maxScroll = Math.max(
+        0,
+        container.scrollWidth - container.clientWidth,
+    );
+
+    if (maxScroll <= 0) {
+        return;
+    }
+
+    const amount = getMitraScrollAmount();
+
+    const behavior: ScrollBehavior = prefersReducedMotion ? "auto" : "smooth";
+
+    if (direction === "next") {
+        const isAtEnd = container.scrollLeft >= maxScroll - 8;
+
+        if (isAtEnd) {
+            container.scrollTo({
+                left: 0,
+                behavior,
+            });
+
+            return;
+        }
+
+        container.scrollBy({
+            left: amount,
+            behavior,
+        });
+
+        return;
+    }
+
+    const isAtStart = container.scrollLeft <= 8;
+
+    if (isAtStart) {
+        container.scrollTo({
+            left: maxScroll,
+            behavior,
+        });
+
+        return;
+    }
+
+    container.scrollBy({
+        left: -amount,
+        behavior,
+    });
+}
+
+function pauseMitraAutoplay() {
+    mitraAutoplayPaused.value = true;
+}
+
+function resumeMitraAutoplay() {
+    mitraAutoplayPaused.value = false;
+}
+
+function stopMitraAutoplay() {
+    if (mitraAutoplayTimer !== null) {
+        clearInterval(mitraAutoplayTimer);
+        mitraAutoplayTimer = null;
+    }
+}
+
+function startMitraAutoplay() {
+    stopMitraAutoplay();
+
+    if (prefersReducedMotion || displayedMitraPerusahaans.value.length <= 1) {
+        return;
+    }
+
+    mitraAutoplayTimer = setInterval(() => {
+        if (mitraAutoplayPaused.value) {
+            return;
+        }
+
+        scrollMitra("next");
+    }, 4500);
+}
+
+/* =========================================================
+ * RICH TEXT - SAMBUTAN DIREKTUR
+ * ========================================================= */
+
+const RICH_ALLOWED_TAGS = new Set([
+    "P",
+    "BR",
+    "STRONG",
+    "B",
+    "EM",
+    "I",
+    "U",
+    "S",
+    "MARK",
+    "SUB",
+    "SUP",
+    "SPAN",
+    "DIV",
+    "A",
+    "UL",
+    "OL",
+    "LI",
+    "H1",
+    "H2",
+    "H3",
+    "H4",
+    "H5",
+    "H6",
+    "BLOCKQUOTE",
+    "HR",
+    "IMG",
+    "FIGURE",
+    "FIGCAPTION",
+    "TABLE",
+    "THEAD",
+    "TBODY",
+    "TR",
+    "TH",
+    "TD",
+]);
+
+const RICH_DROP_TAGS = new Set([
+    "SCRIPT",
+    "STYLE",
+    "IFRAME",
+    "OBJECT",
+    "EMBED",
+    "FORM",
+    "INPUT",
+    "BUTTON",
+    "TEXTAREA",
+    "SELECT",
+    "LINK",
+    "META",
+    "SVG",
+    "MATH",
+]);
+
+const RICH_ALLOWED_ATTRS = new Set([
+    "href",
+    "target",
+    "rel",
+    "src",
+    "alt",
+    "title",
+    "colspan",
+    "rowspan",
+    "start",
+    "width",
+    "height",
+]);
+
+const RICH_ALIGNS = new Set(["left", "center", "right", "justify"]);
+
+function escapeHtml(text: string) {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function looksLikeHtml(text: string) {
+    return /<\/?[a-z][\s\S]*?>/i.test(text);
+}
+
+function plainTextToHtml(text: string) {
+    return text
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+        .join("");
+}
+
+function stripTags(html: string) {
+    return html
+        .replace(/<(br|\/p|\/div|\/li|\/h[1-6])\s*\/?>/gi, "\n")
+        .replace(/<[^>]*>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+}
+
+function cleanRichNode(parent: Element) {
+    Array.from(parent.childNodes).forEach((child) => {
+        if (child.nodeType === Node.COMMENT_NODE) {
+            child.remove();
+            return;
+        }
+
+        if (child.nodeType !== Node.ELEMENT_NODE) {
+            return;
+        }
+
+        const el = child as HTMLElement;
+        const tag = el.tagName;
+
+        if (RICH_DROP_TAGS.has(tag)) {
+            el.remove();
+            return;
+        }
+
+        cleanRichNode(el);
+
+        if (!RICH_ALLOWED_TAGS.has(tag)) {
+            el.replaceWith(...Array.from(el.childNodes));
+            return;
+        }
+
+        const align = el.style?.textAlign;
+
+        Array.from(el.attributes).forEach((attr) => {
+            if (!RICH_ALLOWED_ATTRS.has(attr.name)) {
+                el.removeAttribute(attr.name);
+            }
+        });
+
+        if (align && RICH_ALIGNS.has(align)) {
+            el.style.textAlign = align;
+        }
+
+        if (tag === "A") {
+            const href = el.getAttribute("href") ?? "";
+
+            if (!/^(https?:|mailto:|tel:|\/|#)/i.test(href)) {
+                el.removeAttribute("href");
+            } else if (/^https?:/i.test(href)) {
+                el.setAttribute("target", "_blank");
+
+                el.setAttribute("rel", "noopener noreferrer");
+            }
+        }
+
+        if (tag === "IMG") {
+            const src = el.getAttribute("src") ?? "";
+
+            if (!/^(https?:|\/|data:image\/)/i.test(src)) {
+                el.remove();
+                return;
+            }
+
+            el.setAttribute("loading", "lazy");
+
+            el.setAttribute("decoding", "async");
+        }
+    });
+}
+
+function sanitizeRichText(raw: string): string {
+    if (!raw.trim()) {
+        return "";
+    }
+
+    const source = looksLikeHtml(raw) ? raw : plainTextToHtml(raw);
+
+    if (typeof DOMParser === "undefined") {
+        return plainTextToHtml(stripTags(source));
+    }
+
+    const doc = new DOMParser().parseFromString(source, "text/html");
+
+    cleanRichNode(doc.body);
+
+    return doc.body.innerHTML;
+}
+
+/* =========================================================
+ * COMPANY
+ * ========================================================= */
 
 const companyName = computed(() =>
     firstValue(
@@ -471,8 +862,50 @@ const companyDescription = computed(() =>
 );
 
 /* =========================================================
-   VISION & MISSION
-   ========================================================= */
+ * SAMBUTAN DIREKTUR
+ * ========================================================= */
+
+const isMounted = ref(false);
+
+const sambutanExpanded = ref(false);
+
+const direkturName = computed(() =>
+    firstValue(props.sambutanDirektur, ["nama_direktur"]),
+);
+
+const direkturPosition = computed(() =>
+    firstValue(props.sambutanDirektur, ["jabatan_direktur"]),
+);
+
+const direkturPhoto = computed(() =>
+    storageUrl(firstValue(props.sambutanDirektur, ["foto_direktur"])),
+);
+
+const direkturRaw = computed(() =>
+    firstValue(props.sambutanDirektur, ["sambutan_direktur"]),
+);
+
+const direkturHtml = computed(() =>
+    isMounted.value
+        ? sanitizeRichText(direkturRaw.value)
+        : plainTextToHtml(
+              stripTags(direkturRaw.value.replace(/<\/(p|div)>/gi, "\n\n")),
+          ),
+);
+
+const sambutanIsLong = computed(
+    () => stripTags(direkturRaw.value).length > 900,
+);
+
+const hasSambutanDirektur = computed(
+    () =>
+        Boolean(props.sambutanDirektur?.status) &&
+        Boolean(direkturName.value || direkturRaw.value),
+);
+
+/* =========================================================
+ * VISION & MISSION
+ * ========================================================= */
 
 const visionText = computed(() =>
     firstValue(props.visi, ["visi", "deskripsi", "judul", "title"]),
@@ -487,8 +920,8 @@ const hasVisionMission = computed(
 );
 
 /* =========================================================
-   AREA
-   ========================================================= */
+ * AREA
+ * ========================================================= */
 
 const kawasanName = computed(() =>
     firstValue(
@@ -519,12 +952,12 @@ const kawasanYear = computed(() =>
 );
 
 const kawasanImage = computed(() =>
-    imageUrl(props.profilKawasan, ["gambar_path", "gambar"]),
+    firstValue(props.profilKawasan, ["gambar_path", "gambar"]),
 );
 
 /* =========================================================
-   MAP
-   ========================================================= */
+ * MAP
+ * ========================================================= */
 
 const mapTitle = computed(() =>
     firstValue(
@@ -535,7 +968,7 @@ const mapTitle = computed(() =>
 );
 
 const mapImage = computed(() =>
-    imageUrl(props.petaKawasan, ["gambar_path", "gambar"]),
+    firstValue(props.petaKawasan, ["gambar_path", "gambar"]),
 );
 
 const mapDescription = computed(() =>
@@ -543,8 +976,8 @@ const mapDescription = computed(() =>
 );
 
 /* =========================================================
-   HERO STATS
-   ========================================================= */
+ * HERO STATS
+ * ========================================================= */
 
 const stats = computed(() => {
     const items: Array<{
@@ -553,10 +986,6 @@ const stats = computed(() => {
         suffix: string;
         label: string;
     }> = [];
-
-    const anakUsahas = props.anakUsahas ?? [];
-    const rutes = props.rutes ?? [];
-    const beritas = props.beritas ?? [];
 
     if (kawasanArea.value > 0) {
         items.push({
@@ -567,27 +996,27 @@ const stats = computed(() => {
         });
     }
 
-    if (anakUsahas.length > 0) {
+    if (props.anakUsahas.length > 0) {
         items.push({
-            target: anakUsahas.length,
+            target: props.anakUsahas.length,
             decimals: 0,
             suffix: "",
             label: "Entitas dalam ekosistem KITB",
         });
     }
 
-    if (rutes.length > 0) {
+    if (props.rutes.length > 0) {
         items.push({
-            target: rutes.length,
+            target: props.rutes.length,
             decimals: 0,
             suffix: "",
             label: "Rute pelayaran aktif",
         });
     }
 
-    if (beritas.length > 0) {
+    if (props.beritas.length > 0) {
         items.push({
-            target: beritas.length,
+            target: props.beritas.length,
             decimals: 0,
             suffix: "",
             label: "Informasi terbaru tersedia",
@@ -597,28 +1026,22 @@ const stats = computed(() => {
     return items.slice(0, 4);
 });
 
-/* =========================================================
-   LAND DEVELOPMENT
-   ========================================================= */
-
-const landStats = computed(() => {
-    if (kawasanArea.value <= 0) {
-        return [];
-    }
-
-    return [
-        {
-            target: kawasanArea.value,
-            decimals: kawasanAreaDecimals.value,
-            unit: "Ha",
-            label: "Total wilayah pengembangan KITB",
-        },
-    ];
-});
+const landStats = computed(() =>
+    kawasanArea.value > 0
+        ? [
+              {
+                  target: kawasanArea.value,
+                  decimals: kawasanAreaDecimals.value,
+                  unit: "Ha",
+                  label: "Total wilayah pengembangan KITB",
+              },
+          ]
+        : [],
+);
 
 /* =========================================================
-   DEVELOPMENT DATA
-   ========================================================= */
+ * DEVELOPMENT DATA
+ * ========================================================= */
 
 const developmentStages = [
     {
@@ -639,10 +1062,10 @@ const developmentStages = [
 ];
 
 /* =========================================================
-   ROUTES
-   ========================================================= */
+ * ROUTES
+ * ========================================================= */
 
-const displayedRoutes = computed<Rute[]>(() => (props.rutes ?? []).slice(0, 6));
+const displayedRoutes = computed<Rute[]>(() => props.rutes.slice(0, 6));
 
 const hasLocationSection = computed(
     () => Boolean(kawasanLocation.value) || displayedRoutes.value.length > 0,
@@ -663,38 +1086,36 @@ function routeName(r: Rute, index: number) {
 }
 
 /* =========================================================
-   INVESTMENT
-   ========================================================= */
+ * INVESTMENT / NEWS / SUBSIDIARIES
+ * ========================================================= */
 
-function investmentTitle(investment: PeluangInvestasi) {
-    return firstValue(investment, ["judul", "nama"], "Peluang investasi");
+function investmentTitle(item: PeluangInvestasi) {
+    return firstValue(item, ["judul", "nama"], "Peluang investasi");
 }
 
-function investmentImage(investment: PeluangInvestasi) {
-    return imageUrl(investment, ["gambar_path", "gambar"]);
+function investmentImage(item: PeluangInvestasi) {
+    return firstValue(item, ["gambar_path", "gambar"]);
 }
 
-function investmentDescription(investment: PeluangInvestasi) {
-    return firstValue(investment, ["deskripsi"]);
+function investmentDescription(item: PeluangInvestasi) {
+    return firstValue(item, ["deskripsi"]);
 }
 
-/* =========================================================
-   NEWS
-   ========================================================= */
-
-const latestNews = computed<Berita[]>(() => props.beritas ?? []);
+function hasValue(value: unknown) {
+    return value !== null && value !== undefined && value !== "";
+}
 
 function beritaTitle(berita: Berita) {
     return firstValue(berita, ["judul", "title"], "Berita KITB");
 }
 
 function beritaImage(berita: Berita) {
-    return imageUrl(berita, ["gambar_path", "gambar", "thumbnail"]);
+    return firstValue(berita, ["gambar_path", "gambar", "thumbnail"]);
 }
 
-/* =========================================================
-   SUBSIDIARIES
-   ========================================================= */
+function beritaExcerpt(berita: Berita) {
+    return firstValue(berita, ["excerpt", "ringkasan", "deskripsi"]);
+}
 
 function anakUsahaName(anak: AnakUsaha) {
     return firstValue(
@@ -705,8 +1126,22 @@ function anakUsahaName(anak: AnakUsaha) {
 }
 
 function anakUsahaImage(anak: AnakUsaha) {
-    return imageUrl(anak, ["logo_path", "logo", "gambar_path", "gambar"]);
+    return firstValue(anak, ["logo_path", "logo", "gambar_path", "gambar"]);
 }
+
+/* =========================================================
+ * LIFECYCLE
+ * ========================================================= */
+
+onMounted(() => {
+    isMounted.value = true;
+
+    startMitraAutoplay();
+});
+
+onBeforeUnmount(() => {
+    stopMitraAutoplay();
+});
 </script>
 
 <template>
@@ -770,7 +1205,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                         <span
                             class="h-1.5 w-1.5 shrink-0 rounded-full bg-kitb-teal-500"
                         />
-
                         Badan Usaha Milik Daerah · Kabupaten Siak
                     </div>
 
@@ -779,7 +1213,7 @@ function anakUsahaImage(anak: AnakUsaha) {
                         style="font-size: clamp(2.25rem, 5.8vw, 5rem)"
                     >
                         Kawasan industri yang berdiri tepat di bibir
-                        <span class="text-kitb-navy-900"> Selat Malaka. </span>
+                        <span class="text-kitb-navy-900">Selat Malaka.</span>
                     </h1>
 
                     <p
@@ -847,19 +1281,22 @@ function anakUsahaImage(anak: AnakUsaha) {
             </div>
         </section>
 
-        <!-- =========================================================
-     TENTANG KAMI
-========================================================= -->
+        <!-- =====================================================
+             TENTANG KAMI
+             (digabung dari dua section yang sebelumnya duplikat)
+             ===================================================== -->
+
         <section
             id="tentang-kami"
-            class="relative overflow-hidden bg-slate-50 py-20 sm:py-24 lg:py-28"
+            class="relative overflow-hidden py-16 sm:py-24 lg:py-28"
         >
-            <!-- Decorative blobs -->
             <div
                 class="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-kitb-teal-100/50 blur-3xl"
+                aria-hidden="true"
             />
             <div
                 class="pointer-events-none absolute -right-32 bottom-0 h-80 w-80 rounded-full bg-slate-200/60 blur-3xl"
+                aria-hidden="true"
             />
 
             <div class="relative mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
@@ -867,36 +1304,50 @@ function anakUsahaImage(anak: AnakUsaha) {
                     v-fade-in
                     class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-center lg:gap-16"
                 >
-                    <!-- =====================================================
-                 LEFT — COMPANY PROFILE
-            ====================================================== -->
-                    <div>
-                        <div class="mb-6 flex items-center gap-3">
+                    <!-- Profil perusahaan -->
+                    <div class="min-w-0">
+                        <div class="mb-5 flex items-center gap-3">
                             <span class="h-px w-10 bg-kitb-teal-500" />
-
                             <p
                                 class="text-[12px] font-semibold uppercase tracking-[0.16em] text-kitb-teal-600"
                             >
-                                Tentang Kami
+                                Tentang KITB
                             </p>
                         </div>
 
                         <h2
-                            class="max-w-3xl font-display font-bold leading-[1.08] tracking-[-0.025em] text-slate-900"
-                            style="font-size: clamp(2rem, 4vw, 3.4rem)"
+                            class="max-w-3xl font-display font-bold leading-[1.08] tracking-[-0.025em] text-kitb-green-900"
+                            style="font-size: clamp(1.8rem, 4vw, 3.2rem)"
                         >
                             Bukan sekadar penyedia lahan.
                         </h2>
 
-                        <!-- Company Profile dari database -->
-                        <p
-                            v-if="companyDescription"
-                            class="mt-6 max-w-2xl text-[15px] leading-[1.9] text-slate-600 sm:text-base"
+                        <div
+                            class="mt-6 max-w-2xl space-y-5 text-[15px] leading-[1.9] text-kitb-ink-900/70 sm:text-base"
                         >
-                            {{ truncate(companyDescription, 360) }}
-                        </p>
+                            <p v-if="companyDescription">
+                                {{ truncate(companyDescription, 360) }}
+                            </p>
 
-                        <!-- Nama perusahaan -->
+                            <p>
+                                Mengusung moto
+                                <span
+                                    class="font-display font-semibold text-kitb-green-800"
+                                >
+                                    “Beyond Industry, Towards the Future,”
+                                </span>
+                                KITB dikembangkan sebagai ekosistem
+                                <strong
+                                    class="font-semibold text-kitb-green-800"
+                                >
+                                    Smart &amp; Green Industrial Estate
+                                </strong>
+                                yang mendorong hilirisasi bernilai tambah
+                                tinggi, efisiensi operasional, dan pertumbuhan
+                                ekonomi daerah.
+                            </p>
+                        </div>
+
                         <div
                             v-if="companyName"
                             class="mt-8 flex items-center gap-3"
@@ -907,13 +1358,12 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 <Building2 class="h-5 w-5" />
                             </div>
 
-                            <div>
+                            <div class="min-w-0">
                                 <p
                                     class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400"
                                 >
                                     Perusahaan
                                 </p>
-
                                 <p
                                     class="mt-0.5 font-display font-semibold text-slate-800"
                                 >
@@ -922,14 +1372,12 @@ function anakUsahaImage(anak: AnakUsaha) {
                             </div>
                         </div>
 
-                        <!-- Selengkapnya -->
                         <div class="mt-9">
                             <Link
                                 href="/profil-perusahaan/tentang-kami"
                                 class="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-kitb-teal-300 hover:text-kitb-teal-700 hover:shadow-md"
                             >
                                 Selengkapnya
-
                                 <ArrowRight
                                     class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
                                 />
@@ -937,19 +1385,15 @@ function anakUsahaImage(anak: AnakUsaha) {
                         </div>
                     </div>
 
-                    <!-- =====================================================
-                 RIGHT — SUPPORTING CARDS
-            ====================================================== -->
+                    <!-- Kartu pendukung -->
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                        <!-- Smart Industrial Park -->
                         <div
-                            v-fade-in
                             class="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
                         >
                             <div
                                 class="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-kitb-teal-50 text-kitb-teal-600"
                             >
-                                <Factory class="h-5 w-5" />
+                                <Sparkles class="h-5 w-5" />
                             </div>
 
                             <h3
@@ -959,15 +1403,14 @@ function anakUsahaImage(anak: AnakUsaha) {
                             </h3>
 
                             <p class="mt-2 text-sm leading-7 text-slate-500">
-                                Kawasan industri yang dikembangkan dengan
-                                pendekatan terintegrasi, efisien, dan
-                                berorientasi pada kebutuhan industri masa depan.
+                                Digitalisasi dan otomasi untuk efisiensi
+                                operasional tenant, dengan pendekatan
+                                terintegrasi yang berorientasi pada kebutuhan
+                                industri masa depan.
                             </p>
                         </div>
 
-                        <!-- Green Industrial Estate -->
                         <div
-                            v-fade-in
                             class="rounded-3xl border border-slate-200/80 bg-slate-900 p-6 shadow-sm transition-all duration-300 hover:-translate-y-1"
                         >
                             <div
@@ -982,10 +1425,10 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 Green Industrial Estate
                             </h3>
 
-                            <p class="mt-2 text-sm leading-7 text-white/55">
-                                Mendorong pertumbuhan industri yang selaras
-                                dengan keberlanjutan lingkungan dan ekosistem
-                                kawasan.
+                            <p class="mt-2 text-sm leading-7 text-white/60">
+                                Efisiensi sumber daya dan pengelolaan kawasan
+                                yang selaras dengan keberlanjutan lingkungan dan
+                                ekosistem sekitar.
                             </p>
                         </div>
                     </div>
@@ -994,115 +1437,162 @@ function anakUsahaImage(anak: AnakUsaha) {
         </section>
 
         <!-- =====================================================
-             TENTANG
+             SAMBUTAN DIREKTUR (rich HTML)
              ===================================================== -->
 
         <section
-            id="tentang"
-            class="relative overflow-hidden py-16 sm:py-24 md:py-32"
+            v-if="hasSambutanDirektur"
+            id="sambutan-direktur"
+            class="relative overflow-hidden bg-slate-50 py-16 sm:py-24 md:py-28"
         >
             <div
-                class="blob blob-organic-2 drift-b"
+                class="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full bg-kitb-teal-100/60 blur-3xl"
                 aria-hidden="true"
-                style="
-                    width: 420px;
-                    height: 420px;
-                    top: -60px;
-                    left: -200px;
-                    background: radial-gradient(
-                        circle at 40% 40%,
-                        #7fa8e0,
-                        transparent 70%
-                    );
-                    opacity: 0.35;
-                "
+            />
+            <div
+                class="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-kitb-navy-100/60 blur-3xl"
+                aria-hidden="true"
             />
 
-            <div
-                class="relative mx-auto grid max-w-7xl grid-cols-1 gap-10 px-5 sm:px-6 md:grid-cols-12 md:gap-8 md:px-10"
-            >
-                <div class="md:col-span-4" v-fade-in>
-                    <p
-                        class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
-                    >
-                        Tentang KITB
-                    </p>
-
-                    <h2
-                        class="font-display font-bold leading-[1.08] tracking-[-0.02em] text-kitb-green-900"
-                        style="font-size: clamp(1.8rem, 3.4vw, 2.8rem)"
-                    >
-                        Bukan sekadar penyedia lahan.
-                    </h2>
-                </div>
-
+            <div class="relative mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
                 <div
                     v-fade-in
-                    class="space-y-6 text-[16px] leading-[1.85] text-kitb-ink-900/72 sm:text-[16.5px] md:col-span-7 md:col-start-6"
+                    class="grid gap-10 lg:gap-16"
+                    :class="
+                        direkturPhoto
+                            ? 'lg:grid-cols-[minmax(280px,0.62fr)_minmax(0,1.38fr)] lg:items-start'
+                            : ''
+                    "
                 >
-                    <p>
-                        {{ companyDescription }}
-                    </p>
-
-                    <p>
-                        Mengusung moto
-                        <span
-                            class="font-display font-semibold text-kitb-green-800"
-                        >
-                            “Beyond Industry, Towards the Future,”
-                        </span>
-                        KITB dikembangkan sebagai ekosistem
-                        <strong class="font-semibold text-kitb-green-800">
-                            Smart &amp; Green Industrial Estate
-                        </strong>
-                        yang mendorong hilirisasi bernilai tambah tinggi,
-                        efisiensi operasional, dan pertumbuhan ekonomi daerah.
-                    </p>
-
-                    <div class="grid grid-cols-1 gap-5 pt-4 sm:grid-cols-2">
+                    <!-- Foto -->
+                    <figure
+                        v-if="direkturPhoto"
+                        class="relative mx-auto w-full max-w-[22rem] sm:max-w-sm lg:sticky lg:top-28 lg:mx-0 lg:max-w-md"
+                    >
                         <div
-                            class="rounded-2xl border border-kitb-teal-500/15 bg-white/55 p-5 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-lg hover:shadow-kitb-navy-900/5"
+                            class="pointer-events-none absolute -left-8 -top-8 h-32 w-32 rounded-full bg-kitb-teal-300/25 blur-2xl"
+                            aria-hidden="true"
+                        />
+                        <div
+                            class="pointer-events-none absolute -bottom-10 -right-8 h-40 w-40 rounded-full bg-kitb-navy-300/25 blur-3xl"
+                            aria-hidden="true"
+                        />
+
+                        <div
+                            class="relative overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white p-2 shadow-xl shadow-kitb-navy-900/10 sm:rounded-[2rem]"
                         >
                             <div
-                                class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-kitb-teal-500/10 text-kitb-teal-600"
+                                class="overflow-hidden rounded-[1.4rem] bg-slate-100 sm:rounded-[1.6rem]"
                             >
-                                <Sparkles class="h-5 w-5" />
-                            </div>
-
-                            <div
-                                class="mb-1 font-display text-lg font-semibold text-kitb-green-800"
-                            >
-                                Smart Industrial Park
-                            </div>
-
-                            <div
-                                class="text-[14px] leading-relaxed text-kitb-ink-900/55"
-                            >
-                                Digitalisasi dan otomasi untuk efisiensi
-                                operasional tenant.
+                                <img
+                                    :src="direkturPhoto"
+                                    :alt="
+                                        direkturName
+                                            ? `Foto ${direkturName}`
+                                            : 'Foto Direktur KITB'
+                                    "
+                                    class="aspect-[4/5] h-auto w-full object-cover object-top transition-transform duration-700 hover:scale-[1.025]"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
                             </div>
                         </div>
 
-                        <div
-                            class="rounded-2xl border border-kitb-amber-500/15 bg-white/55 p-5 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-lg hover:shadow-kitb-navy-900/5"
+                        <!-- Nama & jabatan (tampil di bawah foto pada mobile/tablet) -->
+                        <figcaption
+                            v-if="direkturName || direkturPosition"
+                            class="relative mt-5 text-center lg:hidden"
                         >
-                            <div
-                                class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-kitb-amber-500/10 text-kitb-amber-600"
+                            <p
+                                v-if="direkturName"
+                                class="font-display text-lg font-bold text-slate-900"
                             >
-                                <Globe2 class="h-5 w-5" />
+                                {{ direkturName }}
+                            </p>
+                            <p
+                                v-if="direkturPosition"
+                                class="mt-0.5 text-sm font-medium text-kitb-teal-600"
+                            >
+                                {{ direkturPosition }}
+                            </p>
+                        </figcaption>
+                    </figure>
+
+                    <!-- Isi sambutan -->
+                    <div class="relative min-w-0">
+                        <div class="mb-5 flex items-center gap-3">
+                            <span class="h-px w-10 bg-kitb-teal-500" />
+                            <p
+                                class="text-[12px] font-semibold uppercase tracking-[0.16em] text-kitb-teal-600"
+                            >
+                                Sambutan Direktur
+                            </p>
+                        </div>
+
+                        <div
+                            class="relative rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur-sm sm:rounded-[2rem] sm:p-9 md:p-10"
+                        >
+                            <Quote
+                                class="pointer-events-none absolute right-5 top-5 h-10 w-10 text-kitb-navy-900/[0.07] sm:right-8 sm:top-7 sm:h-14 sm:w-14"
+                                aria-hidden="true"
+                            />
+
+                            <!-- Konten rich text -->
+                            <div class="relative">
+                                <div
+                                    class="rich-content"
+                                    :class="
+                                        sambutanIsLong && !sambutanExpanded
+                                            ? 'rich-content-collapsed'
+                                            : ''
+                                    "
+                                    v-html="direkturHtml"
+                                />
+
+                                <div
+                                    v-if="sambutanIsLong && !sambutanExpanded"
+                                    class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/85 to-transparent"
+                                    aria-hidden="true"
+                                />
                             </div>
 
-                            <div
-                                class="mb-1 font-display text-lg font-semibold text-kitb-green-800"
+                            <button
+                                v-if="sambutanIsLong"
+                                type="button"
+                                class="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-kitb-green-700 transition-all duration-200 hover:border-kitb-green-700/30 hover:bg-kitb-green-700 hover:text-white"
+                                :aria-expanded="sambutanExpanded"
+                                @click="sambutanExpanded = !sambutanExpanded"
                             >
-                                Green Industrial Estate
-                            </div>
+                                {{
+                                    sambutanExpanded
+                                        ? "Tampilkan lebih sedikit"
+                                        : "Baca selengkapnya"
+                                }}
+                                <ChevronDown
+                                    class="h-4 w-4 transition-transform duration-300"
+                                    :class="
+                                        sambutanExpanded ? 'rotate-180' : ''
+                                    "
+                                />
+                            </button>
 
+                            <!-- Tanda tangan -->
                             <div
-                                class="text-[14px] leading-relaxed text-kitb-ink-900/55"
+                                v-if="direkturName || direkturPosition"
+                                class="mt-8 border-t border-slate-200 pt-6"
                             >
-                                Efisiensi sumber daya dan pengelolaan kawasan
-                                yang berorientasi keberlanjutan.
+                                <p
+                                    v-if="direkturName"
+                                    class="font-display text-lg font-bold text-slate-900 sm:text-xl"
+                                >
+                                    {{ direkturName }}
+                                </p>
+                                <p
+                                    v-if="direkturPosition"
+                                    class="mt-1 text-sm font-medium text-kitb-teal-600"
+                                >
+                                    {{ direkturPosition }}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -1180,9 +1670,7 @@ function anakUsahaImage(anak: AnakUsaha) {
                             v-for="(m, i) in missions"
                             :key="m.id ?? i"
                             v-fade-in
-                            :style="{
-                                transitionDelay: `${i * 90}ms`,
-                            }"
+                            :style="{ transitionDelay: `${i * 90}ms` }"
                             class="relative border-white/10 pb-8 md:pb-0"
                             :class="
                                 i < missions.length - 1
@@ -1196,7 +1684,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 >
                                     {{ String(i + 1).padStart(2, "0") }}
                                 </span>
-
                                 <span class="h-px w-10 bg-white/15" />
                             </div>
 
@@ -1229,8 +1716,8 @@ function anakUsahaImage(anak: AnakUsaha) {
         </section>
 
         <!-- =====================================================
-     LOKASI & RUTE
-     ===================================================== -->
+             LOKASI & RUTE
+             ===================================================== -->
 
         <section
             v-if="hasLocationSection"
@@ -1239,7 +1726,7 @@ function anakUsahaImage(anak: AnakUsaha) {
         >
             <div class="mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
                 <div class="grid items-start gap-10 md:grid-cols-12 md:gap-12">
-                    <!-- Location information -->
+                    <!-- Informasi lokasi -->
                     <div class="md:col-span-5" v-fade-in>
                         <p
                             class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
@@ -1272,15 +1759,13 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 >
                                     <Navigation class="h-4 w-4" />
                                 </div>
-
                                 <div>
                                     <div
                                         class="mb-0.5 text-[13px] font-medium text-kitb-ink-900/45"
                                     >
                                         Lokasi
                                     </div>
-
-                                    <p class="text-[15px] text-kitb-ink-900/68">
+                                    <p class="text-[15px] text-kitb-ink-900/70">
                                         {{ kawasanLocation }}
                                     </p>
                                 </div>
@@ -1295,15 +1780,13 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 >
                                     <CalendarDays class="h-4 w-4" />
                                 </div>
-
                                 <div>
                                     <div
                                         class="mb-0.5 text-[13px] font-medium text-kitb-ink-900/45"
                                     >
                                         Tahun berdiri
                                     </div>
-
-                                    <p class="text-[15px] text-kitb-ink-900/68">
+                                    <p class="text-[15px] text-kitb-ink-900/70">
                                         {{ kawasanYear }}
                                     </p>
                                 </div>
@@ -1315,15 +1798,13 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 >
                                     <Ship class="h-4 w-4" />
                                 </div>
-
                                 <div>
                                     <div
                                         class="mb-0.5 text-[13px] font-medium text-kitb-ink-900/45"
                                     >
                                         Konektivitas maritim
                                     </div>
-
-                                    <p class="text-[15px] text-kitb-ink-900/68">
+                                    <p class="text-[15px] text-kitb-ink-900/70">
                                         Terhubung dengan jaringan pelayaran
                                         regional melalui kawasan pelabuhan
                                         Tanjung Buton.
@@ -1333,17 +1814,16 @@ function anakUsahaImage(anak: AnakUsaha) {
                         </div>
                     </div>
 
-                    <!-- Routes -->
+                    <!-- Rute -->
                     <div
                         v-if="displayedRoutes.length"
-                        class="min-w-0 md:col-span-6 md:col-start-7"
                         v-fade-in
+                        class="min-w-0 md:col-span-6 md:col-start-7"
                         style="transition-delay: 120ms"
                     >
                         <div
                             class="overflow-hidden rounded-2xl border border-black/5 bg-kitb-sand-100 shadow-sm"
                         >
-                            <!-- Header -->
                             <div class="border-b border-black/5 px-5 py-4">
                                 <div
                                     class="flex items-center justify-between gap-4"
@@ -1354,18 +1834,11 @@ function anakUsahaImage(anak: AnakUsaha) {
                                         >
                                             Rute pelayaran
                                         </div>
-
                                         <div
                                             class="mt-1 font-display text-lg font-semibold text-kitb-green-900"
                                         >
                                             Akses menuju jalur utama
                                         </div>
-
-                                        <p
-                                            class="mt-1 text-[12px] text-kitb-ink-900/45"
-                                        >
-                                            Menampilkan hingga 6 rute terbaru.
-                                        </p>
                                     </div>
 
                                     <Ship
@@ -1374,7 +1847,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 </div>
                             </div>
 
-                            <!-- Table -->
                             <div class="overflow-x-auto">
                                 <table class="w-full min-w-[620px] text-[14px]">
                                     <thead>
@@ -1385,21 +1857,18 @@ function anakUsahaImage(anak: AnakUsaha) {
                                             >
                                                 Rute
                                             </th>
-
                                             <th
                                                 scope="col"
                                                 class="px-4 py-3.5 text-[12px] font-medium text-white sm:px-5"
                                             >
                                                 Jalur
                                             </th>
-
                                             <th
                                                 scope="col"
                                                 class="px-4 py-3.5 text-[12px] font-medium text-white sm:px-5"
                                             >
                                                 Jarak
                                             </th>
-
                                             <th
                                                 scope="col"
                                                 class="px-4 py-3.5 text-[12px] font-medium text-white sm:px-5"
@@ -1422,13 +1891,11 @@ function anakUsahaImage(anak: AnakUsaha) {
                                             >
                                                 {{ routeName(r, index) }}
                                             </td>
-
                                             <td
                                                 class="px-4 py-4 text-kitb-ink-900/70 sm:px-5"
                                             >
                                                 {{ routePath(r) || "—" }}
                                             </td>
-
                                             <td
                                                 class="whitespace-nowrap px-4 py-4 text-kitb-ink-900/70 sm:px-5"
                                             >
@@ -1440,7 +1907,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                                     )
                                                 }}
                                             </td>
-
                                             <td
                                                 class="whitespace-nowrap px-4 py-4 text-kitb-ink-900/70 sm:px-5"
                                             >
@@ -1460,14 +1926,13 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 </table>
                             </div>
 
-                            <!-- Footer -->
                             <div
                                 class="flex flex-col gap-3 border-t border-black/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
                             >
                                 <p
                                     class="text-[12px] leading-relaxed text-kitb-ink-900/45"
                                 >
-                                    Data menampilkan maksimal 6 rute pelayaran
+                                    Menampilkan hingga 6 rute pelayaran aktif
                                     terbaru.
                                 </p>
 
@@ -1480,13 +1945,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 </Link>
                             </div>
                         </div>
-
-                        <p
-                            class="mt-4 text-[12.5px] leading-relaxed text-kitb-ink-900/45"
-                        >
-                            Informasi rute ditampilkan berdasarkan data rute
-                            aktif yang tersedia pada sistem KITB.
-                        </p>
                     </div>
                 </div>
             </div>
@@ -1554,7 +2012,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 >
                                     Luas kawasan
                                 </div>
-
                                 <div
                                     class="font-display text-2xl font-bold text-kitb-green-800 sm:text-3xl"
                                 >
@@ -1564,12 +2021,10 @@ function anakUsahaImage(anak: AnakUsaha) {
                                             kawasanAreaDecimals,
                                         )
                                     }}
-
                                     <span
                                         class="text-sm font-medium text-kitb-ink-900/45"
+                                        >Ha</span
                                     >
-                                        Ha
-                                    </span>
                                 </div>
                             </div>
 
@@ -1582,7 +2037,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 >
                                     Tahun berdiri
                                 </div>
-
                                 <div
                                     class="font-display text-2xl font-bold text-kitb-green-800 sm:text-3xl"
                                 >
@@ -1598,7 +2052,7 @@ function anakUsahaImage(anak: AnakUsaha) {
                         class="order-1 lg:order-2 lg:col-span-7"
                     >
                         <div
-                            class="group relative overflow-hidden rounded-[1.75rem] border border-black/5 bg-white shadow-xl shadow-kitb-navy-900/8"
+                            class="group relative overflow-hidden rounded-[1.75rem] border border-black/5 bg-white shadow-xl shadow-kitb-navy-900/10"
                         >
                             <img
                                 :src="kawasanImage"
@@ -1615,7 +2069,7 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 <div
                                     class="flex items-center gap-2 text-sm font-medium text-white"
                                 >
-                                    <MapPin class="h-4 w-4" />
+                                    <MapPin class="h-4 w-4 shrink-0" />
                                     {{ kawasanLocation }}
                                 </div>
                             </div>
@@ -1623,7 +2077,7 @@ function anakUsahaImage(anak: AnakUsaha) {
                     </div>
                 </div>
 
-                <!-- Land statistics -->
+                <!-- Statistik lahan -->
                 <div
                     v-if="landStats.length"
                     v-fade-in
@@ -1646,10 +2100,9 @@ function anakUsahaImage(anak: AnakUsaha) {
                             >
                                 0
                             </span>
-
-                            <span class="ml-1 align-top text-xl">
-                                {{ land.unit }}
-                            </span>
+                            <span class="ml-1 align-top text-xl">{{
+                                land.unit
+                            }}</span>
                         </div>
 
                         <div
@@ -1660,7 +2113,7 @@ function anakUsahaImage(anak: AnakUsaha) {
                     </div>
                 </div>
 
-                <!-- Development -->
+                <!-- Tahapan pengembangan -->
                 <div
                     class="mt-16 border-t border-black/10 pt-12 md:mt-20 md:pt-16"
                 >
@@ -1679,14 +2132,12 @@ function anakUsahaImage(anak: AnakUsaha) {
                         </h3>
                     </div>
 
-                    <div class="grid gap-6 md:grid-cols-3">
+                    <div class="grid gap-5 md:grid-cols-3 md:gap-6">
                         <div
                             v-for="(stage, i) in developmentStages"
                             :key="stage.number"
                             v-fade-in
-                            :style="{
-                                transitionDelay: `${i * 100}ms`,
-                            }"
+                            :style="{ transitionDelay: `${i * 100}ms` }"
                             class="group relative overflow-hidden rounded-2xl border border-black/5 bg-white/65 p-6 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5"
                         >
                             <div class="mb-7 flex items-center justify-between">
@@ -1695,7 +2146,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 >
                                     {{ stage.number }}
                                 </span>
-
                                 <MoveRight
                                     class="h-5 w-5 text-kitb-teal-500 transition-transform duration-300 group-hover:translate-x-1"
                                 />
@@ -1755,7 +2205,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 >
                                     Total luas kawasan
                                 </div>
-
                                 <div class="font-display text-3xl font-bold">
                                     {{
                                         formatNumber(
@@ -1763,12 +2212,10 @@ function anakUsahaImage(anak: AnakUsaha) {
                                             kawasanAreaDecimals,
                                         )
                                     }}
-
                                     <span
                                         class="text-lg font-medium text-white/55"
+                                        >Ha</span
                                     >
-                                        Ha
-                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -1793,7 +2240,7 @@ function anakUsahaImage(anak: AnakUsaha) {
                                     />
 
                                     <div
-                                        class="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-kitb-navy-900/35 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                                        class="pointer-events-none absolute inset-0 hidden items-end justify-center bg-gradient-to-t from-kitb-navy-900/35 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 md:flex"
                                     >
                                         <span
                                             class="mb-5 inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-kitb-navy-900 shadow-lg"
@@ -1822,14 +2269,14 @@ function anakUsahaImage(anak: AnakUsaha) {
              ===================================================== -->
 
         <section
-            v-if="(props.anakUsahas ?? []).length"
+            v-if="props.anakUsahas.length"
             id="anak-usaha"
             class="relative overflow-hidden py-16 sm:py-24 md:py-32"
         >
             <div class="mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
                 <div
-                    class="mb-12 flex flex-col justify-between gap-6 md:mb-16 md:flex-row md:items-end"
                     v-fade-in
+                    class="mb-12 flex flex-col justify-between gap-6 md:mb-16 md:flex-row md:items-end"
                 >
                     <div class="max-w-2xl">
                         <p
@@ -1853,12 +2300,10 @@ function anakUsahaImage(anak: AnakUsaha) {
 
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <article
-                        v-for="(anak, index) in anakUsahas"
+                        v-for="(anak, index) in props.anakUsahas"
                         :key="anak.id"
                         v-fade-in
-                        :style="{
-                            transitionDelay: `${index * 80}ms`,
-                        }"
+                        :style="{ transitionDelay: `${index * 80}ms` }"
                         class="group rounded-2xl border border-black/5 bg-white/60 p-5 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5 sm:p-6"
                     >
                         <div
@@ -1872,7 +2317,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 loading="lazy"
                                 decoding="async"
                             />
-
                             <Building2
                                 v-else
                                 class="h-7 w-7 text-kitb-green-700/40"
@@ -1908,11 +2352,177 @@ function anakUsahaImage(anak: AnakUsaha) {
         </section>
 
         <!-- =====================================================
+     MITRA PERUSAHAAN
+     ===================================================== -->
+
+        <section
+            v-if="props.mitraPerusahaans.length"
+            id="mitra-perusahaan"
+            class="relative overflow-hidden bg-white py-16 sm:py-24 md:py-32"
+        >
+            <div
+                class="pointer-events-none absolute -left-40 top-20 h-80 w-80 rounded-full bg-kitb-teal-100/50 blur-3xl"
+                aria-hidden="true"
+            />
+
+            <div
+                class="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-kitb-navy-100/40 blur-3xl"
+                aria-hidden="true"
+            />
+
+            <div class="relative mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
+                <!-- Header -->
+                <div
+                    v-fade-in
+                    class="mb-10 flex flex-col gap-6 md:mb-14 md:flex-row md:items-end md:justify-between"
+                >
+                    <div class="max-w-2xl">
+                        <p
+                            class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
+                        >
+                            Mitra perusahaan
+                        </p>
+
+                        <h2
+                            class="font-display font-bold leading-[1.08] text-kitb-green-900"
+                            style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
+                        >
+                            Tumbuh bersama mitra strategis.
+                        </h2>
+
+                        <p
+                            class="mt-5 max-w-xl text-[15px] leading-[1.8] text-kitb-ink-900/60"
+                        >
+                            Membangun kolaborasi dan sinergi bersama berbagai
+                            mitra untuk memperkuat ekosistem industri dan
+                            mendukung pertumbuhan kawasan.
+                        </p>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div
+                        v-if="props.mitraPerusahaans.length > 1"
+                        class="flex shrink-0 items-center gap-2"
+                    >
+                        <button
+                            type="button"
+                            aria-label="Mitra perusahaan sebelumnya"
+                            class="group flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-kitb-green-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-kitb-teal-300 hover:bg-kitb-green-700 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-kitb-teal-500/40 focus:ring-offset-2"
+                            @click="scrollMitra('prev')"
+                            @mouseenter="pauseMitraAutoplay"
+                            @mouseleave="resumeMitraAutoplay"
+                        >
+                            <ChevronRight
+                                class="h-5 w-5 rotate-180 transition-transform duration-300 group-hover:-translate-x-0.5"
+                            />
+                        </button>
+
+                        <button
+                            type="button"
+                            aria-label="Mitra perusahaan berikutnya"
+                            class="group flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-kitb-green-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-kitb-teal-300 hover:bg-kitb-green-700 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-kitb-teal-500/40 focus:ring-offset-2"
+                            @click="scrollMitra('next')"
+                            @mouseenter="pauseMitraAutoplay"
+                            @mouseleave="resumeMitraAutoplay"
+                        >
+                            <ChevronRight
+                                class="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5"
+                            />
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Carousel -->
+                <div class="relative">
+                    <div
+                        ref="mitraCarousel"
+                        class="mitra-carousel flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-6"
+                        tabindex="0"
+                        aria-label="Daftar mitra perusahaan"
+                        @mouseenter="pauseMitraAutoplay"
+                        @mouseleave="resumeMitraAutoplay"
+                        @focusin="pauseMitraAutoplay"
+                        @focusout="resumeMitraAutoplay"
+                    >
+                        <article
+                            v-for="(mitra, index) in props.mitraPerusahaans"
+                            :key="mitra.id"
+                            data-mitra-card
+                            v-fade-in
+                            :style="{ transitionDelay: `${index * 70}ms` }"
+                            class="group relative w-[82%] shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-kitb-teal-200 hover:shadow-xl hover:shadow-kitb-navy-900/5 sm:w-[calc(50%-12px)] sm:p-6 lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)]"
+                        >
+                            <!-- Decorative glow -->
+                            <div
+                                class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-kitb-teal-100/50 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
+                                aria-hidden="true"
+                            />
+
+                            <!-- Logo -->
+                            <div
+                                class="relative mb-5 flex h-24 items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/80 p-4 transition-colors duration-300 group-hover:bg-kitb-teal-50/40"
+                            >
+                                <img
+                                    v-if="mitraPerusahaanImage(mitra)"
+                                    :src="mitraPerusahaanImage(mitra)"
+                                    :alt="mitraPerusahaanName(mitra)"
+                                    class="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+
+                                <Handshake
+                                    v-else
+                                    class="h-9 w-9 text-kitb-green-700/30"
+                                    aria-hidden="true"
+                                />
+                            </div>
+
+                            <!-- Info -->
+                            <div class="relative min-w-0">
+                                <h3
+                                    class="line-clamp-2 font-display text-base font-semibold leading-[1.4] text-kitb-green-900 transition-colors duration-300 group-hover:text-kitb-navy-900 sm:text-lg"
+                                >
+                                    {{ mitraPerusahaanName(mitra) }}
+                                </h3>
+
+                                <a
+                                    v-if="mitra.website"
+                                    :href="normalizeWebsite(mitra.website)"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900 focus:outline-none focus:ring-2 focus:ring-kitb-teal-500/40 focus:ring-offset-2"
+                                    @click.stop
+                                >
+                                    Kunjungi website
+                                    <ExternalLink class="h-3.5 w-3.5" />
+                                </a>
+                            </div>
+                        </article>
+                    </div>
+
+                    <!-- Decorative bottom line -->
+                    <div
+                        v-if="props.mitraPerusahaans.length > 1"
+                        class="mt-2 flex items-center gap-3"
+                        aria-hidden="true"
+                    >
+                        <div class="h-px flex-1 bg-slate-100" />
+                        <span
+                            class="h-1.5 w-1.5 rounded-full bg-kitb-teal-500/60"
+                        />
+                        <div class="h-px flex-1 bg-slate-100" />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================
              INVESTASI
              ===================================================== -->
 
         <section
-            v-if="(props.peluangInvestasi ?? []).length"
+            v-if="props.peluangInvestasi.length"
             id="investasi"
             class="relative overflow-hidden bg-kitb-navy-900 py-16 sm:py-24 md:py-32"
         >
@@ -1935,8 +2545,8 @@ function anakUsahaImage(anak: AnakUsaha) {
 
             <div class="relative mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
                 <div
-                    class="mb-12 flex flex-col justify-between gap-6 md:mb-16 md:flex-row md:items-end"
                     v-fade-in
+                    class="mb-12 flex flex-col justify-between gap-6 md:mb-16 md:flex-row md:items-end"
                 >
                     <div class="max-w-2xl">
                         <p
@@ -1967,12 +2577,10 @@ function anakUsahaImage(anak: AnakUsaha) {
 
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <article
-                        v-for="(investment, index) in peluangInvestasi"
+                        v-for="(investment, index) in props.peluangInvestasi"
                         :key="investment.id"
                         v-fade-in
-                        :style="{
-                            transitionDelay: `${index * 80}ms`,
-                        }"
+                        :style="{ transitionDelay: `${index * 80}ms` }"
                         class="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.08]"
                     >
                         <div
@@ -2015,22 +2623,16 @@ function anakUsahaImage(anak: AnakUsaha) {
                             </p>
 
                             <div
-                                v-if="
-                                    investment.luas_lahan !== null &&
-                                    investment.luas_lahan !== undefined &&
-                                    investment.luas_lahan !== ''
-                                "
+                                v-if="hasValue(investment.luas_lahan)"
                                 class="flex items-center justify-between border-t border-white/10 pt-4"
                             >
-                                <span class="text-[12px] text-white/40">
-                                    Luas lahan
-                                </span>
-
+                                <span class="text-[12px] text-white/40"
+                                    >Luas lahan</span
+                                >
                                 <span
                                     class="font-display font-semibold text-white"
                                 >
-                                    {{ formatNumber(investment.luas_lahan) }}
-                                    Ha
+                                    {{ formatNumber(investment.luas_lahan) }} Ha
                                 </span>
                             </div>
                         </div>
@@ -2044,14 +2646,14 @@ function anakUsahaImage(anak: AnakUsaha) {
              ===================================================== -->
 
         <section
-            v-if="(props.beritas ?? []).length"
+            v-if="props.beritas.length"
             id="berita"
             class="relative overflow-hidden py-16 sm:py-24 md:py-32"
         >
             <div class="mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
                 <div
-                    class="mb-12 flex flex-col justify-between gap-6 md:mb-14 md:flex-row md:items-end"
                     v-fade-in
+                    class="mb-12 flex flex-col justify-between gap-6 md:mb-14 md:flex-row md:items-end"
                 >
                     <div class="max-w-2xl">
                         <p
@@ -2077,21 +2679,19 @@ function anakUsahaImage(anak: AnakUsaha) {
 
                     <Link
                         href="/berita"
-                        class="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900"
+                        class="hidden shrink-0 items-center gap-2 text-sm font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900 md:inline-flex"
                     >
                         Lihat semua berita
                         <ArrowRight class="h-4 w-4" />
                     </Link>
                 </div>
 
-                <div class="grid gap-6 md:grid-cols-3">
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <article
-                        v-for="(berita, index) in beritas"
+                        v-for="(berita, index) in props.beritas"
                         :key="berita.id"
                         v-fade-in
-                        :style="{
-                            transitionDelay: `${index * 100}ms`,
-                        }"
+                        :style="{ transitionDelay: `${index * 100}ms` }"
                         class="group overflow-hidden rounded-2xl border border-black/5 bg-white/65 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5"
                     >
                         <Link
@@ -2100,33 +2700,15 @@ function anakUsahaImage(anak: AnakUsaha) {
                                     ? `/berita/${berita.slug}`
                                     : '/berita'
                             "
-                            class="block"
+                            class="block h-full"
                         >
                             <div
-                                v-if="
-                                    imageUrl(berita, [
-                                        'gambar',
-                                        'gambar_path',
-                                        'thumbnail',
-                                    ])
-                                "
+                                v-if="beritaImage(berita)"
                                 class="aspect-[16/9] overflow-hidden bg-kitb-sand-100"
                             >
                                 <img
-                                    :src="
-                                        imageUrl(berita, [
-                                            'gambar',
-                                            'gambar_path',
-                                            'thumbnail',
-                                        ])
-                                    "
-                                    :alt="
-                                        firstValue(
-                                            berita,
-                                            ['judul', 'title'],
-                                            'Berita KITB',
-                                        )
-                                    "
+                                    :src="beritaImage(berita)"
+                                    :alt="beritaTitle(berita)"
                                     class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                                     loading="lazy"
                                     decoding="async"
@@ -2138,7 +2720,6 @@ function anakUsahaImage(anak: AnakUsaha) {
                                     class="mb-3 flex items-center gap-2 text-[12px] text-kitb-ink-900/45"
                                 >
                                     <CalendarDays class="h-3.5 w-3.5" />
-
                                     {{
                                         formatDate(
                                             berita.published_at ??
@@ -2150,35 +2731,14 @@ function anakUsahaImage(anak: AnakUsaha) {
                                 <h3
                                     class="mb-3 font-display text-lg font-semibold leading-[1.35] text-kitb-green-900 transition-colors group-hover:text-kitb-navy-900 sm:text-xl"
                                 >
-                                    {{
-                                        firstValue(
-                                            berita,
-                                            ["judul", "title"],
-                                            "Berita KITB",
-                                        )
-                                    }}
+                                    {{ beritaTitle(berita) }}
                                 </h3>
 
                                 <p
-                                    v-if="
-                                        firstValue(berita, [
-                                            'excerpt',
-                                            'ringkasan',
-                                            'deskripsi',
-                                        ])
-                                    "
+                                    v-if="beritaExcerpt(berita)"
                                     class="text-[14px] leading-[1.75] text-kitb-ink-900/60"
                                 >
-                                    {{
-                                        truncate(
-                                            firstValue(berita, [
-                                                "excerpt",
-                                                "ringkasan",
-                                                "deskripsi",
-                                            ]),
-                                            135,
-                                        )
-                                    }}
+                                    {{ truncate(beritaExcerpt(berita), 135) }}
                                 </p>
 
                                 <div
@@ -2211,7 +2771,7 @@ function anakUsahaImage(anak: AnakUsaha) {
              ===================================================== -->
 
         <section
-            v-if="(props.lowongans ?? []).length"
+            v-if="props.lowongans.length"
             id="karier"
             class="relative overflow-hidden bg-kitb-sand-100 py-16 sm:py-24 md:py-32"
         >
@@ -2234,8 +2794,8 @@ function anakUsahaImage(anak: AnakUsaha) {
 
             <div class="relative mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
                 <div
-                    class="mb-12 flex flex-col justify-between gap-6 md:mb-14 md:flex-row md:items-end"
                     v-fade-in
+                    class="mb-12 flex flex-col justify-between gap-6 md:mb-14 md:flex-row md:items-end"
                 >
                     <div class="max-w-2xl">
                         <p
@@ -2261,7 +2821,7 @@ function anakUsahaImage(anak: AnakUsaha) {
 
                     <Link
                         href="/karier"
-                        class="inline-flex items-center gap-2 text-sm font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900"
+                        class="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900"
                     >
                         Lihat semua lowongan
                         <ArrowRight class="h-4 w-4" />
@@ -2270,14 +2830,12 @@ function anakUsahaImage(anak: AnakUsaha) {
 
                 <div class="grid gap-4">
                     <Link
-                        v-for="(job, index) in lowongans"
+                        v-for="(job, index) in props.lowongans"
                         :key="job.id"
                         :href="job.slug ? `/karier/${job.slug}` : '/karier'"
                         v-fade-in
-                        :style="{
-                            transitionDelay: `${index * 80}ms`,
-                        }"
-                        class="group grid gap-5 rounded-2xl border border-black/5 bg-white/70 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5 sm:p-6 md:grid-cols-[1fr_auto] md:items-center"
+                        :style="{ transitionDelay: `${index * 80}ms` }"
+                        class="group grid gap-4 rounded-2xl border border-black/5 bg-white/70 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5 sm:p-6 md:grid-cols-[1fr_auto] md:items-center md:gap-5"
                     >
                         <div class="min-w-0">
                             <div class="mb-2 flex flex-wrap items-center gap-2">
@@ -2336,14 +2894,13 @@ function anakUsahaImage(anak: AnakUsaha) {
                                     class="inline-flex items-center gap-1.5"
                                 >
                                     <Clock3 class="h-3.5 w-3.5" />
-                                    Tutup
-                                    {{ formatDate(job.tanggal_tutup) }}
+                                    Tutup {{ formatDate(job.tanggal_tutup) }}
                                 </span>
                             </div>
                         </div>
 
                         <div
-                            class="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-kitb-green-700 transition-all duration-300 group-hover:translate-x-1 group-hover:bg-kitb-green-700 group-hover:text-white"
+                            class="hidden h-10 w-10 items-center justify-center rounded-full border border-black/10 text-kitb-green-700 transition-all duration-300 group-hover:translate-x-1 group-hover:bg-kitb-green-700 group-hover:text-white md:flex"
                         >
                             <ChevronRight class="h-4 w-4" />
                         </div>
@@ -2396,13 +2953,13 @@ function anakUsahaImage(anak: AnakUsaha) {
                         </div>
 
                         <p
-                            class="relative mb-5 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-300"
+                            class="mb-5 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-300"
                         >
                             Naik ke panggung industri global
                         </p>
 
                         <h2
-                            class="relative mx-auto max-w-3xl font-display font-bold leading-[1.12] text-white"
+                            class="mx-auto max-w-3xl font-display font-bold leading-[1.12] text-white"
                             style="font-size: clamp(1.7rem, 3.8vw, 3rem)"
                         >
                             Bersama para mitra dan investor, kami siap membangun
@@ -2417,7 +2974,7 @@ function anakUsahaImage(anak: AnakUsaha) {
                             Buton.
                         </p>
 
-                        <div class="relative mt-8 sm:mt-10">
+                        <div class="mt-8 sm:mt-10">
                             <a
                                 :href="visitUrl"
                                 class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-3.5 text-[15px] font-medium text-[#163a70] shadow-lg shadow-black/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/95 sm:w-auto"
@@ -2452,11 +3009,6 @@ function anakUsahaImage(anak: AnakUsaha) {
     font-family: inherit;
 }
 
-.kitb-landing input,
-.kitb-landing textarea {
-    font-size: 16px;
-}
-
 .kitb-landing a:focus-visible,
 .kitb-landing button:focus-visible {
     outline: 2px solid #2e6fbf;
@@ -2489,16 +3041,11 @@ function anakUsahaImage(anak: AnakUsaha) {
     border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%;
 }
 
-/* =========================================================
-   BLOB ANIMATION
-   ========================================================= */
-
 @keyframes driftA {
     0%,
     100% {
         transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
     }
-
     50% {
         transform: translate3d(18px, -24px, 0) rotate(6deg) scale(1.025);
     }
@@ -2509,7 +3056,6 @@ function anakUsahaImage(anak: AnakUsaha) {
     100% {
         transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
     }
-
     50% {
         transform: translate3d(-22px, 20px, 0) rotate(-5deg) scale(1.03);
     }
@@ -2523,22 +3069,219 @@ function anakUsahaImage(anak: AnakUsaha) {
     animation: driftB 19s ease-in-out infinite;
 }
 
-/* =========================================================
-   HERO
-   ========================================================= */
-
 .hero-blob-field {
     background: transparent;
 }
-
-/* =========================================================
-   STAT NUMBER
-   ========================================================= */
 
 .stat-number {
     font-family: "Poppins", sans-serif;
     font-weight: 700;
     letter-spacing: -0.025em;
+}
+
+/* =========================================================
+   RICH CONTENT (sambutan direktur dari rich text editor)
+   ---------------------------------------------------------
+   Memakai :deep() karena elemen dirender lewat v-html dan
+   tidak membawa atribut scoped.
+   ========================================================= */
+
+.rich-content {
+    max-width: 68ch;
+    font-size: 15.5px;
+    line-height: 1.9;
+    color: #475569;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+.rich-content-collapsed {
+    max-height: 22rem;
+    overflow: hidden;
+}
+
+/* Child langsung dari konten v-html */
+.rich-content > :deep(*:first-child) {
+    margin-top: 0;
+}
+
+.rich-content > :deep(*:last-child) {
+    margin-bottom: 0;
+}
+
+/* Paragraf & blok */
+/* Paragraf: tanpa margin, supaya jarak persis seperti yang diketik di editor
+   (Enter sekali = baris berikutnya, Enter dua kali = satu baris kosong) */
+.rich-content :deep(p) {
+    margin: 0;
+}
+
+/* Baris kosong dari editor (<p></p> / <p><br></p>) = tinggi satu baris */
+.rich-content :deep(p:empty) {
+    min-height: 1.9em;
+}
+
+.rich-content :deep(ul),
+.rich-content :deep(ol),
+.rich-content :deep(blockquote),
+.rich-content :deep(figure),
+.rich-content :deep(table) {
+    margin: 0.6em 0 1em;
+}
+
+.rich-content :deep(strong),
+.rich-content :deep(b) {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.rich-content :deep(em),
+.rich-content :deep(i) {
+    font-style: italic;
+}
+
+.rich-content :deep(u) {
+    text-underline-offset: 3px;
+}
+
+.rich-content :deep(mark) {
+    background: rgb(46 111 191 / 0.14);
+    color: inherit;
+    padding: 0 0.2em;
+    border-radius: 0.25em;
+}
+
+.rich-content :deep(a) {
+    color: #2e6fbf;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.2s ease;
+}
+
+.rich-content :deep(a:hover) {
+    color: #163a70;
+}
+
+.rich-content :deep(h1),
+.rich-content :deep(h2),
+.rich-content :deep(h3),
+.rich-content :deep(h4),
+.rich-content :deep(h5),
+.rich-content :deep(h6) {
+    margin: 1.6em 0 0.6em;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: #0f172a;
+}
+
+.rich-content :deep(h1),
+.rich-content :deep(h2) {
+    font-size: 1.3em;
+}
+
+.rich-content :deep(h3) {
+    font-size: 1.15em;
+}
+
+.rich-content :deep(h4),
+.rich-content :deep(h5),
+.rich-content :deep(h6) {
+    font-size: 1.02em;
+}
+
+.rich-content :deep(ul),
+.rich-content :deep(ol) {
+    padding-left: 1.4em;
+}
+
+.rich-content :deep(ul) {
+    list-style: disc;
+}
+
+.rich-content :deep(ol) {
+    list-style: decimal;
+}
+
+.rich-content :deep(li) {
+    margin: 0.35em 0;
+    padding-left: 0.2em;
+}
+
+.rich-content :deep(li::marker) {
+    color: #2e6fbf;
+}
+
+.rich-content :deep(li > p) {
+    margin: 0;
+}
+
+.rich-content :deep(blockquote) {
+    border-left: 3px solid #2e6fbf;
+    background: rgb(22 58 112 / 0.04);
+    padding: 0.9em 1.2em;
+    border-radius: 0 0.75rem 0.75rem 0;
+    font-style: italic;
+    color: #334155;
+}
+
+.rich-content :deep(hr) {
+    margin: 2em 0;
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+}
+
+.rich-content :deep(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 1.4em auto;
+    border-radius: 1rem;
+}
+
+.rich-content :deep(figcaption) {
+    margin-top: 0.5em;
+    font-size: 0.85em;
+    text-align: center;
+    color: #64748b;
+}
+
+.rich-content :deep(table) {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.92em;
+}
+
+.rich-content :deep(th),
+.rich-content :deep(td) {
+    border: 1px solid #e2e8f0;
+    padding: 0.55em 0.8em;
+    text-align: left;
+    vertical-align: top;
+}
+
+.rich-content :deep(th) {
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+@media (min-width: 640px) {
+    .rich-content {
+        font-size: 16px;
+    }
+
+    .rich-content-collapsed {
+        max-height: 26rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .rich-content {
+        font-size: 17px;
+    }
 }
 
 /* =========================================================
@@ -2597,7 +3340,7 @@ function anakUsahaImage(anak: AnakUsaha) {
 }
 
 /* =========================================================
-   TABLET
+   RESPONSIVE
    ========================================================= */
 
 @media (max-width: 1024px) {
@@ -2614,10 +3357,6 @@ function anakUsahaImage(anak: AnakUsaha) {
         right: 70px !important;
     }
 }
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
 
 @media (max-width: 640px) {
     :global(html) {
@@ -2644,10 +3383,6 @@ function anakUsahaImage(anak: AnakUsaha) {
         transform: translateY(18px);
     }
 }
-
-/* =========================================================
-   REDUCED MOTION
-   ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
     :global(html) {

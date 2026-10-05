@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-
 import { Link, usePage } from "@inertiajs/vue3";
-
 import {
     ArrowUpRight,
     Facebook,
@@ -12,12 +10,13 @@ import {
     MapPin,
     Youtube,
 } from "lucide-vue-next";
-
 import { kontakLink, navGroups, visitUrl } from "@/data/publicNavigation";
 
-/* =========================================================
-   Types
-========================================================= */
+/**
+ * =========================================================
+ * Types
+ * =========================================================
+ */
 
 interface PengaturanKontak {
     nama_perusahaan: string | null;
@@ -30,6 +29,8 @@ interface PengaturanKontak {
     latitude: number | null;
     longitude: number | null;
     maps_embed_url: string | null;
+
+    // Social media
     facebook: string | null;
     instagram: string | null;
     linkedin: string | null;
@@ -40,9 +41,11 @@ interface SharedPageProps {
     pengaturanKontak?: PengaturanKontak | null;
 }
 
-/* =========================================================
-   Inertia Shared Props
-========================================================= */
+/**
+ * =========================================================
+ * Inertia Shared Props
+ * =========================================================
+ */
 
 const page = usePage();
 
@@ -52,9 +55,11 @@ const sharedProps = computed(
 
 const pengaturan = computed(() => sharedProps.value.pengaturanKontak ?? null);
 
-/* =========================================================
-   Contact
-========================================================= */
+/**
+ * =========================================================
+ * Contact
+ * =========================================================
+ */
 
 const emailHref = computed(() => {
     const email = pengaturan.value?.email?.trim();
@@ -62,9 +67,11 @@ const emailHref = computed(() => {
     return email ? `mailto:${email}` : "#";
 });
 
-/* =========================================================
-   Social Media
-========================================================= */
+/**
+ * =========================================================
+ * Social Media
+ * =========================================================
+ */
 
 type SocialType = "facebook" | "instagram" | "linkedin" | "youtube";
 
@@ -298,7 +305,7 @@ const socialLinks = computed(() => {
                             :href="visitUrl"
                             class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-kitb-navy-900 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-kitb-sand-50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900 sm:w-auto"
                         >
-                            <span>Ajukan Kunjungan</span>
+                            <span> Ajukan Kunjungan </span>
 
                             <ArrowUpRight class="size-4" aria-hidden="true" />
                         </Link>
@@ -319,7 +326,7 @@ const socialLinks = computed(() => {
                     </div>
 
                     <!-- Social Media -->
-                    <div v-if="socialLinks.length > 0" class="mt-8">
+                    <div v-if="socialLinks.length" class="mt-8">
                         <p
                             class="text-xs font-semibold uppercase tracking-[0.16em] text-white/40"
                         >
@@ -353,7 +360,6 @@ const socialLinks = computed(() => {
             >
                 <p class="text-xs leading-5 text-white/40">
                     © {{ new Date().getFullYear() }}
-
                     {{
                         pengaturan?.nama_perusahaan ||
                         "PT. Kawasan Industri Tanjung Buton"
