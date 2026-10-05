@@ -617,7 +617,7 @@ function openCreate() {
             ?.querySelector<HTMLElement>(
                 "input:not([disabled]), textarea, select, button",
             )
-            ?.focus();
+            ?.focus({ preventScroll: true });
     });
 }
 
@@ -685,7 +685,7 @@ function openEdit(kawasan: Kawasan) {
             ?.querySelector<HTMLElement>(
                 "input:not([disabled]), textarea, select, button",
             )
-            ?.focus();
+            ?.focus({ preventScroll: true });
     });
 }
 
@@ -969,7 +969,7 @@ function submitForm() {
         nextTick(() => {
             formModalRef.value
                 ?.querySelector<HTMLElement>('[aria-invalid="true"]')
-                ?.focus();
+                ?.focus({ preventScroll: true });
         });
 
         return;
@@ -1081,7 +1081,7 @@ function openDetail(kawasan: Kawasan) {
             ?.querySelector<HTMLElement>(
                 "button, [tabindex]:not([tabindex='-1'])",
             )
-            ?.focus();
+            ?.focus({ preventScroll: true });
     });
 }
 
@@ -1790,7 +1790,7 @@ onBeforeUnmount(() => {
 
                 <section
                     ref="formModalRef"
-                    class="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+                    class="relative flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
                 >
                     <!-- Header -->
                     <div
@@ -1825,10 +1825,12 @@ onBeforeUnmount(() => {
 
                     <!-- Body -->
                     <form
-                        class="relative min-h-0 flex-1 overflow-y-auto overscroll-contain"
+                        class="flex min-h-0 flex-1 flex-col overflow-hidden"
                         @submit.prevent="submitForm"
                     >
-                        <div class="space-y-6 p-5 sm:p-6">
+                        <div
+                            class="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-5 sm:p-6"
+                        >
                             <!-- Basic -->
                             <div>
                                 <div class="mb-4 flex items-center gap-2">
@@ -2418,7 +2420,7 @@ onBeforeUnmount(() => {
 
                         <!-- Footer -->
                         <div
-                            class="sticky bottom-0 flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur sm:flex-row sm:justify-end sm:px-6 dark:border-slate-800 dark:bg-slate-900/95"
+                            class="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-6 dark:border-slate-800 dark:bg-slate-900"
                         >
                             <button
                                 type="button"
@@ -2477,7 +2479,7 @@ onBeforeUnmount(() => {
 
                 <section
                     ref="detailModalRef"
-                    class="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+                    class="relative flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
                 >
                     <div
                         class="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800 sm:px-6"
