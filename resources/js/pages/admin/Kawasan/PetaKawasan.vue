@@ -99,7 +99,7 @@ const props = defineProps<{
     };
 }>();
 
-const BASE_URL = "/kawasan/peta-kawasan";
+const BASE_URL = "/admin/kawasan/peta-kawasan";
 
 /**
  * |--------------------------------------------------------------------------
