@@ -13,7 +13,14 @@ import {
     UserRound,
     X,
 } from "lucide-vue-next";
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
 
@@ -63,6 +70,9 @@ const previewUrl = ref<string | null>(null);
 const objectUrl = ref<string | null>(null);
 
 const isSubmitting = ref(false);
+const isProcessingFoto = ref(false);
+
+const MAX_FOTO_SIZE = 1024 * 1024; // 1 MB
 
 const form = useForm({
     nama_direktur: props.sambutanDirektur?.nama_direktur ?? "",
@@ -125,6 +135,22 @@ const hasSambutanContent = computed(() => {
 | Editor
 |--------------------------------------------------------------------------
 */
+
+/*
+| Editor berada di dalam blok v-else (muncul setelah skeleton hilang),
+| jadi isinya harus diisi saat elemen benar-benar sudah dirender.
+| Watch ini berjalan setiap kali editor muncul/dibuat ulang.
+*/
+
+watch(
+    editorRef,
+    (el) => {
+        if (el) {
+            el.innerHTML = form.sambutan_direktur;
+        }
+    },
+    { flush: "post" },
+);
 
 const syncEditor = () => {
     if (!editorRef.value) {
@@ -208,18 +234,107 @@ const handleEditorPaste = (event: ClipboardEvent) => {
 |--------------------------------------------------------------------------
 */
 
-const handleFile = (event: Event) => {
+const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+/*
+| Kompres & konversi gambar di browser.
+| Foto dari kamera HP biasanya 2-8 MB (atau HEIC di iPhone),
+| jadi diperkecil dulu sebelum dicek batas ukuran.
+*/
+
+const loadImage = (file: File): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(img);
+        };
+
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error("Gagal membaca gambar."));
+        };
+
+        img.src = url;
+    });
+
+const canvasToBlob = (
+    canvas: HTMLCanvasElement,
+    type: string,
+    quality: number,
+): Promise<Blob | null> =>
+    new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+
+const compressImage = async (file: File): Promise<File> => {
+    const needsConversion = !allowedTypes.includes(file.type);
+
+    // Sudah kecil dan formatnya valid → tidak perlu diproses.
+    if (!needsConversion && file.size <= MAX_FOTO_SIZE) {
+        return file;
+    }
+
+    try {
+        const img = await loadImage(file);
+
+        let maxWidth = 1200;
+        let quality = 0.85;
+
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const scale = Math.min(1, maxWidth / img.width);
+
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+
+            const ctx = canvas.getContext("2d");
+
+            if (!ctx) {
+                return file;
+            }
+
+            // Latar putih agar PNG transparan tidak menjadi hitam di JPEG.
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+
+            if (blob && blob.size <= MAX_FOTO_SIZE) {
+                return new File(
+                    [blob],
+                    file.name.replace(/\.\w+$/, "") + ".jpg",
+                    { type: "image/jpeg" },
+                );
+            }
+
+            maxWidth = Math.round(maxWidth * 0.8);
+            quality = Math.max(0.6, quality - 0.08);
+        }
+
+        return file;
+    } catch {
+        return file;
+    }
+};
+
+const handleFile = async (event: Event) => {
     const target = event.target as HTMLInputElement;
 
-    const file = target.files?.[0] ?? null;
+    const selected = target.files?.[0] ?? null;
 
-    if (!file) {
+    if (!selected) {
         return;
     }
 
-    const maxSize = 1024 * 1024;
+    isProcessingFoto.value = true;
 
-    if (file.size > maxSize) {
+    const file = await compressImage(selected);
+
+    isProcessingFoto.value = false;
+
+    if (file.size > MAX_FOTO_SIZE) {
         target.value = "";
         form.foto_direktur = null;
 
@@ -227,8 +342,6 @@ const handleFile = (event: Event) => {
 
         return;
     }
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
     if (!allowedTypes.includes(file.type)) {
         target.value = "";
@@ -294,21 +407,32 @@ const removeExistingFoto = () => {
 */
 
 const submitForm = () => {
-    if (isSubmitting.value) {
+    if (isSubmitting.value || isProcessingFoto.value) {
         return;
     }
 
     syncEditor();
 
+    form.clearErrors();
+
+    let hasError = false;
+
     if (!form.nama_direktur.trim()) {
-        return;
+        form.setError("nama_direktur", "Nama direktur wajib diisi.");
+        hasError = true;
     }
 
     if (!form.jabatan_direktur.trim()) {
-        return;
+        form.setError("jabatan_direktur", "Jabatan wajib diisi.");
+        hasError = true;
     }
 
     if (!hasSambutanContent.value) {
+        form.setError("sambutan_direktur", "Isi sambutan wajib diisi.");
+        hasError = true;
+    }
+
+    if (hasError) {
         return;
     }
 
@@ -343,12 +467,17 @@ const submitForm = () => {
 
         onError: (errors) => {
             console.error("Gagal memperbarui sambutan direktur:", errors);
+
+            // Tampilkan error dari server pada field terkait.
+            Object.entries(errors).forEach(([key, message]) => {
+                form.setError(key as keyof typeof form.data, message as string);
+            });
         },
 
         onSuccess: () => {
             /*
-                | Reset file baru setelah berhasil.
-                */
+            | Reset file baru setelah berhasil.
+            */
 
             if (objectUrl.value) {
                 URL.revokeObjectURL(objectUrl.value);
@@ -379,11 +508,6 @@ const submitForm = () => {
 
 onMounted(async () => {
     await nextTick();
-
-    if (editorRef.value) {
-        editorRef.value.innerHTML =
-            props.sambutanDirektur?.sambutan_direktur ?? "";
-    }
 
     removeRouterStartListener = router.on("start", (event) => {
         if (!event.detail.visit.preserveState) {
@@ -996,14 +1120,20 @@ onBeforeUnmount(() => {
                                     <div class="mt-4">
                                         <label
                                             class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-3 text-xs font-medium text-slate-600 transition hover:border-blue-400 hover:bg-blue-50/30 hover:text-blue-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:bg-blue-950/20"
+                                            :class="{
+                                                'pointer-events-none opacity-60':
+                                                    isProcessingFoto,
+                                            }"
                                         >
                                             <Upload class="size-4" />
 
                                             <span>
                                                 {{
-                                                    previewUrl
-                                                        ? "Ganti Foto"
-                                                        : "Pilih Foto"
+                                                    isProcessingFoto
+                                                        ? "Memproses foto..."
+                                                        : previewUrl
+                                                          ? "Ganti Foto"
+                                                          : "Pilih Foto"
                                                 }}
                                             </span>
 
@@ -1020,6 +1150,7 @@ onBeforeUnmount(() => {
                                             class="mt-2 text-center text-[10px] leading-4 text-slate-400"
                                         >
                                             JPG, JPEG, PNG, WEBP · Maksimal 1 MB
+                                            (foto besar dikompres otomatis)
                                         </p>
 
                                         <p
@@ -1109,12 +1240,7 @@ onBeforeUnmount(() => {
 
                                 <button
                                     type="submit"
-                                    :disabled="
-                                        isSubmitting ||
-                                        !form.nama_direktur.trim() ||
-                                        !form.jabatan_direktur.trim() ||
-                                        !hasSambutanContent
-                                    "
+                                    :disabled="isSubmitting || isProcessingFoto"
                                     class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-500/10 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-950"
                                 >
                                     <Save
