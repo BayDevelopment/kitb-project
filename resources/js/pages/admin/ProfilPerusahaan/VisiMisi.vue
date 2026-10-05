@@ -511,7 +511,7 @@ const submitMisi = (): void => {
 
     if (misiModalMode.value === "create") {
         router.post(
-            `/profil-perusahaan/visi-misi/${props.visi.id}/misi`,
+            `/admin/profil-perusahaan/visi-misi/${props.visi.id}/misi`,
             {
                 isi,
             },
@@ -541,7 +541,7 @@ const submitMisi = (): void => {
     }
 
     router.put(
-        `/profil-perusahaan/visi-misi/${props.visi.id}/misi/${selectedMisi.value.id}`,
+        `/admin/profil-perusahaan/visi-misi/${props.visi.id}/misi/${selectedMisi.value.id}`,
         {
             isi,
         },
@@ -615,7 +615,7 @@ const deleteMisi = (): void => {
     processingDelete.value = true;
 
     router.delete(
-        `/profil-perusahaan/visi-misi/${props.visi.id}/misi/${selectedMisi.value.id}`,
+        `/admin/profil-perusahaan/visi-misi/${props.visi.id}/misi/${selectedMisi.value.id}`,
         {
             preserveScroll: true,
 
@@ -654,7 +654,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
     movingMisiId.value = misi.id;
 
     router.patch(
-        `/profil-perusahaan/visi-misi/${props.visi.id}/misi/${misi.id}/move`,
+        `/admin/profil-perusahaan/visi-misi/${props.visi.id}/misi/${misi.id}/move`,
         {
             direction,
         },
