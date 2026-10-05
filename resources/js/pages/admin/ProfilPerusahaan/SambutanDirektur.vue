@@ -69,7 +69,7 @@ const editorRef = ref<HTMLDivElement | null>(null);
 const previewUrl = ref<string | null>(null);
 const objectUrl = ref<string | null>(null);
 
-const DASHBOARD_URL = "/admin/dashboard"; // ganti sesuai URL dashboard kamu
+const DASHBOARD_URL = "/dashboard";
 
 const goToDashboard = () => {
     router.visit(DASHBOARD_URL);
