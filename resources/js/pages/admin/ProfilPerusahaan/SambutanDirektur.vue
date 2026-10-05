@@ -69,6 +69,12 @@ const editorRef = ref<HTMLDivElement | null>(null);
 const previewUrl = ref<string | null>(null);
 const objectUrl = ref<string | null>(null);
 
+const DASHBOARD_URL = "/admin/dashboard"; // ganti sesuai URL dashboard kamu
+
+const goToDashboard = () => {
+    router.visit(DASHBOARD_URL);
+};
+
 const isSubmitting = ref(false);
 const isProcessingFoto = ref(false);
 
@@ -734,7 +740,7 @@ onBeforeUnmount(() => {
                         <button
                             type="button"
                             class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-950"
-                            @click="router.visit('/admin/profil-perusahaan')"
+                            @click="goToDashboard"
                         >
                             <ArrowLeft class="size-4" />
                             Kembali
@@ -1230,9 +1236,7 @@ onBeforeUnmount(() => {
                                     type="button"
                                     :disabled="isSubmitting"
                                     class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                                    @click="
-                                        router.visit('/admin/profil-perusahaan')
-                                    "
+                                    @click="goToDashboard"
                                 >
                                     <X class="size-4" />
                                     Batal
