@@ -353,7 +353,6 @@ const navSkeletonGroups = mainNavItems.map((item, groupIndex) => ({
                 </div>
 
                 <div v-else key="footer-navigation" class="min-w-0">
-                    <NavFooter :items="footerNavItems" />
                     <NavUser />
                 </div>
             </Transition>
