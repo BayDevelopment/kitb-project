@@ -146,7 +146,7 @@ const props = defineProps<{
     statuses?: Record<string, string> | string[];
 }>();
 
-const BASE_URL = "/hubungan-investor/peluang-investasi";
+const BASE_URL = "/admin/hubungan-investor/peluang-investasi";
 
 const MAX_IMAGE_SIZE = 1024 * 1024; // 1 MB (hasil akhir yang diupload)
 const MAX_INPUT_SIZE = 15 * 1024 * 1024; // 15 MB (file mentah sebelum kompres)
