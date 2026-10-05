@@ -378,7 +378,7 @@ const submitVisi = (): void => {
 
     if (visiModalMode.value === "create") {
         router.post(
-            "/profil-perusahaan/visi-misi/visi",
+            "/admin/profil-perusahaan/visi-misi/visi",
             {
                 isi,
             },
@@ -408,7 +408,7 @@ const submitVisi = (): void => {
     }
 
     router.put(
-        `/profil-perusahaan/visi-misi/visi/${props.visi.id}`,
+        `/admin/profil-perusahaan/visi-misi/visi/${props.visi.id}`,
         {
             isi,
         },
