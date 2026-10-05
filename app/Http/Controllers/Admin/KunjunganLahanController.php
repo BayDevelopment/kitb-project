@@ -22,41 +22,44 @@ class KunjunganLahanController extends Controller
         $tanggal = $request->input('tanggal');
 
         $kunjunganLahan = KunjunganLahan::query()
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query
-                        ->where(
-                            'nomor_registrasi',
-                            'like',
-                            "%{$search}%"
-                        )
-                        ->orWhere(
-                            'nama',
-                            'like',
-                            "%{$search}%"
-                        )
-                        ->orWhere(
-                            'instansi',
-                            'like',
-                            "%{$search}%"
-                        )
-                        ->orWhere(
-                            'email',
-                            'like',
-                            "%{$search}%"
-                        )
-                        ->orWhere(
-                            'telepon',
-                            'like',
-                            "%{$search}%"
-                        )
-                        ->orWhere(
-                            'area_lahan',
-                            'like',
-                            "%{$search}%"
-                        );
-                });
-            })
+            ->when(
+                $search !== '',
+                function ($query) use ($search) {
+                    $query->where(function ($query) use ($search) {
+                        $query
+                            ->where(
+                                'nomor_registrasi',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'nama',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'instansi',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'email',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'telepon',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'area_lahan',
+                                'like',
+                                "%{$search}%"
+                            );
+                    });
+                }
+            )
             ->when(
                 in_array(
                     $status,
@@ -99,8 +102,6 @@ class KunjunganLahanController extends Controller
 
     /**
      * Menyimpan pengajuan kunjungan lahan baru.
-     *
-     * Digunakan oleh form pengajuan kunjungan dari public.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -115,29 +116,27 @@ class KunjunganLahanController extends Controller
         ) {
             return back()
                 ->withInput()
-                ->with(
-                    'error',
-                    'Jadwal kunjungan pada waktu tersebut sudah digunakan.'
-                );
+                ->with('toast', [
+                    'type' => 'error',
+                    'message' => 'Jadwal kunjungan pada waktu tersebut sudah digunakan.',
+                ]);
         }
 
         DB::transaction(function () use ($validated) {
             KunjunganLahan::create([
                 ...$validated,
-                'nomor_registrasi' =>
-                $this->generateRegistrationNumber(),
-                'status' =>
-                KunjunganLahan::STATUS_PENDING,
+                'nomor_registrasi' => $this->generateRegistrationNumber(),
+                'status' => KunjunganLahan::STATUS_PENDING,
                 'disetujui_at' => null,
                 'ditolak_at' => null,
                 'selesai_at' => null,
             ]);
         });
 
-        return back()->with(
-            'success',
-            'Pengajuan kunjungan lahan berhasil dibuat.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Pengajuan kunjungan lahan berhasil dibuat.',
+        ]);
     }
 
     /**
@@ -162,18 +161,18 @@ class KunjunganLahanController extends Controller
         ) {
             return back()
                 ->withInput()
-                ->with(
-                    'error',
-                    'Jadwal kunjungan pada waktu tersebut sudah digunakan.'
-                );
+                ->with('toast', [
+                    'type' => 'error',
+                    'message' => 'Jadwal kunjungan pada waktu tersebut sudah digunakan.',
+                ]);
         }
 
         $kunjunganLahan->update($validated);
 
-        return back()->with(
-            'success',
-            'Data kunjungan lahan berhasil diperbarui.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Data kunjungan lahan berhasil diperbarui.',
+        ]);
     }
 
     /**
@@ -184,10 +183,10 @@ class KunjunganLahanController extends Controller
     ): RedirectResponse {
         $kunjunganLahan->delete();
 
-        return back()->with(
-            'success',
-            'Data kunjungan lahan berhasil dihapus.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Data kunjungan lahan berhasil dihapus.',
+        ]);
     }
 
     /**
@@ -197,42 +196,39 @@ class KunjunganLahanController extends Controller
         KunjunganLahan $kunjunganLahan
     ): RedirectResponse {
         if (!$kunjunganLahan->isPending()) {
-            return back()->with(
-                'error',
-                'Hanya pengajuan dengan status pending yang dapat disetujui.'
-            );
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Hanya pengajuan dengan status pending yang dapat disetujui.',
+            ]);
         }
 
         if (
             $this->hasScheduleConflict(
-                $kunjunganLahan
-                    ->tanggal_kunjungan
-                    ->format('Y-m-d'),
+                $kunjunganLahan->tanggal_kunjungan->format('Y-m-d'),
                 $kunjunganLahan->waktu_mulai,
                 $kunjunganLahan->waktu_selesai,
                 $kunjunganLahan->id
             )
         ) {
-            return back()->with(
-                'error',
-                'Jadwal kunjungan bertabrakan dengan kunjungan lain.'
-            );
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Jadwal kunjungan bertabrakan dengan kunjungan lain.',
+            ]);
         }
 
         DB::transaction(function () use ($kunjunganLahan) {
             $kunjunganLahan->update([
-                'status' =>
-                KunjunganLahan::STATUS_DISETUJUI,
+                'status' => KunjunganLahan::STATUS_DISETUJUI,
                 'disetujui_at' => now(),
                 'ditolak_at' => null,
                 'selesai_at' => null,
             ]);
         });
 
-        return back()->with(
-            'success',
-            'Pengajuan kunjungan berhasil disetujui.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Pengajuan kunjungan berhasil disetujui.',
+        ]);
     }
 
     /**
@@ -243,10 +239,10 @@ class KunjunganLahanController extends Controller
         KunjunganLahan $kunjunganLahan
     ): RedirectResponse {
         if (!$kunjunganLahan->isPending()) {
-            return back()->with(
-                'error',
-                'Hanya pengajuan dengan status pending yang dapat ditolak.'
-            );
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Hanya pengajuan dengan status pending yang dapat ditolak.',
+            ]);
         }
 
         $validated = $request->validate([
@@ -262,22 +258,18 @@ class KunjunganLahanController extends Controller
             $validated
         ) {
             $kunjunganLahan->update([
-                'status' =>
-                KunjunganLahan::STATUS_DITOLAK,
-
-                'catatan_admin' =>
-                $validated['catatan_admin'] ?? null,
-
+                'status' => KunjunganLahan::STATUS_DITOLAK,
+                'catatan_admin' => $validated['catatan_admin'] ?? null,
                 'ditolak_at' => now(),
                 'disetujui_at' => null,
                 'selesai_at' => null,
             ]);
         });
 
-        return back()->with(
-            'success',
-            'Pengajuan kunjungan berhasil ditolak.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Pengajuan kunjungan berhasil ditolak.',
+        ]);
     }
 
     /**
@@ -287,24 +279,23 @@ class KunjunganLahanController extends Controller
         KunjunganLahan $kunjunganLahan
     ): RedirectResponse {
         if (!$kunjunganLahan->isDisetujui()) {
-            return back()->with(
-                'error',
-                'Hanya kunjungan yang sudah disetujui yang dapat diselesaikan.'
-            );
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Hanya kunjungan yang sudah disetujui yang dapat diselesaikan.',
+            ]);
         }
 
         DB::transaction(function () use ($kunjunganLahan) {
             $kunjunganLahan->update([
-                'status' =>
-                KunjunganLahan::STATUS_SELESAI,
+                'status' => KunjunganLahan::STATUS_SELESAI,
                 'selesai_at' => now(),
             ]);
         });
 
-        return back()->with(
-            'success',
-            'Kunjungan lahan berhasil ditandai sebagai selesai.'
-        );
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Kunjungan lahan berhasil ditandai sebagai selesai.',
+        ]);
     }
 
     /**
@@ -395,12 +386,6 @@ class KunjunganLahanController extends Controller
 
     /**
      * Mengecek bentrok jadwal kunjungan.
-     *
-     * Jadwal dianggap bentrok apabila:
-     *
-     * waktu mulai A < waktu selesai B
-     * DAN
-     * waktu selesai A > waktu mulai B
      */
     private function hasScheduleConflict(
         string $tanggal,
