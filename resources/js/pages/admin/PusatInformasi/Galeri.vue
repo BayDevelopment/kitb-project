@@ -97,7 +97,7 @@ let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 
 const applyFilter = () => {
     router.get(
-        "/pusat-informasi/galeri",
+        "/admin/pusat-informasi/galeri",
         {
             search: search.value.trim() || undefined,
             kategori: kategori.value !== "all" ? kategori.value : undefined,
@@ -135,7 +135,7 @@ const resetFilter = () => {
     status.value = "all";
 
     router.get(
-        "/pusat-informasi/galeri",
+        "/admin/pusat-informasi/galeri",
         {},
         {
             preserveState: true,
@@ -585,7 +585,7 @@ const submitForm = () => {
     */
 
     if (modalMode.value === "create") {
-        router.post("/pusat-informasi/galeri", data, {
+        router.post("/admin/pusat-informasi/galeri", data, {
             forceFormData: true,
             preserveScroll: true,
 
@@ -628,32 +628,36 @@ const submitForm = () => {
 
     data.append("_method", "PUT");
 
-    router.post(`/pusat-informasi/galeri/${selectedGaleri.value.id}`, data, {
-        forceFormData: true,
-        preserveScroll: true,
+    router.post(
+        `/admin/pusat-informasi/galeri/${selectedGaleri.value.id}`,
+        data,
+        {
+            forceFormData: true,
+            preserveScroll: true,
 
-        onSuccess: () => {
-            resetFormState();
+            onSuccess: () => {
+                resetFormState();
+            },
+
+            onError: (errors) => {
+                console.error("Gagal memperbarui galeri:", errors);
+
+                const firstError = Object.values(errors)[0];
+
+                if (firstError) {
+                    toast.error(
+                        Array.isArray(firstError)
+                            ? firstError[0]
+                            : String(firstError),
+                    );
+                }
+            },
+
+            onFinish: () => {
+                processingForm.value = false;
+            },
         },
-
-        onError: (errors) => {
-            console.error("Gagal memperbarui galeri:", errors);
-
-            const firstError = Object.values(errors)[0];
-
-            if (firstError) {
-                toast.error(
-                    Array.isArray(firstError)
-                        ? firstError[0]
-                        : String(firstError),
-                );
-            }
-        },
-
-        onFinish: () => {
-            processingForm.value = false;
-        },
-    });
+    );
 };
 
 /*
@@ -669,7 +673,7 @@ const deleteGaleri = () => {
 
     processingDelete.value = true;
 
-    router.delete(`/pusat-informasi/galeri/${selectedGaleri.value.id}`, {
+    router.delete(`/admin/pusat-informasi/galeri/${selectedGaleri.value.id}`, {
         preserveScroll: true,
 
         onSuccess: () => {
@@ -711,7 +715,7 @@ const toggleStatus = (galeri: Galeri) => {
     togglingStatusId.value = galeri.id;
 
     router.patch(
-        `/pusat-informasi/galeri/${galeri.id}/toggle-aktif`,
+        `/admin/pusat-informasi/galeri/${galeri.id}/toggle-aktif`,
         {},
         {
             preserveScroll: true,
@@ -752,7 +756,7 @@ const moveGaleri = (galeri: Galeri, direction: "up" | "down") => {
     movingDirection.value = direction;
 
     router.patch(
-        `/pusat-informasi/galeri/${galeri.id}/move`,
+        `/admin/pusat-informasi/galeri/${galeri.id}/move`,
         {
             direction,
         },

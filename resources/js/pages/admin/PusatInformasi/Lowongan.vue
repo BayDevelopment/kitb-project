@@ -109,7 +109,7 @@ let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 
 const applyFilter = () => {
     router.get(
-        "/pusat-informasi/lowongan",
+        "/admin/pusat-informasi/lowongan",
         {
             search: search.value.trim() || undefined,
             status: status.value !== "all" ? status.value : undefined,
@@ -141,7 +141,7 @@ const resetFilter = () => {
     status.value = "all";
 
     router.get(
-        "/pusat-informasi/lowongan",
+        "/admin/pusat-informasi/lowongan",
         {},
         {
             preserveState: true,
@@ -575,7 +575,7 @@ const submitForm = () => {
     */
 
     if (modalMode.value === "create") {
-        router.post("/pusat-informasi/lowongan", data, {
+        router.post("/admin/pusat-informasi/lowongan", data, {
             preserveScroll: true,
 
             onSuccess: () => {
@@ -611,27 +611,31 @@ const submitForm = () => {
         return;
     }
 
-    router.put(`/pusat-informasi/lowongan/${selectedLowongan.value.id}`, data, {
-        preserveScroll: true,
+    router.put(
+        `/admin/pusat-informasi/lowongan/${selectedLowongan.value.id}`,
+        data,
+        {
+            preserveScroll: true,
 
-        onSuccess: () => {
-            resetFormState();
+            onSuccess: () => {
+                resetFormState();
+            },
+
+            onError: (errors) => {
+                console.error("Gagal memperbarui lowongan:", errors);
+
+                const message = getFirstError(errors);
+
+                if (message) {
+                    toast.error(message);
+                }
+            },
+
+            onFinish: () => {
+                processingForm.value = false;
+            },
         },
-
-        onError: (errors) => {
-            console.error("Gagal memperbarui lowongan:", errors);
-
-            const message = getFirstError(errors);
-
-            if (message) {
-                toast.error(message);
-            }
-        },
-
-        onFinish: () => {
-            processingForm.value = false;
-        },
-    });
+    );
 };
 
 /*
@@ -647,28 +651,31 @@ const deleteLowongan = () => {
 
     processingDelete.value = true;
 
-    router.delete(`/pusat-informasi/lowongan/${selectedLowongan.value.id}`, {
-        preserveScroll: true,
+    router.delete(
+        `/admin/pusat-informasi/lowongan/${selectedLowongan.value.id}`,
+        {
+            preserveScroll: true,
 
-        onSuccess: () => {
-            showDelete.value = false;
-            selectedLowongan.value = null;
+            onSuccess: () => {
+                showDelete.value = false;
+                selectedLowongan.value = null;
+            },
+
+            onError: (errors) => {
+                console.error("Gagal menghapus lowongan:", errors);
+
+                const message = getFirstError(errors);
+
+                if (message) {
+                    toast.error(message);
+                }
+            },
+
+            onFinish: () => {
+                processingDelete.value = false;
+            },
         },
-
-        onError: (errors) => {
-            console.error("Gagal menghapus lowongan:", errors);
-
-            const message = getFirstError(errors);
-
-            if (message) {
-                toast.error(message);
-            }
-        },
-
-        onFinish: () => {
-            processingDelete.value = false;
-        },
-    });
+    );
 };
 
 /*
@@ -687,7 +694,7 @@ const toggleStatus = (lowongan: Lowongan) => {
     togglingStatusId.value = lowongan.id;
 
     router.patch(
-        `/pusat-informasi/lowongan/${lowongan.id}/toggle-status`,
+        `/admin/pusat-informasi/lowongan/${lowongan.id}/toggle-status`,
         {
             status: nextStatus,
         },
@@ -725,7 +732,7 @@ const toggleFeatured = (lowongan: Lowongan) => {
     togglingFeaturedId.value = lowongan.id;
 
     router.patch(
-        `/pusat-informasi/lowongan/${lowongan.id}/toggle-featured`,
+        `/admin/pusat-informasi/lowongan/${lowongan.id}/toggle-featured`,
         {},
         {
             preserveScroll: true,
@@ -762,7 +769,7 @@ const moveLowongan = (lowongan: Lowongan, direction: "up" | "down") => {
     movingDirection.value = direction;
 
     router.patch(
-        `/pusat-informasi/lowongan/${lowongan.id}/move`,
+        `/admin/pusat-informasi/lowongan/${lowongan.id}/move`,
         {
             direction,
         },
