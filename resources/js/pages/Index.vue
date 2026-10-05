@@ -1937,7 +1937,7 @@ onBeforeUnmount(() => {
                                 </p>
 
                                 <Link
-                                    href="/rute-pelayaran-lokasi"
+                                    href="/hubungan-investor/rute-pelayaran-lokasi"
                                     class="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-kitb-green-700/15 bg-white px-4 py-2.5 text-[12px] font-semibold text-kitb-green-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-kitb-green-700/25 hover:bg-kitb-green-700 hover:text-white"
                                 >
                                     Lihat semua rute
