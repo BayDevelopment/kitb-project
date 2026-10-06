@@ -13,7 +13,11 @@ class StrukturPerusahaan extends Model
 
     protected $fillable = [
         'nama',
+        'nama_en',
+        'nama_zh',
         'jabatan',
+        'jabatan_en',
+        'jabatan_zh',
         'gambar',
         'urutan',
         'aktif',

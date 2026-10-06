@@ -17,37 +17,79 @@ class DatabaseSeeder extends Seeder
             $now = now();
 
             /*
-            |--------------------------------------------------------------------------
-            | 1. COMPANY PROFILE
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 1. COMPANY PROFILE
+|--------------------------------------------------------------------------
+*/
+
             DB::table('company_profiles')->updateOrInsert(
                 ['id' => 1],
                 [
                     'nama_perusahaan' => 'PT Kawasan Industri Tanjung Buton',
+
+                    // Indonesian
                     'tentang_kami' => 'PT Kawasan Industri Tanjung Buton (KITB) merupakan pengelola kawasan industri yang dikembangkan untuk mendukung pertumbuhan industri, investasi, logistik, dan kegiatan ekonomi strategis di Indonesia.',
+
+                    // English
+                    'tentang_kami_en' => 'PT Kawasan Industri Tanjung Buton (KITB) is an industrial estate developer and operator established to support industrial growth, investment, logistics, and strategic economic activities in Indonesia.',
+
+                    // Mandarin
+                    'tentang_kami_zh' => 'PT Kawasan Industri Tanjung Buton（KITB）是一家工业园区开发与运营企业，致力于支持印度尼西亚的产业发展、投资、物流以及战略经济活动。',
+
+                    // Indonesian
                     'latar_belakang' => 'Kawasan Industri Tanjung Buton dikembangkan sebagai kawasan industri terpadu dengan dukungan infrastruktur, akses logistik, serta potensi konektivitas menuju jalur perdagangan regional dan nasional.',
+
+                    // English
+                    'latar_belakang_en' => 'Tanjung Buton Industrial Estate is developed as an integrated industrial area supported by infrastructure, logistics access, and connectivity potential to regional and national trade routes.',
+
+                    // Mandarin
+                    'latar_belakang_zh' => '丹绒布顿工业园区定位为综合性工业园区，配备完善的基础设施、物流通道，并具备连接区域及国家贸易线路的潜力。',
+
+                    // Indonesian
                     'moto' => 'Membangun Kawasan Industri Berkelanjutan',
+
+                    // English
+                    'moto_en' => 'Building a Sustainable Industrial Estate',
+
+                    // Mandarin
+                    'moto_zh' => '建设可持续发展的工业园区',
+
                     'alamat' => 'Kawasan Industri Tanjung Buton, Kabupaten Siak, Provinsi Riau, Indonesia',
+
                     'email' => 'info@tanjungbuton-industrial.co.id',
+
                     'telepon' => '+62 761 123456',
+
                     'website' => 'https://tanjungbuton-industrial.co.id',
+
                     'logo' => null,
+
                     'aktif' => true,
+
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]
             );
 
+
             /*
-            |--------------------------------------------------------------------------
-            | 2. VISI
-            |--------------------------------------------------------------------------
-            */
-            $visiId = DB::table('visis')->updateOrInsert(
+|--------------------------------------------------------------------------
+| 2. VISI
+|--------------------------------------------------------------------------
+*/
+
+            DB::table('visis')->updateOrInsert(
                 ['id' => 1],
                 [
+                    // Indonesian
                     'isi' => 'Menjadi kawasan industri terpadu yang unggul, berkelanjutan, kompetitif, dan memberikan nilai tambah bagi industri, masyarakat, serta perekonomian nasional.',
+
+                    // English
+                    'isi_en' => 'To become an excellent, sustainable, and competitive integrated industrial estate that creates added value for industries, communities, and the national economy.',
+
+                    // Mandarin
+                    'isi_zh' => '成为一个卓越、可持续且具有竞争力的综合性工业园区，为产业、社会以及国家经济创造附加价值。',
+
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]
@@ -57,35 +99,51 @@ class DatabaseSeeder extends Seeder
                 ->where('id', 1)
                 ->value('id');
 
+
             /*
-            |--------------------------------------------------------------------------
-            | 3. MISI
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 3. MISI
+|--------------------------------------------------------------------------
+*/
+
             $misis = [
                 [
                     'visi_id' => $visiId,
                     'isi' => 'Mengembangkan kawasan industri dengan infrastruktur yang andal dan terintegrasi.',
+                    'isi_en' => 'Develop an industrial estate supported by reliable and integrated infrastructure.',
+                    'isi_zh' => '建设配备可靠且一体化基础设施的工业园区。',
                     'urutan' => 1,
                 ],
+
                 [
                     'visi_id' => $visiId,
                     'isi' => 'Mendorong terciptanya iklim investasi yang aman, mudah, dan kompetitif.',
+                    'isi_en' => 'Promote a safe, accessible, and competitive investment climate.',
+                    'isi_zh' => '营造安全、便捷且具有竞争力的投资环境。',
                     'urutan' => 2,
                 ],
+
                 [
                     'visi_id' => $visiId,
                     'isi' => 'Memberikan pelayanan profesional kepada investor dan pelaku industri.',
+                    'isi_en' => 'Provide professional services to investors and industrial stakeholders.',
+                    'isi_zh' => '为投资者及产业参与者提供专业的服务。',
                     'urutan' => 3,
                 ],
+
                 [
                     'visi_id' => $visiId,
                     'isi' => 'Mendukung pertumbuhan ekonomi daerah dan menciptakan lapangan kerja berkelanjutan.',
+                    'isi_en' => 'Support regional economic growth and create sustainable employment opportunities.',
+                    'isi_zh' => '支持区域经济增长，并创造可持续的就业机会。',
                     'urutan' => 4,
                 ],
+
                 [
                     'visi_id' => $visiId,
                     'isi' => 'Menerapkan prinsip pembangunan kawasan industri yang berwawasan lingkungan.',
+                    'isi_en' => 'Implement environmentally responsible principles in industrial estate development.',
+                    'isi_zh' => '在工业园区开发中贯彻环境友好的发展理念。',
                     'urutan' => 5,
                 ],
             ];
@@ -98,42 +156,68 @@ class DatabaseSeeder extends Seeder
                     ],
                     [
                         'isi' => $misi['isi'],
-                        'created_at' => $now,
+                        'isi_en' => $misi['isi_en'],
+                        'isi_zh' => $misi['isi_zh'],
                         'updated_at' => $now,
                     ]
                 );
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | 4. STRUKTUR PERUSAHAAN
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 4. STRUKTUR PERUSAHAAN
+|--------------------------------------------------------------------------
+*/
+
             $struktur = [
                 [
                     'nama' => 'Budi Santoso',
+                    'nama_en' => 'Budi Santoso',
+                    'nama_zh' => '布迪·桑托索',
+
                     'jabatan' => 'Direktur Utama',
+                    'jabatan_en' => 'President Director',
+                    'jabatan_zh' => '总裁董事',
+
                     'gambar' => null,
                     'urutan' => 1,
                     'aktif' => true,
                 ],
                 [
                     'nama' => 'Andi Pratama',
+                    'nama_en' => 'Andi Pratama',
+                    'nama_zh' => '安迪·普拉塔马',
+
                     'jabatan' => 'Direktur Operasional',
+                    'jabatan_en' => 'Operations Director',
+                    'jabatan_zh' => '运营董事',
+
                     'gambar' => null,
                     'urutan' => 2,
                     'aktif' => true,
                 ],
                 [
                     'nama' => 'Rina Kurniawati',
+                    'nama_en' => 'Rina Kurniawati',
+                    'nama_zh' => '丽娜·库尔尼亚瓦蒂',
+
                     'jabatan' => 'Direktur Keuangan',
+                    'jabatan_en' => 'Finance Director',
+                    'jabatan_zh' => '财务董事',
+
                     'gambar' => null,
                     'urutan' => 3,
                     'aktif' => true,
                 ],
                 [
                     'nama' => 'Dedi Firmansyah',
+                    'nama_en' => 'Dedi Firmansyah',
+                    'nama_zh' => '德迪·菲尔曼夏',
+
                     'jabatan' => 'Manajer Pengembangan Kawasan',
+                    'jabatan_en' => 'Area Development Manager',
+                    'jabatan_zh' => '园区开发经理',
+
                     'gambar' => null,
                     'urutan' => 4,
                     'aktif' => true,
@@ -147,6 +231,12 @@ class DatabaseSeeder extends Seeder
                         'jabatan' => $item['jabatan'],
                     ],
                     [
+                        'nama_en' => $item['nama_en'],
+                        'nama_zh' => $item['nama_zh'],
+
+                        'jabatan_en' => $item['jabatan_en'],
+                        'jabatan_zh' => $item['jabatan_zh'],
+
                         'gambar' => $item['gambar'],
                         'urutan' => $item['urutan'],
                         'aktif' => $item['aktif'],

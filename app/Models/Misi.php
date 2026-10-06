@@ -10,6 +10,8 @@ class Misi extends Model
     protected $fillable = [
         'visi_id',
         'isi',
+        'isi_en',
+        'isi_zh',
         'urutan',
     ];
 

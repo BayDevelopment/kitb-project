@@ -19,6 +19,9 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
             $table->text('isi');
+            $table->text('isi_en')->nullable();
+            $table->text('isi_zh')->nullable();
+
             $table->integer('urutan')->default(0);
 
             $table->timestamps();

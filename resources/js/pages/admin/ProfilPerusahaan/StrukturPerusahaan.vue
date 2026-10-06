@@ -22,8 +22,19 @@ defineOptions({
 
 interface Struktur {
     id: number;
+
+    // Indonesia
     nama: string;
     jabatan: string;
+
+    // English
+    nama_en: string | null;
+    jabatan_en: string | null;
+
+    // Chinese
+    nama_zh: string | null;
+    jabatan_zh: string | null;
+
     gambar: string | null;
     urutan: number;
     aktif: boolean;
@@ -111,7 +122,11 @@ const filteredStruktur = computed(() => {
         const matchesSearch =
             !keyword ||
             item.nama.toLowerCase().includes(keyword) ||
-            item.jabatan.toLowerCase().includes(keyword);
+            item.jabatan.toLowerCase().includes(keyword) ||
+            (item.nama_en ?? "").toLowerCase().includes(keyword) ||
+            (item.jabatan_en ?? "").toLowerCase().includes(keyword) ||
+            (item.nama_zh ?? "").toLowerCase().includes(keyword) ||
+            (item.jabatan_zh ?? "").toLowerCase().includes(keyword);
 
         const matchesStatus =
             statusFilter.value === "all" ||
@@ -166,8 +181,18 @@ const modalMode = ref<"create" | "edit">("create");
 const selectedItem = ref<Struktur | null>(null);
 
 const form = ref({
+    // Indonesia
     nama: "",
     jabatan: "",
+
+    // English
+    nama_en: "",
+    jabatan_en: "",
+
+    // Chinese
+    nama_zh: "",
+    jabatan_zh: "",
+
     gambar: null as File | null,
     aktif: true,
 });
@@ -199,6 +224,13 @@ const resetForm = () => {
     form.value = {
         nama: "",
         jabatan: "",
+
+        nama_en: "",
+        jabatan_en: "",
+
+        nama_zh: "",
+        jabatan_zh: "",
+
         gambar: null,
         aktif: true,
     };
@@ -223,8 +255,18 @@ const openEdit = (item: Struktur) => {
     modalMode.value = "edit";
 
     form.value = {
+        // Indonesia
         nama: item.nama,
         jabatan: item.jabatan,
+
+        // English
+        nama_en: item.nama_en ?? "",
+        jabatan_en: item.jabatan_en ?? "",
+
+        // Chinese
+        nama_zh: item.nama_zh ?? "",
+        jabatan_zh: item.jabatan_zh ?? "",
+
         gambar: null,
         aktif: item.aktif,
     };
@@ -327,6 +369,7 @@ const submitForm = () => {
         return;
     }
 
+    // Bahasa Indonesia wajib
     if (!form.value.nama.trim()) {
         return;
     }
@@ -337,9 +380,41 @@ const submitForm = () => {
 
     const formData = new FormData();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Indonesia
+    |--------------------------------------------------------------------------
+    */
+
     formData.append("nama", form.value.nama.trim());
 
     formData.append("jabatan", form.value.jabatan.trim());
+
+    /*
+    |--------------------------------------------------------------------------
+    | English
+    |--------------------------------------------------------------------------
+    */
+
+    formData.append("nama_en", form.value.nama_en.trim());
+
+    formData.append("jabatan_en", form.value.jabatan_en.trim());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Chinese
+    |--------------------------------------------------------------------------
+    */
+
+    formData.append("nama_zh", form.value.nama_zh.trim());
+
+    formData.append("jabatan_zh", form.value.jabatan_zh.trim());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Other
+    |--------------------------------------------------------------------------
+    */
 
     formData.append("aktif", form.value.aktif ? "1" : "0");
 
@@ -531,17 +606,17 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
         <div
             class="pointer-events-none absolute -left-24 -top-24 z-0 size-72 rounded-full bg-gradient-to-br from-blue-400/25 to-indigo-500/15 blur-3xl dark:from-blue-500/15 dark:to-indigo-600/10"
             aria-hidden="true"
-        ></div>
+        />
 
         <div
             class="pointer-events-none absolute -right-28 top-40 z-0 size-80 rounded-full bg-gradient-to-br from-sky-400/20 to-blue-500/10 blur-3xl dark:from-sky-500/10 dark:to-blue-600/10"
             aria-hidden="true"
-        ></div>
+        />
 
         <div
             class="pointer-events-none absolute -bottom-40 left-1/3 z-0 size-96 rounded-full bg-gradient-to-br from-indigo-400/10 to-cyan-400/10 blur-3xl dark:from-indigo-500/10 dark:to-cyan-500/5"
             aria-hidden="true"
-        ></div>
+        />
 
         <div
             class="pointer-events-none absolute inset-0 z-0 opacity-[0.35] dark:opacity-[0.08]"
@@ -567,7 +642,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                         transparent 75%
                     );
                 "
-            ></div>
+            />
         </div>
 
         <div class="relative z-10">
@@ -587,22 +662,22 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                         <div class="flex items-center gap-3">
                             <div
                                 class="size-11 rounded-2xl bg-slate-200 dark:bg-slate-800"
-                            ></div>
+                            />
 
                             <div class="space-y-2">
                                 <div
                                     class="h-5 w-48 rounded-lg bg-slate-200 dark:bg-slate-800"
-                                ></div>
+                                />
 
                                 <div
                                     class="h-4 w-72 max-w-[70vw] rounded-lg bg-slate-200 dark:bg-slate-800"
-                                ></div>
+                                />
                             </div>
                         </div>
 
                         <div
                             class="h-10 w-full rounded-xl bg-slate-200 sm:w-36 dark:bg-slate-800"
-                        ></div>
+                        />
                     </div>
 
                     <div
@@ -614,21 +689,21 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             <div class="space-y-2">
                                 <div
                                     class="h-5 w-44 rounded-lg bg-slate-200 dark:bg-slate-800"
-                                ></div>
+                                />
 
                                 <div
                                     class="h-4 w-64 max-w-full rounded-lg bg-slate-200 dark:bg-slate-800"
-                                ></div>
+                                />
                             </div>
 
                             <div class="flex flex-col gap-2 sm:flex-row">
                                 <div
                                     class="h-10 w-full rounded-xl bg-slate-200 sm:w-56 dark:bg-slate-800"
-                                ></div>
+                                />
 
                                 <div
                                     class="h-10 w-full rounded-xl bg-slate-200 sm:w-32 dark:bg-slate-800"
-                                ></div>
+                                />
                             </div>
                         </div>
 
@@ -640,25 +715,25 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             >
                                 <div
                                     class="size-12 shrink-0 rounded-xl bg-slate-200 dark:bg-slate-800"
-                                ></div>
+                                />
 
                                 <div class="min-w-0 flex-1 space-y-2">
                                     <div
                                         class="h-4 w-48 max-w-full rounded-lg bg-slate-200 dark:bg-slate-800"
-                                    ></div>
+                                    />
 
                                     <div
                                         class="h-3 w-32 rounded-lg bg-slate-200 dark:bg-slate-800"
-                                    ></div>
+                                    />
                                 </div>
 
                                 <div
                                     class="hidden h-8 w-20 rounded-full bg-slate-200 sm:block dark:bg-slate-800"
-                                ></div>
+                                />
 
                                 <div
                                     class="hidden h-8 w-28 rounded-lg bg-slate-200 sm:block dark:bg-slate-800"
-                                ></div>
+                                />
                             </div>
                         </div>
                     </div>
@@ -673,9 +748,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                     key="content"
                     class="mx-auto w-full max-w-[1600px] space-y-5 p-4 sm:p-5 lg:p-6 xl:p-8"
                 >
-                    <!-- ===================================================== -->
                     <!-- HEADER -->
-                    <!-- ===================================================== -->
 
                     <div
                         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
@@ -713,9 +786,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                         </button>
                     </div>
 
-                    <!-- ===================================================== -->
                     <!-- MAIN CARD -->
-                    <!-- ===================================================== -->
 
                     <div
                         class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
@@ -745,7 +816,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             >
                                 <!-- SEARCH -->
 
-                                <div class="relative w-full sm:w-56">
+                                <div class="relative w-full sm:w-64">
                                     <Search
                                         class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
                                     />
@@ -765,15 +836,15 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                     class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                                 >
                                     <option value="all">Semua Status</option>
+
                                     <option value="active">Aktif</option>
+
                                     <option value="inactive">Nonaktif</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- ===================================================== -->
                         <!-- EMPTY -->
-                        <!-- ===================================================== -->
 
                         <div
                             v-if="filteredStruktur.length === 0"
@@ -802,9 +873,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             </p>
                         </div>
 
-                        <!-- ===================================================== -->
                         <!-- TABLE -->
-                        <!-- ===================================================== -->
 
                         <div v-else class="overflow-x-auto">
                             <table class="w-full min-w-[850px] text-left">
@@ -935,20 +1004,40 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                                     />
                                                 </div>
 
-                                                <p
-                                                    class="font-medium text-slate-800 dark:text-slate-200"
-                                                >
-                                                    {{ item.nama }}
-                                                </p>
+                                                <div class="min-w-0">
+                                                    <p
+                                                        class="font-medium text-slate-800 dark:text-slate-200"
+                                                    >
+                                                        {{ item.nama }}
+                                                    </p>
+
+                                                    <p
+                                                        v-if="item.nama_en"
+                                                        class="mt-0.5 text-xs text-slate-400"
+                                                    >
+                                                        {{ item.nama_en }}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </td>
 
                                         <!-- JABATAN -->
 
-                                        <td
-                                            class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300"
-                                        >
-                                            {{ item.jabatan }}
+                                        <td class="px-6 py-4">
+                                            <div class="space-y-0.5 text-sm">
+                                                <p
+                                                    class="text-slate-600 dark:text-slate-300"
+                                                >
+                                                    {{ item.jabatan }}
+                                                </p>
+
+                                                <p
+                                                    v-if="item.jabatan_en"
+                                                    class="text-xs text-slate-400"
+                                                >
+                                                    {{ item.jabatan_en }}
+                                                </p>
+                                            </div>
                                         </td>
 
                                         <!-- STATUS -->
@@ -1013,43 +1102,45 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             </table>
                         </div>
 
-                        <!-- ===================================================== -->
                         <!-- PAGINATION -->
-                        <!-- ===================================================== -->
 
                         <div
                             v-if="props.struktur.last_page > 1"
-                            class="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 sm:px-6 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800"
+                            class="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
                         >
                             <p
                                 class="text-sm text-slate-500 dark:text-slate-400"
                             >
                                 Menampilkan
+
                                 <span
                                     class="font-medium text-slate-700 dark:text-slate-200"
                                 >
                                     {{ props.struktur.from ?? 0 }}
                                 </span>
+
                                 -
+
                                 <span
                                     class="font-medium text-slate-700 dark:text-slate-200"
                                 >
                                     {{ props.struktur.to ?? 0 }}
                                 </span>
+
                                 dari
+
                                 <span
                                     class="font-medium text-slate-700 dark:text-slate-200"
                                 >
                                     {{ props.struktur.total }}
                                 </span>
+
                                 data
                             </p>
 
                             <div
                                 class="flex max-w-full items-center gap-1.5 overflow-x-auto pb-1"
                             >
-                                <!-- PREVIOUS -->
-
                                 <button
                                     type="button"
                                     :disabled="!previousPageUrl"
@@ -1058,8 +1149,6 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                 >
                                     Previous
                                 </button>
-
-                                <!-- PAGE NUMBERS -->
 
                                 <template
                                     v-for="(
@@ -1087,8 +1176,6 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                     />
                                 </template>
 
-                                <!-- NEXT -->
-
                                 <button
                                     type="button"
                                     :disabled="!nextPageUrl"
@@ -1113,7 +1200,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                 @click.self="closeForm"
             >
                 <div
-                    class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+                    class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <!-- HEADER -->
 
@@ -1130,7 +1217,8 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             <p
                                 class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Lengkapi informasi struktur perusahaan.
+                                Lengkapi informasi struktur perusahaan dalam
+                                tiga bahasa.
                             </p>
                         </div>
 
@@ -1147,44 +1235,208 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                     <!-- FORM -->
 
                     <form
-                        class="space-y-5 p-5 sm:p-6"
+                        class="space-y-6 p-5 sm:p-6"
                         @submit.prevent="submitForm"
                     >
-                        <!-- NAMA -->
+                        <!-- ================================================= -->
+                        <!-- INDONESIA -->
+                        <!-- ================================================= -->
 
-                        <div>
-                            <label
-                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Nama
-                            </label>
+                        <div
+                            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/40"
+                        >
+                            <div class="mb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg" aria-hidden="true">
+                                        🇮🇩
+                                    </span>
 
-                            <input
-                                v-model="form.nama"
-                                type="text"
-                                placeholder="Contoh: Budi Santoso"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                            />
+                                    <div>
+                                        <h3
+                                            class="text-sm font-semibold text-slate-800 dark:text-slate-200"
+                                        >
+                                            Bahasa Indonesia
+                                        </h3>
+
+                                        <p class="text-xs text-slate-400">
+                                            Bahasa utama
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <!-- NAMA ID -->
+
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Nama
+                                        <span class="text-red-500"> * </span>
+                                    </label>
+
+                                    <input
+                                        v-model="form.nama"
+                                        type="text"
+                                        placeholder="Contoh: Budi Santoso"
+                                        required
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+
+                                <!-- JABATAN ID -->
+
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Jabatan
+                                        <span class="text-red-500"> * </span>
+                                    </label>
+
+                                    <input
+                                        v-model="form.jabatan"
+                                        type="text"
+                                        placeholder="Contoh: Direktur Utama"
+                                        required
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- JABATAN -->
+                        <!-- ================================================= -->
+                        <!-- ENGLISH -->
+                        <!-- ================================================= -->
 
-                        <div>
-                            <label
-                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Jabatan
-                            </label>
+                        <div
+                            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/40"
+                        >
+                            <div class="mb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg" aria-hidden="true">
+                                        🇬🇧
+                                    </span>
 
-                            <input
-                                v-model="form.jabatan"
-                                type="text"
-                                placeholder="Contoh: Direktur Utama"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                            />
+                                    <div>
+                                        <h3
+                                            class="text-sm font-semibold text-slate-800 dark:text-slate-200"
+                                        >
+                                            English
+                                        </h3>
+
+                                        <p class="text-xs text-slate-400">
+                                            Bahasa Inggris
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <!-- NAMA EN -->
+
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Name
+                                    </label>
+
+                                    <input
+                                        v-model="form.nama_en"
+                                        type="text"
+                                        placeholder="Example: Budi Santoso"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+
+                                <!-- JABATAN EN -->
+
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Position
+                                    </label>
+
+                                    <input
+                                        v-model="form.jabatan_en"
+                                        type="text"
+                                        placeholder="Example: President Director"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
+                        <!-- ================================================= -->
+                        <!-- CHINESE -->
+                        <!-- ================================================= -->
+
+                        <div
+                            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/40"
+                        >
+                            <div class="mb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg" aria-hidden="true">
+                                        🇨🇳
+                                    </span>
+
+                                    <div>
+                                        <h3
+                                            class="text-sm font-semibold text-slate-800 dark:text-slate-200"
+                                        >
+                                            中文
+                                        </h3>
+
+                                        <p class="text-xs text-slate-400">
+                                            中文语言
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <!-- NAMA ZH -->
+
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        姓名
+                                    </label>
+
+                                    <input
+                                        v-model="form.nama_zh"
+                                        type="text"
+                                        placeholder="例如：Budi Santoso"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+
+                                <!-- JABATAN ZH -->
+
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        职位
+                                    </label>
+
+                                    <input
+                                        v-model="form.jabatan_zh"
+                                        type="text"
+                                        placeholder="例如：总裁"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ================================================= -->
                         <!-- GAMBAR -->
+                        <!-- ================================================= -->
 
                         <div>
                             <label
@@ -1243,7 +1495,9 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             </div>
                         </div>
 
+                        <!-- ================================================= -->
                         <!-- STATUS -->
+                        <!-- ================================================= -->
 
                         <label
                             class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 p-4 transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
@@ -1313,7 +1567,7 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                 @click.self="closeDetail"
             >
                 <div
-                    class="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+                    class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
                         class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
@@ -1342,6 +1596,8 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                     </div>
 
                     <div class="space-y-5 p-5 sm:p-6">
+                        <!-- FOTO -->
+
                         <div class="flex justify-center">
                             <div
                                 class="flex size-28 items-center justify-center overflow-hidden rounded-3xl bg-slate-100 text-slate-400 shadow-inner dark:bg-slate-800"
@@ -1357,7 +1613,15 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             </div>
                         </div>
 
+                        <!-- INDONESIA -->
+
                         <div class="text-center">
+                            <p
+                                class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400"
+                            >
+                                🇮🇩 Indonesia
+                            </p>
+
                             <h3
                                 class="text-lg font-semibold text-slate-900 dark:text-white"
                             >
@@ -1370,6 +1634,74 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                 {{ selectedItem.jabatan }}
                             </p>
                         </div>
+
+                        <!-- TRANSLATIONS -->
+
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <!-- ENGLISH -->
+
+                            <div
+                                class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60"
+                            >
+                                <p
+                                    class="text-xs font-medium uppercase tracking-wide text-slate-400"
+                                >
+                                    🇬🇧 English
+                                </p>
+
+                                <p
+                                    class="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                >
+                                    {{
+                                        selectedItem.nama_en ||
+                                        selectedItem.nama
+                                    }}
+                                </p>
+
+                                <p
+                                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                                >
+                                    {{
+                                        selectedItem.jabatan_en ||
+                                        selectedItem.jabatan
+                                    }}
+                                </p>
+                            </div>
+
+                            <!-- CHINESE -->
+
+                            <div
+                                class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60"
+                            >
+                                <p
+                                    class="text-xs font-medium uppercase tracking-wide text-slate-400"
+                                >
+                                    🇨🇳 中文
+                                </p>
+
+                                <p
+                                    class="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                >
+                                    {{
+                                        selectedItem.nama_zh ||
+                                        selectedItem.nama_en ||
+                                        selectedItem.nama
+                                    }}
+                                </p>
+
+                                <p
+                                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                                >
+                                    {{
+                                        selectedItem.jabatan_zh ||
+                                        selectedItem.jabatan_en ||
+                                        selectedItem.jabatan
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- META -->
 
                         <div class="grid grid-cols-2 gap-3">
                             <div
@@ -1446,11 +1778,13 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                             class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
                         >
                             Yakin ingin menghapus data
+
                             <span
                                 class="font-semibold text-slate-700 dark:text-slate-200"
                             >
                                 {{ selectedItem.nama }}
                             </span>
+
                             ? Data yang sudah dihapus tidak dapat dikembalikan.
                         </p>
 
@@ -1461,6 +1795,13 @@ const moveItem = (item: Struktur, direction: "up" | "down") => {
                                 class="text-sm font-medium text-slate-700 dark:text-slate-200"
                             >
                                 {{ selectedItem.jabatan }}
+                            </p>
+
+                            <p
+                                v-if="selectedItem.jabatan_en"
+                                class="mt-1 text-xs text-slate-400"
+                            >
+                                {{ selectedItem.jabatan_en }}
                             </p>
                         </div>
                     </div>

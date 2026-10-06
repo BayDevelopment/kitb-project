@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
+import { trans } from "laravel-vue-i18n";
+import { currentLanguage, localizedValue } from "@/composables/useLocale";
 import {
     ArrowRight,
     Building2,
@@ -19,28 +21,47 @@ defineOptions({
     layout: PublicLayout,
 });
 
-/* ==========================================================================
-   Types
-========================================================================== */
+/*
+|--------------------------------------------------------------------------
+| Types
+|--------------------------------------------------------------------------
+*/
 
 interface Misi {
     id?: number;
-    judul?: string;
-    title?: string;
-    deskripsi?: string;
-    desc?: string;
-    isi?: string;
+
+    // Multilingual database fields
+    isi?: string | null;
+    isi_en?: string | null;
+    isi_zh?: string | null;
+
+    // Legacy compatibility
+    judul?: string | null;
+    title?: string | null;
+    deskripsi?: string | null;
+    desc?: string | null;
+
     urutan?: number;
+
     [key: string]: unknown;
 }
 
 interface Visi {
     id?: number;
-    judul?: string;
-    title?: string;
-    visi?: string;
-    deskripsi?: string;
+
+    // Multilingual database fields
+    isi?: string | null;
+    isi_en?: string | null;
+    isi_zh?: string | null;
+
+    // Legacy compatibility
+    judul?: string | null;
+    title?: string | null;
+    visi?: string | null;
+    deskripsi?: string | null;
+
     misis?: Misi[];
+
     [key: string]: unknown;
 }
 
@@ -52,9 +73,24 @@ const props = withDefaults(defineProps<Props>(), {
     visi: null,
 });
 
-/* ==========================================================================
-   Loading / Skeleton
-========================================================================== */
+/*
+|--------------------------------------------------------------------------
+| Language
+|--------------------------------------------------------------------------
+|
+| currentLanguage adalah source of truth bahasa public.
+| activeLanguage sengaja direferensikan oleh computed content supaya
+| perubahan bahasa selalu memicu evaluasi ulang data database.
+|
+*/
+
+const activeLanguage = computed(() => currentLanguage.value);
+
+/*
+|--------------------------------------------------------------------------
+| Loading / Skeleton
+|--------------------------------------------------------------------------
+*/
 
 const isLoading = ref(true);
 
@@ -80,9 +116,11 @@ onMounted(() => {
     });
 });
 
-/* ==========================================================================
-   Helpers
-========================================================================== */
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
 
 function firstValue(
     object: Record<string, unknown> | null | undefined,
@@ -108,33 +146,84 @@ function firstValue(
     return fallback;
 }
 
+/**
+ * Mengambil field multilingual melalui localizedValue().
+ *
+ * Untuk schema baru:
+ * isi      = Indonesia
+ * isi_en   = English
+ * isi_zh   = Mandarin
+ *
+ * Jika translation tidak tersedia, localizedValue() fallback
+ * ke bahasa Indonesia.
+ *
+ * Legacy field tetap didukung sebagai fallback tambahan.
+ */
+function localizedText(
+    object: Record<string, unknown> | null | undefined,
+    field = "isi",
+    legacyKeys: string[] = [],
+    fallback = "",
+): string {
+    if (!object) {
+        return fallback;
+    }
+
+    const localized = localizedValue(object, field);
+
+    if (localized.trim() !== "") {
+        return localized;
+    }
+
+    return firstValue(object, legacyKeys, fallback);
+}
+
 function misiTitle(misi: Misi, index: number): string {
     return firstValue(
         misi,
         ["judul", "title"],
-        `Misi ${String(index + 1).padStart(2, "0")}`,
+        trans("vision_mission.mission_item", {
+            number: String(index + 1).padStart(2, "0"),
+        }),
     );
 }
 
 function misiDescription(misi: Misi): string {
-    return firstValue(misi, ["deskripsi", "desc", "isi"]);
+    return localizedText(misi, "isi", ["deskripsi", "desc"]);
 }
 
-/* ==========================================================================
-   Content State
-========================================================================== */
+/*
+|--------------------------------------------------------------------------
+| Content State
+|--------------------------------------------------------------------------
+*/
 
-const visionTitle = computed(() =>
-    firstValue(props.visi, ["judul", "title"], "Visi"),
-);
+const visionTitle = computed(() => {
+    // Make the computed explicitly depend on active language.
+    activeLanguage.value;
 
-const visionText = computed(() =>
-    firstValue(props.visi, ["visi", "deskripsi"]),
-);
+    return firstValue(
+        props.visi,
+        ["judul", "title"],
+        trans("vision_mission.vision_title"),
+    );
+});
 
-const missions = computed<Misi[]>(() =>
-    (props.visi?.misis ?? []).filter((misi) => Boolean(misiDescription(misi))),
-);
+const visionText = computed(() => {
+    // Make the computed explicitly depend on active language.
+    activeLanguage.value;
+
+    return localizedText(props.visi, "isi", ["visi", "deskripsi"]);
+});
+
+const missions = computed<Misi[]>(() => {
+    // Make the computed explicitly depend on active language.
+    activeLanguage.value;
+
+    return (props.visi?.misis ?? []).filter((misi) =>
+        Boolean(misiDescription(misi)),
+    );
+});
 
 const hasVision = computed(() => Boolean(visionText.value));
 
@@ -142,22 +231,34 @@ const hasMissions = computed(() => missions.value.length > 0);
 
 const hasContent = computed(() => hasVision.value || hasMissions.value);
 
-/* ==========================================================================
-   SEO
-========================================================================== */
+const missionCountLabel = computed(() =>
+    trans("vision_mission.sidebar_mission_count", {
+        count: String(missions.value.length),
+    }),
+);
+
+/*
+|--------------------------------------------------------------------------
+| SEO
+|--------------------------------------------------------------------------
+*/
 
 const pageTitle = computed(
-    () => `${visionTitle.value} & Misi - PT Kawasan Industri Tanjung Buton`,
-);
-
-const pageDescription = computed(
     () =>
-        "Visi, misi, dan arah strategis PT Kawasan Industri Tanjung Buton (KITB) dalam membangun kawasan industri yang terintegrasi dan berkelanjutan.",
+        `${visionTitle.value} & ${trans(
+            "vision_mission.mission_title",
+        )} - PT Kawasan Industri Tanjung Buton`,
 );
 
-/* ==========================================================================
-   Reveal Animation
-========================================================================== */
+const pageDescription = computed(() =>
+    trans("vision_mission.meta_description"),
+);
+
+/*
+|--------------------------------------------------------------------------
+| Reveal Animation
+|--------------------------------------------------------------------------
+*/
 
 const prefersReducedMotion =
     typeof window !== "undefined" &&
@@ -198,9 +299,11 @@ const vFadeIn = {
     },
 };
 
-/* ==========================================================================
-   Cleanup
-========================================================================== */
+/*
+|--------------------------------------------------------------------------
+| Cleanup
+|--------------------------------------------------------------------------
+*/
 
 onBeforeUnmount(() => {
     removeStart?.();
@@ -244,27 +347,22 @@ onBeforeUnmount(() => {
             class="pointer-events-none absolute inset-x-0 -top-28 h-[900px] overflow-hidden"
             aria-hidden="true"
         >
-            <!-- Top fade -->
             <div
                 class="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-blue-100/75 via-blue-50/40 to-transparent dark:from-blue-950/35 dark:via-blue-950/10"
             />
 
-            <!-- Blob kiri -->
             <div
                 class="blob blob-a absolute left-[2%] top-0 size-[26rem] rounded-full bg-gradient-to-br from-blue-400/35 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/15"
             />
 
-            <!-- Blob kanan -->
             <div
                 class="blob blob-b absolute right-[2%] top-4 size-[22rem] rounded-full bg-gradient-to-tr from-sky-300/35 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10"
             />
 
-            <!-- Blob tengah -->
             <div
                 class="blob blob-c absolute left-1/3 top-56 size-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/10"
             />
 
-            <!-- Grid -->
             <div
                 class="absolute inset-0 opacity-[0.18] dark:opacity-[0.08]"
                 style="
@@ -294,7 +392,6 @@ onBeforeUnmount(() => {
                 "
             />
 
-            <!-- Fade ke background -->
             <div
                 class="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-b from-transparent to-slate-50/95 dark:to-slate-950/95"
             />
@@ -310,46 +407,48 @@ onBeforeUnmount(() => {
             <!-- ============================================================
                  BREADCRUMB
             ============================================================= -->
-            <!-- ============================================================
-     BREADCRUMB
-============================================================= -->
+
             <div v-fade-in class="mb-6" style="--d: 0ms">
                 <nav
-                    aria-label="Breadcrumb"
+                    :aria-label="trans('vision_mission.breadcrumb_current')"
                     class="flex items-center gap-2 text-sm"
                 >
-                    <!-- Beranda -->
                     <Link
                         href="/"
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
                         <Home class="size-4 shrink-0" />
-                        <span>Beranda</span>
+
+                        <span>
+                            {{ trans("vision_mission.breadcrumb_home") }}
+                        </span>
                     </Link>
 
-                    <!-- Separator -->
                     <ChevronRight class="size-4 shrink-0 text-slate-400" />
 
-                    <!-- Perusahaan -->
                     <Link
                         href="/profil-perusahaan/tentang-kami"
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
                         <Building2 class="size-4 shrink-0" />
-                        <span>Perusahaan</span>
+
+                        <span>
+                            {{ trans("vision_mission.breadcrumb_company") }}
+                        </span>
                     </Link>
 
-                    <!-- Separator -->
                     <ChevronRight class="size-4 shrink-0 text-slate-400" />
 
-                    <!-- Current Page -->
                     <span
                         class="inline-flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200"
                     >
                         <Target
                             class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
                         />
-                        <span>Visi &amp; Misi</span>
+
+                        <span>
+                            {{ trans("vision_mission.breadcrumb_current") }}
+                        </span>
                     </span>
                 </nav>
             </div>
@@ -363,12 +462,10 @@ onBeforeUnmount(() => {
                 class="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/90 shadow-xl shadow-slate-900/[0.05] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90"
                 style="--d: 80ms"
             >
-                <!-- Accent -->
                 <div
                     class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400"
                 />
 
-                <!-- Glow -->
                 <div
                     aria-hidden="true"
                     class="pointer-events-none absolute -right-28 -top-28 size-80 rounded-full bg-blue-400/10 blur-3xl dark:bg-blue-500/10"
@@ -381,34 +478,32 @@ onBeforeUnmount(() => {
 
                 <div class="relative p-6 sm:p-8 lg:p-10">
                     <div class="max-w-4xl">
-                        <!-- Label -->
                         <div
                             class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300"
                         >
                             <Compass class="size-3.5" />
-                            Profil Perusahaan
+
+                            {{ trans("vision_mission.hero_label") }}
                         </div>
 
-                        <!-- Heading -->
                         <h1
                             class="mt-5 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl dark:text-white"
                         >
-                            Arah yang jelas untuk tumbuh bersama.
+                            {{ trans("vision_mission.hero_title") }}
                         </h1>
 
                         <p
                             class="mt-5 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base sm:leading-8 dark:text-slate-400"
                         >
-                            Visi dan misi menjadi landasan KITB dalam membangun
-                            kawasan industri yang terintegrasi, berkelanjutan,
-                            dan memberikan nilai jangka panjang bagi seluruh
-                            pemangku kepentingan.
+                            {{ trans("vision_mission.hero_description") }}
                         </p>
                     </div>
 
                     <!-- Hero mini stats -->
+
                     <div class="mt-8 grid gap-3 sm:grid-cols-3">
                         <!-- Arah -->
+
                         <div
                             class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/50"
                         >
@@ -423,19 +518,26 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-[11px] font-semibold uppercase tracking-wider text-slate-400"
                                     >
-                                        Arah
+                                        {{
+                                            trans(
+                                                "vision_mission.stat_direction",
+                                            )
+                                        }}
                                     </p>
 
                                     <p
                                         class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                     >
-                                        Visi Perusahaan
+                                        {{
+                                            trans("vision_mission.stat_vision")
+                                        }}
                                     </p>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Fokus -->
+
                         <div
                             class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/50"
                         >
@@ -450,19 +552,22 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-[11px] font-semibold uppercase tracking-wider text-slate-400"
                                     >
-                                        Fokus
+                                        {{ trans("vision_mission.stat_focus") }}
                                     </p>
 
                                     <p
                                         class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                     >
-                                        Misi Strategis
+                                        {{
+                                            trans("vision_mission.stat_mission")
+                                        }}
                                     </p>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Prinsip -->
+
                         <div
                             class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/50"
                         >
@@ -477,13 +582,21 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-[11px] font-semibold uppercase tracking-wider text-slate-400"
                                     >
-                                        Prinsip
+                                        {{
+                                            trans(
+                                                "vision_mission.stat_principle",
+                                            )
+                                        }}
                                     </p>
 
                                     <p
                                         class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                     >
-                                        Berkelanjutan
+                                        {{
+                                            trans(
+                                                "vision_mission.stat_sustainable",
+                                            )
+                                        }}
                                     </p>
                                 </div>
                             </div>
@@ -502,6 +615,7 @@ onBeforeUnmount(() => {
             >
                 <div class="space-y-6">
                     <!-- Vision skeleton -->
+
                     <section
                         class="rounded-[1.75rem] border border-slate-200/80 bg-white/90 p-6 shadow-lg shadow-slate-900/[0.04] backdrop-blur-xl sm:p-8 dark:border-slate-800 dark:bg-slate-900/90"
                     >
@@ -539,6 +653,7 @@ onBeforeUnmount(() => {
                     </section>
 
                     <!-- Mission skeleton -->
+
                     <section
                         class="rounded-[1.75rem] border border-slate-200/80 bg-white/90 p-6 shadow-lg shadow-slate-900/[0.04] backdrop-blur-xl sm:p-8 dark:border-slate-800 dark:bg-slate-900/90"
                     >
@@ -589,6 +704,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <!-- Sidebar skeleton -->
+
                 <aside class="lg:sticky lg:top-28">
                     <div
                         class="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white/90 shadow-xl shadow-slate-900/[0.05] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90"
@@ -648,6 +764,7 @@ onBeforeUnmount(() => {
 
                 <div class="space-y-6">
                     <!-- VISION -->
+
                     <section
                         v-if="hasVision"
                         v-fade-in
@@ -665,7 +782,11 @@ onBeforeUnmount(() => {
                                 <p
                                     class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400"
                                 >
-                                    Arah Perusahaan
+                                    {{
+                                        trans(
+                                            "vision_mission.section_company_direction",
+                                        )
+                                    }}
                                 </p>
 
                                 <h2
@@ -710,6 +831,7 @@ onBeforeUnmount(() => {
                     </section>
 
                     <!-- MISSIONS -->
+
                     <section
                         v-if="hasMissions"
                         v-fade-in
@@ -727,13 +849,13 @@ onBeforeUnmount(() => {
                                 <p
                                     class="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400"
                                 >
-                                    Fokus Strategis
+                                    {{ trans("vision_mission.focus_title") }}
                                 </p>
 
                                 <h2
                                     class="mt-1 text-xl font-bold text-slate-900 dark:text-white"
                                 >
-                                    Misi Perusahaan
+                                    {{ trans("vision_mission.mission_title") }}
                                 </h2>
                             </div>
                         </div>
@@ -787,6 +909,7 @@ onBeforeUnmount(() => {
                     </section>
 
                     <!-- NILAI -->
+
                     <section
                         v-fade-in
                         class="rounded-[1.75rem] border border-slate-200/80 bg-white/90 p-6 shadow-lg shadow-slate-900/[0.04] backdrop-blur-xl sm:p-8 dark:border-slate-800 dark:bg-slate-900/90"
@@ -803,19 +926,22 @@ onBeforeUnmount(() => {
                                 <p
                                     class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400"
                                 >
-                                    Prinsip Pengembangan
+                                    {{
+                                        trans("vision_mission.principle_label")
+                                    }}
                                 </p>
 
                                 <h2
                                     class="mt-1 text-xl font-bold text-slate-900 dark:text-white"
                                 >
-                                    Nilai &amp; Arah KITB
+                                    {{ trans("vision_mission.values_title") }}
                                 </h2>
                             </div>
                         </div>
 
                         <div class="grid gap-4 sm:grid-cols-2">
-                            <!-- Berkelanjutan -->
+                            <!-- Sustainable -->
+
                             <div
                                 class="group rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-900/[0.05] dark:border-emerald-900/50 dark:bg-emerald-950/20"
                             >
@@ -828,19 +954,26 @@ onBeforeUnmount(() => {
                                 <h3
                                     class="mt-5 text-base font-bold text-slate-900 dark:text-white"
                                 >
-                                    Berkelanjutan
+                                    {{
+                                        trans(
+                                            "vision_mission.sustainable_title",
+                                        )
+                                    }}
                                 </h3>
 
                                 <p
                                     class="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-400"
                                 >
-                                    Mendorong pengembangan kawasan yang
-                                    memperhatikan keberlanjutan lingkungan,
-                                    sosial, dan ekonomi dalam jangka panjang.
+                                    {{
+                                        trans(
+                                            "vision_mission.sustainable_description",
+                                        )
+                                    }}
                                 </p>
                             </div>
 
-                            <!-- Terintegrasi -->
+                            <!-- Integrated -->
+
                             <div
                                 class="group rounded-2xl border border-blue-100 bg-blue-50/60 p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-900/[0.05] dark:border-blue-900/50 dark:bg-blue-950/20"
                             >
@@ -853,21 +986,26 @@ onBeforeUnmount(() => {
                                 <h3
                                     class="mt-5 text-base font-bold text-slate-900 dark:text-white"
                                 >
-                                    Terintegrasi
+                                    {{
+                                        trans("vision_mission.integrated_title")
+                                    }}
                                 </h3>
 
                                 <p
                                     class="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-400"
                                 >
-                                    Menghubungkan infrastruktur, fasilitas,
-                                    layanan, dan kebutuhan industri dalam
-                                    ekosistem kawasan yang saling mendukung.
+                                    {{
+                                        trans(
+                                            "vision_mission.integrated_description",
+                                        )
+                                    }}
                                 </p>
                             </div>
                         </div>
                     </section>
 
                     <!-- EMPTY -->
+
                     <section
                         v-if="!hasContent"
                         v-fade-in
@@ -883,15 +1021,13 @@ onBeforeUnmount(() => {
                         <h2
                             class="mt-5 text-lg font-bold text-slate-900 dark:text-white"
                         >
-                            Informasi belum tersedia
+                            {{ trans("vision_mission.empty_title") }}
                         </h2>
 
                         <p
                             class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                         >
-                            Informasi visi dan misi perusahaan belum tersedia.
-                            Silakan kembali lagi untuk melihat informasi
-                            terbaru.
+                            {{ trans("vision_mission.empty_description") }}
                         </p>
                     </section>
                 </div>
@@ -905,6 +1041,7 @@ onBeforeUnmount(() => {
                         class="overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white/90 shadow-xl shadow-slate-900/[0.05] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90"
                     >
                         <!-- Sidebar header -->
+
                         <div
                             class="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-6 text-white"
                         >
@@ -928,16 +1065,19 @@ onBeforeUnmount(() => {
                                 <p
                                     class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-100"
                                 >
-                                    Company Direction
+                                    {{ trans("vision_mission.sidebar_label") }}
                                 </p>
 
                                 <h2 class="mt-2 text-xl font-bold">
-                                    Visi &amp; Misi
+                                    {{ trans("vision_mission.sidebar_title") }}
                                 </h2>
 
                                 <p class="mt-2 text-sm leading-6 text-blue-100">
-                                    Landasan strategis dalam pengembangan
-                                    kawasan industri Tanjung Buton.
+                                    {{
+                                        trans(
+                                            "vision_mission.sidebar_description",
+                                        )
+                                    }}
                                 </p>
                             </div>
                         </div>
@@ -945,6 +1085,7 @@ onBeforeUnmount(() => {
                         <div class="p-5 sm:p-6">
                             <div class="space-y-4">
                                 <!-- Arah -->
+
                                 <div
                                     class="flex items-start gap-3 border-b border-slate-100 pb-4 dark:border-slate-800"
                                 >
@@ -954,18 +1095,27 @@ onBeforeUnmount(() => {
 
                                     <div>
                                         <p class="text-xs text-slate-400">
-                                            Arah
+                                            {{
+                                                trans(
+                                                    "vision_mission.sidebar_direction",
+                                                )
+                                            }}
                                         </p>
 
                                         <p
                                             class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                         >
-                                            Visi Perusahaan
+                                            {{
+                                                trans(
+                                                    "vision_mission.sidebar_vision",
+                                                )
+                                            }}
                                         </p>
                                     </div>
                                 </div>
 
                                 <!-- Fokus -->
+
                                 <div
                                     class="flex items-start gap-3 border-b border-slate-100 pb-4 dark:border-slate-800"
                                 >
@@ -975,19 +1125,23 @@ onBeforeUnmount(() => {
 
                                     <div>
                                         <p class="text-xs text-slate-400">
-                                            Fokus
+                                            {{
+                                                trans(
+                                                    "vision_mission.sidebar_focus",
+                                                )
+                                            }}
                                         </p>
 
                                         <p
                                             class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                         >
-                                            {{ missions.length }}
-                                            Misi Strategis
+                                            {{ missionCountLabel }}
                                         </p>
                                     </div>
                                 </div>
 
                                 <!-- Prinsip -->
+
                                 <div
                                     class="flex items-start gap-3 border-b border-slate-100 pb-4 dark:border-slate-800"
                                 >
@@ -997,18 +1151,27 @@ onBeforeUnmount(() => {
 
                                     <div>
                                         <p class="text-xs text-slate-400">
-                                            Prinsip
+                                            {{
+                                                trans(
+                                                    "vision_mission.sidebar_principle",
+                                                )
+                                            }}
                                         </p>
 
                                         <p
                                             class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                         >
-                                            Berkelanjutan
+                                            {{
+                                                trans(
+                                                    "vision_mission.sidebar_sustainable",
+                                                )
+                                            }}
                                         </p>
                                     </div>
                                 </div>
 
                                 <!-- Pendekatan -->
+
                                 <div class="flex items-start gap-3">
                                     <Building2
                                         class="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
@@ -1016,19 +1179,28 @@ onBeforeUnmount(() => {
 
                                     <div>
                                         <p class="text-xs text-slate-400">
-                                            Pendekatan
+                                            {{
+                                                trans(
+                                                    "vision_mission.sidebar_approach",
+                                                )
+                                            }}
                                         </p>
 
                                         <p
                                             class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                         >
-                                            Terintegrasi
+                                            {{
+                                                trans(
+                                                    "vision_mission.sidebar_integrated",
+                                                )
+                                            }}
                                         </p>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- About link -->
+
                             <Link
                                 href="/profil-perusahaan/tentang-kami"
                                 class="group mt-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/50 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/20"
@@ -1037,13 +1209,19 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-xs font-medium text-slate-400"
                                     >
-                                        Eksplorasi
+                                        {{
+                                            trans(
+                                                "vision_mission.explore_label",
+                                            )
+                                        }}
                                     </p>
 
                                     <p
                                         class="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                     >
-                                        Tentang Kami
+                                        {{
+                                            trans("vision_mission.about_title")
+                                        }}
                                     </p>
                                 </div>
 
@@ -1065,7 +1243,6 @@ onBeforeUnmount(() => {
                 class="relative mt-10 overflow-hidden rounded-[2rem] border border-blue-200/70 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 px-6 py-10 text-center shadow-xl shadow-blue-900/10 sm:px-10 lg:py-12 dark:border-blue-800/50"
                 style="--d: 380ms"
             >
-                <!-- CTA circles -->
                 <div
                     class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full border border-white/10"
                 />
@@ -1088,28 +1265,26 @@ onBeforeUnmount(() => {
                     <p
                         class="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-blue-100"
                     >
-                        Kenali KITB
+                        {{ trans("vision_mission.cta_label") }}
                     </p>
 
                     <h2
                         class="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl"
                     >
-                        Kenali lebih dekat perjalanan KITB.
+                        {{ trans("vision_mission.cta_title") }}
                     </h2>
 
                     <p
                         class="mx-auto mt-3 max-w-2xl text-sm leading-7 text-blue-100 sm:text-base"
                     >
-                        Pelajari profil, perjalanan, dan komitmen PT Kawasan
-                        Industri Tanjung Buton dalam membangun kawasan industri
-                        yang terintegrasi dan berkelanjutan.
+                        {{ trans("vision_mission.cta_description") }}
                     </p>
 
                     <Link
                         href="/profil-perusahaan/tentang-kami"
                         class="group mt-6 inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/10 transition duration-300 hover:-translate-y-0.5 hover:bg-blue-50"
                     >
-                        Tentang Kami
+                        {{ trans("vision_mission.about_button") }}
 
                         <ArrowRight
                             class="size-4 transition-transform duration-300 group-hover:translate-x-1"

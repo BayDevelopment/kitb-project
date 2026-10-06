@@ -14,10 +14,20 @@ return new class extends Migration
         Schema::create('struktur_perusahaans', function (Blueprint $table) {
             $table->id();
 
-            $table->string('nama');
-            $table->string('jabatan');
+            // Nama
+            $table->string('nama'); // Indonesia
+            $table->string('nama_en')->nullable(); // English
+            $table->string('nama_zh')->nullable(); // 中文
+
+            // Jabatan
+            $table->string('jabatan'); // Indonesia
+            $table->string('jabatan_en')->nullable(); // English
+            $table->string('jabatan_zh')->nullable(); // 中文
+
+            // Gambar
             $table->string('gambar')->nullable();
 
+            // Pengaturan
             $table->unsignedSmallInteger('urutan')->default(0);
             $table->boolean('aktif')->default(true);
 

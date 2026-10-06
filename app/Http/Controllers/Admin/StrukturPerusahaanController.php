@@ -47,7 +47,7 @@ class StrukturPerusahaanController extends Controller
                 $request,
                 &$gambarPath
             ) {
-                /*
+                /**
                  * Upload gambar.
                  */
                 if ($request->hasFile('gambar')) {
@@ -56,7 +56,7 @@ class StrukturPerusahaanController extends Controller
                         ->store('struktur-perusahaan', 'public');
                 }
 
-                /*
+                /**
                  * Tentukan urutan berikutnya.
                  */
                 $nextUrutan = (
@@ -64,19 +64,38 @@ class StrukturPerusahaanController extends Controller
                         ->max('urutan')
                 ) + 1;
 
-                /*
+                /**
                  * Simpan data.
                  */
                 StrukturPerusahaan::create([
+                    // Indonesia
                     'nama' => trim($validated['nama']),
                     'jabatan' => trim($validated['jabatan']),
+
+                    // English
+                    'nama_en' => $this->nullableTrim(
+                        $validated['nama_en'] ?? null
+                    ),
+                    'jabatan_en' => $this->nullableTrim(
+                        $validated['jabatan_en'] ?? null
+                    ),
+
+                    // Chinese
+                    'nama_zh' => $this->nullableTrim(
+                        $validated['nama_zh'] ?? null
+                    ),
+                    'jabatan_zh' => $this->nullableTrim(
+                        $validated['jabatan_zh'] ?? null
+                    ),
+
+                    // Lainnya
                     'gambar' => $gambarPath,
                     'urutan' => $nextUrutan,
                     'aktif' => $validated['aktif'] ?? true,
                 ]);
             });
         } catch (\Throwable $e) {
-            /*
+            /**
              * Jika database gagal, hapus gambar
              * yang sudah berhasil di-upload.
              */
@@ -102,12 +121,12 @@ class StrukturPerusahaanController extends Controller
     ): RedirectResponse {
         $validated = $this->validateStruktur($request);
 
-        /*
+        /**
          * Simpan path gambar lama.
          */
         $oldGambar = $strukturPerusahaan->gambar;
 
-        /*
+        /**
          * Path gambar baru.
          */
         $newGambar = null;
@@ -119,7 +138,7 @@ class StrukturPerusahaanController extends Controller
                 $strukturPerusahaan,
                 &$newGambar
             ) {
-                /*
+                /**
                  * Upload gambar baru jika ada.
                  */
                 if ($request->hasFile('gambar')) {
@@ -128,23 +147,40 @@ class StrukturPerusahaanController extends Controller
                         ->store('struktur-perusahaan', 'public');
                 }
 
-                /*
+                /**
                  * Update database.
-                 *
-                 * Jika tidak ada gambar baru,
-                 * gunakan gambar lama.
                  */
                 $strukturPerusahaan->update([
+                    // Indonesia
                     'nama' => trim($validated['nama']),
                     'jabatan' => trim($validated['jabatan']),
+
+                    // English
+                    'nama_en' => $this->nullableTrim(
+                        $validated['nama_en'] ?? null
+                    ),
+                    'jabatan_en' => $this->nullableTrim(
+                        $validated['jabatan_en'] ?? null
+                    ),
+
+                    // Chinese
+                    'nama_zh' => $this->nullableTrim(
+                        $validated['nama_zh'] ?? null
+                    ),
+                    'jabatan_zh' => $this->nullableTrim(
+                        $validated['jabatan_zh'] ?? null
+                    ),
+
+                    // Lainnya
                     'gambar' => $newGambar
                         ?? $strukturPerusahaan->gambar,
+
                     'aktif' => $validated['aktif']
                         ?? $strukturPerusahaan->aktif,
                 ]);
             });
         } catch (\Throwable $e) {
-            /*
+            /**
              * Jika database gagal,
              * hapus gambar baru agar tidak menjadi
              * file yang tidak terpakai.
@@ -156,7 +192,7 @@ class StrukturPerusahaanController extends Controller
             throw $e;
         }
 
-        /*
+        /**
          * Database sudah berhasil di-update.
          *
          * Baru hapus gambar lama agar tidak terjadi
@@ -178,12 +214,12 @@ class StrukturPerusahaanController extends Controller
     public function destroy(
         StrukturPerusahaan $strukturPerusahaan
     ): RedirectResponse {
-        /*
+        /**
          * Simpan path gambar sebelum data dihapus.
          */
         $gambar = $strukturPerusahaan->gambar;
 
-        /*
+        /**
          * Simpan urutan sebelum data dihapus.
          */
         $deletedOrder = $strukturPerusahaan->urutan;
@@ -192,21 +228,21 @@ class StrukturPerusahaanController extends Controller
             $strukturPerusahaan->delete();
         });
 
-        /*
+        /**
          * Hapus file gambar setelah database berhasil.
          */
         if ($gambar) {
             Storage::disk('public')->delete($gambar);
         }
 
-        /*
+        /**
          * Kurangi urutan setelah data yang bersangkutan.
          */
         StrukturPerusahaan::query()
             ->where('urutan', '>', $deletedOrder)
             ->decrement('urutan');
 
-        /*
+        /**
          * Pastikan urutan tetap rapi.
          */
         $this->normalizeOrder();
@@ -251,7 +287,7 @@ class StrukturPerusahaanController extends Controller
 
         $direction = $validated['direction'];
 
-        /*
+        /**
          * Cari item tetangga.
          */
         if ($direction === 'up') {
@@ -268,7 +304,7 @@ class StrukturPerusahaanController extends Controller
                 ->first();
         }
 
-        /*
+        /**
          * Jika tidak ada tetangga.
          */
         if (! $neighbor) {
@@ -280,7 +316,7 @@ class StrukturPerusahaanController extends Controller
             ]);
         }
 
-        /*
+        /**
          * Tukar urutan.
          */
         DB::transaction(function () use (
@@ -297,7 +333,7 @@ class StrukturPerusahaanController extends Controller
                 'urutan' => $currentOrder,
             ]);
 
-            /*
+            /**
              * Pastikan urutan tetap 1, 2, 3, dst.
              */
             $this->normalizeOrder();
@@ -336,6 +372,9 @@ class StrukturPerusahaanController extends Controller
     private function validateStruktur(Request $request): array
     {
         return $request->validate([
+            /**
+             * Indonesia
+             */
             'nama' => [
                 'required',
                 'string',
@@ -348,7 +387,37 @@ class StrukturPerusahaanController extends Controller
                 'max:255',
             ],
 
-            /*
+            /**
+             * English
+             */
+            'nama_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'jabatan_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /**
+             * Chinese
+             */
+            'nama_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'jabatan_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /**
              * Maksimal 1 MB.
              *
              * Laravel menggunakan satuan KB:
@@ -366,5 +435,19 @@ class StrukturPerusahaanController extends Controller
                 'boolean',
             ],
         ]);
+    }
+
+    /**
+     * Trim value dan ubah string kosong menjadi null.
+     */
+    private function nullableTrim(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return $value !== '' ? $value : null;
     }
 }

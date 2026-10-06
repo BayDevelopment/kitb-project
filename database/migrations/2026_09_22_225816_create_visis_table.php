@@ -13,7 +13,11 @@ return new class extends Migration
     {
         Schema::create('visis', function (Blueprint $table) {
             $table->id();
+
             $table->text('isi');
+            $table->text('isi_en')->nullable();
+            $table->text('isi_zh')->nullable();
+
             $table->timestamps();
         });
     }

@@ -31,6 +31,8 @@ defineOptions({
 interface Visi {
     id: number;
     isi: string;
+    isi_en: string | null;
+    isi_zh: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -39,6 +41,8 @@ interface Misi {
     id: number;
     visi_id: number;
     isi: string;
+    isi_en: string | null;
+    isi_zh: string | null;
     urutan: number;
     created_at: string;
     updated_at: string;
@@ -135,10 +139,14 @@ const selectedMisi = ref<Misi | null>(null);
 
 const visiForm = ref({
     isi: "",
+    isi_en: "",
+    isi_zh: "",
 });
 
 const misiForm = ref({
     isi: "",
+    isi_en: "",
+    isi_zh: "",
 });
 
 const processingVisi = ref(false);
@@ -309,6 +317,8 @@ const openCreateVisi = (): void => {
 
     visiForm.value = {
         isi: "",
+        isi_en: "",
+        isi_zh: "",
     };
 
     showMisiModal.value = false;
@@ -327,6 +337,8 @@ const openEditVisi = (): void => {
 
     visiForm.value = {
         isi: props.visi.isi ?? "",
+        isi_en: props.visi.isi_en ?? "",
+        isi_zh: props.visi.isi_zh ?? "",
     };
 
     showMisiModal.value = false;
@@ -345,6 +357,8 @@ const closeVisiModal = (): void => {
 
     visiForm.value = {
         isi: "",
+        isi_en: "",
+        isi_zh: "",
     };
 };
 
@@ -354,6 +368,8 @@ const forceCloseVisiModal = (): void => {
 
     visiForm.value = {
         isi: "",
+        isi_en: "",
+        isi_zh: "",
     };
 };
 
@@ -369,6 +385,8 @@ const submitVisi = (): void => {
     }
 
     const isi = visiForm.value.isi.trim();
+    const isi_en = visiForm.value.isi_en.trim();
+    const isi_zh = visiForm.value.isi_zh.trim();
 
     if (!isi) {
         return;
@@ -376,28 +394,28 @@ const submitVisi = (): void => {
 
     processingVisi.value = true;
 
+    const payload = {
+        isi,
+        isi_en: isi_en || null,
+        isi_zh: isi_zh || null,
+    };
+
     if (visiModalMode.value === "create") {
-        router.post(
-            "/admin/profil-perusahaan/visi-misi/visi",
-            {
-                isi,
+        router.post("/admin/profil-perusahaan/visi-misi/visi", payload, {
+            preserveScroll: true,
+
+            onSuccess: () => {
+                forceCloseVisiModal();
             },
-            {
-                preserveScroll: true,
 
-                onSuccess: () => {
-                    forceCloseVisiModal();
-                },
-
-                onError: (errors) => {
-                    console.error("Gagal menambahkan visi:", errors);
-                },
-
-                onFinish: () => {
-                    processingVisi.value = false;
-                },
+            onError: (errors) => {
+                console.error("Gagal menambahkan visi:", errors);
             },
-        );
+
+            onFinish: () => {
+                processingVisi.value = false;
+            },
+        });
 
         return;
     }
@@ -409,9 +427,7 @@ const submitVisi = (): void => {
 
     router.put(
         `/admin/profil-perusahaan/visi-misi/visi/${props.visi.id}`,
-        {
-            isi,
-        },
+        payload,
         {
             preserveScroll: true,
 
@@ -446,6 +462,8 @@ const openCreateMisi = (): void => {
 
     misiForm.value = {
         isi: "",
+        isi_en: "",
+        isi_zh: "",
     };
 
     showVisiModal.value = false;
@@ -460,6 +478,8 @@ const openEditMisi = (misi: Misi): void => {
 
     misiForm.value = {
         isi: misi.isi ?? "",
+        isi_en: misi.isi_en ?? "",
+        isi_zh: misi.isi_zh ?? "",
     };
 
     showVisiModal.value = false;
@@ -478,6 +498,8 @@ const closeMisiModal = (): void => {
 
     misiForm.value = {
         isi: "",
+        isi_en: "",
+        isi_zh: "",
     };
 };
 
@@ -487,6 +509,8 @@ const forceCloseMisiModal = (): void => {
 
     misiForm.value = {
         isi: "",
+        isi_en: "",
+        isi_zh: "",
     };
 };
 
@@ -502,6 +526,8 @@ const submitMisi = (): void => {
     }
 
     const isi = misiForm.value.isi.trim();
+    const isi_en = misiForm.value.isi_en.trim();
+    const isi_zh = misiForm.value.isi_zh.trim();
 
     if (!isi) {
         return;
@@ -509,12 +535,16 @@ const submitMisi = (): void => {
 
     processingMisi.value = true;
 
+    const payload = {
+        isi,
+        isi_en: isi_en || null,
+        isi_zh: isi_zh || null,
+    };
+
     if (misiModalMode.value === "create") {
         router.post(
             `/admin/profil-perusahaan/visi-misi/${props.visi.id}/misi`,
-            {
-                isi,
-            },
+            payload,
             {
                 preserveScroll: true,
 
@@ -542,9 +572,7 @@ const submitMisi = (): void => {
 
     router.put(
         `/admin/profil-perusahaan/visi-misi/${props.visi.id}/misi/${selectedMisi.value.id}`,
-        {
-            isi,
-        },
+        payload,
         {
             preserveScroll: true,
 
@@ -956,7 +984,8 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                             <p
                                 class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Kelola visi dan misi perusahaan.
+                                Kelola visi dan misi perusahaan dalam Bahasa
+                                Indonesia, English, dan Mandarin.
                             </p>
                         </div>
                     </div>
@@ -1018,7 +1047,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                 <p
                                     class="text-xs text-slate-500 dark:text-slate-400"
                                 >
-                                    Pernyataan visi perusahaan.
+                                    Pernyataan visi dalam tiga bahasa.
                                 </p>
                             </div>
                         </div>
@@ -1037,19 +1066,96 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                     <div class="p-5 sm:p-6">
                         <div
                             v-if="props.visi"
-                            class="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-white p-5 shadow-sm dark:border-blue-900/40 dark:from-blue-950/30 dark:via-indigo-950/20 dark:to-slate-900"
+                            class="grid gap-4 lg:grid-cols-3"
                         >
-                            <div class="flex gap-4">
-                                <div
-                                    class="hidden size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm sm:flex"
-                                >
-                                    <Target class="size-5" />
+                            <!-- Indonesia -->
+                            <div
+                                class="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-white p-5 shadow-sm dark:border-blue-900/40 dark:from-blue-950/30 dark:via-indigo-950/20 dark:to-slate-900"
+                            >
+                                <div class="mb-4 flex items-center gap-2">
+                                    <span
+                                        class="inline-flex items-center rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white"
+                                    >
+                                        ID
+                                    </span>
+
+                                    <span
+                                        class="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400"
+                                    >
+                                        Indonesia
+                                    </span>
                                 </div>
 
                                 <p
                                     class="whitespace-pre-line text-sm leading-7 text-slate-700 dark:text-slate-200"
                                 >
                                     {{ props.visi.isi }}
+                                </p>
+                            </div>
+
+                            <!-- English -->
+                            <div
+                                class="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50/80 via-blue-50/40 to-white p-5 shadow-sm dark:border-sky-900/40 dark:from-sky-950/30 dark:via-blue-950/20 dark:to-slate-900"
+                            >
+                                <div class="mb-4 flex items-center gap-2">
+                                    <span
+                                        class="inline-flex items-center rounded-lg bg-sky-600 px-2.5 py-1 text-xs font-semibold text-white"
+                                    >
+                                        EN
+                                    </span>
+
+                                    <span
+                                        class="text-xs font-medium uppercase tracking-wide text-sky-600 dark:text-sky-400"
+                                    >
+                                        English
+                                    </span>
+                                </div>
+
+                                <p
+                                    v-if="props.visi.isi_en"
+                                    class="whitespace-pre-line text-sm leading-7 text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ props.visi.isi_en }}
+                                </p>
+
+                                <p
+                                    v-else
+                                    class="text-sm italic leading-7 text-slate-400 dark:text-slate-500"
+                                >
+                                    Terjemahan English belum tersedia.
+                                </p>
+                            </div>
+
+                            <!-- Mandarin -->
+                            <div
+                                class="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-violet-50/40 to-white p-5 shadow-sm dark:border-indigo-900/40 dark:from-indigo-950/30 dark:via-violet-950/20 dark:to-slate-900"
+                            >
+                                <div class="mb-4 flex items-center gap-2">
+                                    <span
+                                        class="inline-flex items-center rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white"
+                                    >
+                                        ZH
+                                    </span>
+
+                                    <span
+                                        class="text-xs font-medium uppercase tracking-wide text-indigo-600 dark:text-indigo-400"
+                                    >
+                                        Mandarin
+                                    </span>
+                                </div>
+
+                                <p
+                                    v-if="props.visi.isi_zh"
+                                    class="whitespace-pre-line text-sm leading-7 text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ props.visi.isi_zh }}
+                                </p>
+
+                                <p
+                                    v-else
+                                    class="text-sm italic leading-7 text-slate-400 dark:text-slate-500"
+                                >
+                                    Terjemahan Mandarin belum tersedia.
                                 </p>
                             </div>
                         </div>
@@ -1185,11 +1291,43 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                                         </td>
 
                                         <td class="px-6 py-4">
-                                            <p
-                                                class="whitespace-pre-line leading-6 text-slate-600 dark:text-slate-300"
-                                            >
-                                                {{ truncate(misi.isi) }}
-                                            </p>
+                                            <div class="max-w-3xl">
+                                                <p
+                                                    class="whitespace-pre-line leading-6 text-slate-600 dark:text-slate-300"
+                                                >
+                                                    {{ truncate(misi.isi) }}
+                                                </p>
+
+                                                <div
+                                                    class="mt-2 flex flex-wrap gap-1.5"
+                                                >
+                                                    <span
+                                                        class="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                                    >
+                                                        ID
+                                                    </span>
+
+                                                    <span
+                                                        class="rounded-md bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-600 dark:bg-sky-950/40 dark:text-sky-400"
+                                                    >
+                                                        {{
+                                                            misi.isi_en
+                                                                ? "EN"
+                                                                : "EN belum"
+                                                        }}
+                                                    </span>
+
+                                                    <span
+                                                        class="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400"
+                                                    >
+                                                        {{
+                                                            misi.isi_zh
+                                                                ? "ZH"
+                                                                : "ZH belum"
+                                                        }}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </td>
 
                                         <td class="px-6 py-4">
@@ -1446,7 +1584,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                 @click.self="closeVisiModal"
             >
                 <div
-                    class="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl dark:bg-slate-900"
+                    class="my-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl dark:bg-slate-900"
                 >
                     <div
                         class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
@@ -1465,7 +1603,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                             <p
                                 class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Kelola pernyataan visi perusahaan.
+                                Kelola pernyataan visi dalam tiga bahasa.
                             </p>
                         </div>
 
@@ -1479,30 +1617,112 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         </button>
                     </div>
 
-                    <form class="p-5 sm:p-6" @submit.prevent="submitVisi">
-                        <div>
-                            <label
-                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Pernyataan Visi
-                                <span class="text-red-500">*</span>
-                            </label>
+                    <form
+                        class="max-h-[calc(100vh-8rem)] overflow-y-auto p-5 sm:p-6"
+                        @submit.prevent="submitVisi"
+                    >
+                        <div class="space-y-5">
+                            <!-- Indonesia -->
+                            <div>
+                                <div
+                                    class="mb-2 flex items-center justify-between gap-3"
+                                >
+                                    <label
+                                        class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Pernyataan Visi
+                                        <span class="text-red-500">*</span>
+                                    </label>
 
-                            <textarea
-                                v-model="visiForm.isi"
-                                rows="7"
-                                required
-                                maxlength="5000"
-                                placeholder="Tuliskan visi perusahaan..."
-                                class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-900"
-                            ></textarea>
+                                    <span
+                                        class="rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                    >
+                                        ID · Indonesia
+                                    </span>
+                                </div>
 
-                            <p
-                                class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"
-                            >
-                                Gunakan kalimat yang jelas, singkat, dan
-                                menggambarkan arah perusahaan.
-                            </p>
+                                <textarea
+                                    v-model="visiForm.isi"
+                                    rows="6"
+                                    required
+                                    maxlength="5000"
+                                    placeholder="Tuliskan visi perusahaan dalam Bahasa Indonesia..."
+                                    class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-900"
+                                ></textarea>
+
+                                <p
+                                    class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                    Bahasa Indonesia merupakan bahasa utama dan
+                                    wajib diisi.
+                                </p>
+                            </div>
+
+                            <!-- English -->
+                            <div>
+                                <div
+                                    class="mb-2 flex items-center justify-between gap-3"
+                                >
+                                    <label
+                                        class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Vision Statement
+                                    </label>
+
+                                    <span
+                                        class="rounded-lg bg-sky-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-sky-600 dark:bg-sky-950/40 dark:text-sky-400"
+                                    >
+                                        EN · English
+                                    </span>
+                                </div>
+
+                                <textarea
+                                    v-model="visiForm.isi_en"
+                                    rows="6"
+                                    maxlength="5000"
+                                    placeholder="Write the company's vision in English..."
+                                    class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-sky-500 dark:focus:bg-slate-900"
+                                ></textarea>
+
+                                <p
+                                    class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                    English bersifat opsional.
+                                </p>
+                            </div>
+
+                            <!-- Mandarin -->
+                            <div>
+                                <div
+                                    class="mb-2 flex items-center justify-between gap-3"
+                                >
+                                    <label
+                                        class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        愿景声明
+                                    </label>
+
+                                    <span
+                                        class="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400"
+                                    >
+                                        ZH · Mandarin
+                                    </span>
+                                </div>
+
+                                <textarea
+                                    v-model="visiForm.isi_zh"
+                                    rows="6"
+                                    maxlength="5000"
+                                    placeholder="请输入公司的愿景..."
+                                    class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
+                                ></textarea>
+
+                                <p
+                                    class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                    中文普通话（Mandarin） bersifat opsional.
+                                </p>
+                            </div>
                         </div>
 
                         <div
@@ -1551,7 +1771,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                 @click.self="closeMisiModal"
             >
                 <div
-                    class="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl dark:bg-slate-900"
+                    class="my-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl dark:bg-slate-900"
                 >
                     <div
                         class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
@@ -1570,7 +1790,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                             <p
                                 class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Kelola pernyataan misi perusahaan.
+                                Kelola pernyataan misi dalam tiga bahasa.
                             </p>
                         </div>
 
@@ -1584,30 +1804,112 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         </button>
                     </div>
 
-                    <form class="p-5 sm:p-6" @submit.prevent="submitMisi">
-                        <div>
-                            <label
-                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Pernyataan Misi
-                                <span class="text-red-500">*</span>
-                            </label>
+                    <form
+                        class="max-h-[calc(100vh-8rem)] overflow-y-auto p-5 sm:p-6"
+                        @submit.prevent="submitMisi"
+                    >
+                        <div class="space-y-5">
+                            <!-- Indonesia -->
+                            <div>
+                                <div
+                                    class="mb-2 flex items-center justify-between gap-3"
+                                >
+                                    <label
+                                        class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Pernyataan Misi
+                                        <span class="text-red-500">*</span>
+                                    </label>
 
-                            <textarea
-                                v-model="misiForm.isi"
-                                rows="7"
-                                required
-                                maxlength="5000"
-                                placeholder="Tuliskan misi perusahaan..."
-                                class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-900"
-                            ></textarea>
+                                    <span
+                                        class="rounded-lg bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                    >
+                                        ID · Indonesia
+                                    </span>
+                                </div>
 
-                            <p
-                                class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"
-                            >
-                                Tuliskan tindakan atau komitmen utama perusahaan
-                                untuk mewujudkan visi.
-                            </p>
+                                <textarea
+                                    v-model="misiForm.isi"
+                                    rows="6"
+                                    required
+                                    maxlength="5000"
+                                    placeholder="Tuliskan misi perusahaan dalam Bahasa Indonesia..."
+                                    class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-900"
+                                ></textarea>
+
+                                <p
+                                    class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                    Bahasa Indonesia merupakan bahasa utama dan
+                                    wajib diisi.
+                                </p>
+                            </div>
+
+                            <!-- English -->
+                            <div>
+                                <div
+                                    class="mb-2 flex items-center justify-between gap-3"
+                                >
+                                    <label
+                                        class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Mission Statement
+                                    </label>
+
+                                    <span
+                                        class="rounded-lg bg-sky-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-sky-600 dark:bg-sky-950/40 dark:text-sky-400"
+                                    >
+                                        EN · English
+                                    </span>
+                                </div>
+
+                                <textarea
+                                    v-model="misiForm.isi_en"
+                                    rows="6"
+                                    maxlength="5000"
+                                    placeholder="Write the company's mission in English..."
+                                    class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-sky-500 dark:focus:bg-slate-900"
+                                ></textarea>
+
+                                <p
+                                    class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                    English bersifat opsional.
+                                </p>
+                            </div>
+
+                            <!-- Mandarin -->
+                            <div>
+                                <div
+                                    class="mb-2 flex items-center justify-between gap-3"
+                                >
+                                    <label
+                                        class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        使命声明
+                                    </label>
+
+                                    <span
+                                        class="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400"
+                                    >
+                                        ZH · Mandarin
+                                    </span>
+                                </div>
+
+                                <textarea
+                                    v-model="misiForm.isi_zh"
+                                    rows="6"
+                                    maxlength="5000"
+                                    placeholder="请输入公司的使命..."
+                                    class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-indigo-500 dark:focus:bg-slate-900"
+                                ></textarea>
+
+                                <p
+                                    class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"
+                                >
+                                    中文普通话（Mandarin） bersifat opsional.
+                                </p>
+                            </div>
                         </div>
 
                         <div
@@ -1656,7 +1958,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                 @click.self="closeDetail"
             >
                 <div
-                    class="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl dark:bg-slate-900"
+                    class="my-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl dark:bg-slate-900"
                 >
                     <div
                         class="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800"
@@ -1671,7 +1973,7 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                             <p
                                 class="text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Informasi lengkap misi perusahaan.
+                                Informasi lengkap misi dalam tiga bahasa.
                             </p>
                         </div>
 
@@ -1684,7 +1986,9 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         </button>
                     </div>
 
-                    <div class="p-5 sm:p-6">
+                    <div
+                        class="max-h-[calc(100vh-8rem)] overflow-y-auto p-5 sm:p-6"
+                    >
                         <div
                             class="mb-5 flex items-center gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20"
                         >
@@ -1709,14 +2013,97 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                             </div>
                         </div>
 
-                        <div
-                            class="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-800/50"
-                        >
-                            <p
-                                class="whitespace-pre-line text-sm leading-7 text-slate-700 dark:text-slate-200"
+                        <div class="grid gap-4 lg:grid-cols-3">
+                            <!-- Indonesia -->
+                            <div
+                                class="rounded-2xl border border-blue-100 bg-blue-50/40 p-5 dark:border-blue-900/40 dark:bg-blue-950/20"
                             >
-                                {{ selectedMisi.isi }}
-                            </p>
+                                <div class="mb-4 flex items-center gap-2">
+                                    <span
+                                        class="rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white"
+                                    >
+                                        ID
+                                    </span>
+
+                                    <span
+                                        class="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400"
+                                    >
+                                        Indonesia
+                                    </span>
+                                </div>
+
+                                <p
+                                    class="whitespace-pre-line text-sm leading-7 text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ selectedMisi.isi }}
+                                </p>
+                            </div>
+
+                            <!-- English -->
+                            <div
+                                class="rounded-2xl border border-sky-100 bg-sky-50/40 p-5 dark:border-sky-900/40 dark:bg-sky-950/20"
+                            >
+                                <div class="mb-4 flex items-center gap-2">
+                                    <span
+                                        class="rounded-lg bg-sky-600 px-2.5 py-1 text-xs font-semibold text-white"
+                                    >
+                                        EN
+                                    </span>
+
+                                    <span
+                                        class="text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-400"
+                                    >
+                                        English
+                                    </span>
+                                </div>
+
+                                <p
+                                    v-if="selectedMisi.isi_en"
+                                    class="whitespace-pre-line text-sm leading-7 text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ selectedMisi.isi_en }}
+                                </p>
+
+                                <p
+                                    v-else
+                                    class="text-sm italic leading-7 text-slate-400 dark:text-slate-500"
+                                >
+                                    Terjemahan English belum tersedia.
+                                </p>
+                            </div>
+
+                            <!-- Mandarin -->
+                            <div
+                                class="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5 dark:border-indigo-900/40 dark:bg-indigo-950/20"
+                            >
+                                <div class="mb-4 flex items-center gap-2">
+                                    <span
+                                        class="rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white"
+                                    >
+                                        ZH
+                                    </span>
+
+                                    <span
+                                        class="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400"
+                                    >
+                                        Mandarin
+                                    </span>
+                                </div>
+
+                                <p
+                                    v-if="selectedMisi.isi_zh"
+                                    class="whitespace-pre-line text-sm leading-7 text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ selectedMisi.isi_zh }}
+                                </p>
+
+                                <p
+                                    v-else
+                                    class="text-sm italic leading-7 text-slate-400 dark:text-slate-500"
+                                >
+                                    Terjemahan Mandarin belum tersedia.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1751,8 +2138,8 @@ const moveMisi = (misi: Misi, direction: "up" | "down"): void => {
                         >
                             Yakin ingin menghapus misi ke-{{
                                 selectedMisi.urutan
-                            }}? Data yang sudah dihapus tidak dapat
-                            dikembalikan.
+                            }}? Data Indonesia, English, dan Mandarin yang sudah
+                            dihapus tidak dapat dikembalikan.
                         </p>
                     </div>
 

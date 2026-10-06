@@ -9,6 +9,8 @@ class Visi extends Model
 {
     protected $fillable = [
         'isi',
+        'isi_en',
+        'isi_zh',
     ];
 
     public function misis(): HasMany
