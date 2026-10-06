@@ -1,6 +1,6 @@
 import { createInertiaApp } from "@inertiajs/vue3";
+import { i18nVue } from "laravel-vue-i18n";
 import type { DefineComponent } from "vue";
-
 import { initializeTheme } from "@/composables/useAppearance";
 import AppLayout from "@/layouts/AppLayout.vue";
 import SettingsLayout from "@/layouts/settings/Layout.vue";
@@ -31,7 +31,6 @@ void createInertiaApp({
 
     layout: (name) => {
         switch (true) {
-            // Halaman publik tanpa layout
             case name === "Welcome":
             case name === "Index":
             case name === "auth/Login":
@@ -42,21 +41,68 @@ void createInertiaApp({
             case name === "auth/VerifyEmail":
                 return null;
 
-            // Halaman settings
             case name.startsWith("settings/"):
                 return [AppLayout, SettingsLayout];
 
-            // Halaman admin
             case name.startsWith("admin/"):
                 return AppLayout;
 
-            // Default
             default:
                 return AppLayout;
         }
     },
 
     withApp: (app) => {
+        const langs = import.meta.glob<{
+            default: Record<string, string>;
+        }>("../../lang/php_*.json");
+
+        const localeFiles: Record<string, string> = {
+            id: "../../lang/php_id.json",
+            en: "../../lang/php_en.json",
+            zh: "../../lang/php_zh_CN.json",
+        };
+
+        app.use(i18nVue, {
+            lang: "id",
+
+            resolve: async (lang) => {
+                const normalized = String(lang)
+                    .toLowerCase()
+                    .replace(/_/g, "-");
+
+                let locale: "id" | "en" | "zh";
+
+                if (
+                    normalized === "zh" ||
+                    normalized === "zh-cn" ||
+                    normalized === "cn"
+                ) {
+                    locale = "zh";
+                } else if (normalized.startsWith("en")) {
+                    locale = "en";
+                } else {
+                    locale = "id";
+                }
+
+                const path = localeFiles[locale];
+                const loader = langs[path];
+
+                if (!loader) {
+                    throw new Error(
+                        `Translation file not found for locale "${lang}": ${path}`,
+                    );
+                }
+
+                const module = await loader();
+
+                // laravel-vue-i18n membutuhkan object dengan property `default`
+                return {
+                    default: module.default,
+                };
+            },
+        });
+
         app.directive("focus", {
             mounted: (el: HTMLElement, shouldFocus) => {
                 if (shouldFocus.value !== false) {
@@ -72,5 +118,4 @@ void createInertiaApp({
 });
 
 initializeTheme();
-
 initializeFlashToast();

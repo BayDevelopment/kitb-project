@@ -24,6 +24,7 @@
         "clsx": "^2.1.1",
         "dompurify": "^3.4.16",
         "laravel-vite-plugin": "^3.0.0",
+        "laravel-vue-i18n": "^2.9.0",
         "lucide-vue-next": "^1.0.0",
         "reka-ui": "^2.9.8",
         "tailwind-merge": "^3.2.0",
@@ -45,8 +46,8 @@
         "leaflet": "^1.9.4",
         "npm": "^12.1.0",
         "typescript": "^5.2.2",
-        "vite": "^8.0.0",
-        "vite-plus": "0.3.0",
+        "vite": "catalog:",
+        "vite-plus": "catalog:",
         "vue-tsc": "^2.2.4"
     },
     "optionalDependencies": {
@@ -57,5 +58,12 @@
         "@tailwindcss/oxide-win32-x64-msvc": "^4.0.1",
         "lightningcss-linux-x64-gnu": "^1.29.1",
         "lightningcss-win32-x64-msvc": "^1.29.1"
+    },
+    "devEngines": {
+        "packageManager": {
+            "name": "pnpm",
+            "version": "12.9.1",
+            "onFail": "download"
+        }
     }
 }

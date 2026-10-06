@@ -27,16 +27,33 @@ class ProfilPerusahaanController extends Controller
         $status = $validated['status'] ?? '';
 
         $profiles = CompanyProfile::query()
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('nama_perusahaan', 'like', "%{$search}%")
-                        ->orWhere('moto', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
-            })
-            ->when($status !== '', function ($query) use ($status) {
-                $query->where('aktif', (bool) $status);
-            })
+            ->when(
+                $search !== '',
+                function ($query) use ($search) {
+                    $query->where(function ($q) use ($search) {
+                        $keyword = "%{$search}%";
+
+                        $q->where('nama_perusahaan', 'like', $keyword)
+                            ->orWhere('tentang_kami', 'like', $keyword)
+                            ->orWhere('tentang_kami_en', 'like', $keyword)
+                            ->orWhere('tentang_kami_zh', 'like', $keyword)
+                            ->orWhere('latar_belakang', 'like', $keyword)
+                            ->orWhere('latar_belakang_en', 'like', $keyword)
+                            ->orWhere('latar_belakang_zh', 'like', $keyword)
+                            ->orWhere('moto', 'like', $keyword)
+                            ->orWhere('moto_en', 'like', $keyword)
+                            ->orWhere('moto_zh', 'like', $keyword)
+                            ->orWhere('email', 'like', $keyword)
+                            ->orWhere('telepon', 'like', $keyword);
+                    });
+                }
+            )
+            ->when(
+                $status !== '',
+                function ($query) use ($status) {
+                    $query->where('aktif', (bool) $status);
+                }
+            )
             ->latest('id')
             ->paginate(10)
             ->withQueryString();
@@ -130,15 +147,14 @@ class ProfilPerusahaanController extends Controller
 
                     $validated['logo'] = $newLogo;
                 } else {
-                    // Jangan menghapus logo lama hanya karena
-                    // form edit tidak mengirim file baru.
+                    // Pertahankan logo lama jika tidak upload logo baru.
                     unset($validated['logo']);
                 }
 
                 $companyProfile->update($validated);
             });
         } catch (\Throwable $e) {
-            // Kalau database gagal, file baru jangan ditinggalkan.
+            // Jika update database gagal, hapus file logo baru.
             if ($newLogo) {
                 Storage::disk('public')->delete($newLogo);
             }
@@ -147,7 +163,7 @@ class ProfilPerusahaanController extends Controller
         }
 
         // Hapus logo lama setelah database berhasil diperbarui.
-        if ($newLogo && $oldLogo) {
+        if ($newLogo && $oldLogo && $oldLogo !== $newLogo) {
             Storage::disk('public')->delete($oldLogo);
         }
 
@@ -169,6 +185,7 @@ class ProfilPerusahaanController extends Controller
             $companyProfile->delete();
         });
 
+        // Hapus logo setelah data berhasil dihapus.
         if ($logo) {
             Storage::disk('public')->delete($logo);
         }
@@ -183,10 +200,17 @@ class ProfilPerusahaanController extends Controller
      * Normalisasi URL website.
      *
      * Contoh:
-     * kitb.co.id       -> https://kitb.co.id
-     * www.kitb.co.id   -> https://www.kitb.co.id
-     * https://kitb.co.id -> tetap
-     * kosong            -> null
+     * kitb.co.id
+     * -> https://kitb.co.id
+     *
+     * www.kitb.co.id
+     * -> https://www.kitb.co.id
+     *
+     * https://kitb.co.id
+     * -> tetap
+     *
+     * kosong
+     * -> null
      */
     private function normalizeWebsite(?string $website): ?string
     {
@@ -205,33 +229,111 @@ class ProfilPerusahaanController extends Controller
 
     /**
      * Validasi data profil perusahaan.
+     *
+     * Bahasa Indonesia menjadi sumber utama/fallback.
+     * English dan Chinese bersifat opsional.
      */
     private function validateProfile(Request $request): array
     {
         return $request->validate([
+            /*
+            |--------------------------------------------------------------------------
+            | Identitas
+            |--------------------------------------------------------------------------
+            */
+
             'nama_perusahaan' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
+            /*
+            |--------------------------------------------------------------------------
+            | Tentang Kami
+            |--------------------------------------------------------------------------
+            */
+
+            // Bahasa Indonesia = wajib
             'tentang_kami' => [
+                'required',
+                'string',
+                'max:10000',
+            ],
+
+            // English = opsional
+            'tentang_kami_en' => [
                 'nullable',
                 'string',
                 'max:10000',
             ],
 
+            // Chinese = opsional
+            'tentang_kami_zh' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Latar Belakang
+            |--------------------------------------------------------------------------
+            */
+
+            // Bahasa Indonesia = wajib
             'latar_belakang' => [
+                'required',
+                'string',
+                'max:10000',
+            ],
+
+            // English = opsional
+            'latar_belakang_en' => [
                 'nullable',
                 'string',
                 'max:10000',
             ],
 
+            // Chinese = opsional
+            'latar_belakang_zh' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Moto
+            |--------------------------------------------------------------------------
+            */
+
+            // Bahasa Indonesia = wajib
             'moto' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            // English = opsional
+            'moto_en' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
+
+            // Chinese = opsional
+            'moto_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Kontak
+            |--------------------------------------------------------------------------
+            */
 
             'alamat' => [
                 'nullable',
@@ -257,13 +359,25 @@ class ProfilPerusahaanController extends Controller
                 'max:255',
             ],
 
+            /*
+            |--------------------------------------------------------------------------
+            | Logo
+            |--------------------------------------------------------------------------
+            */
+
             'logo' => [
                 'nullable',
                 'file',
                 'image',
-                'mimes:jpg,jpeg,png',
+                'mimes:jpg,jpeg,png,webp',
                 'max:2048',
             ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Status
+            |--------------------------------------------------------------------------
+            */
 
             'aktif' => [
                 'sometimes',

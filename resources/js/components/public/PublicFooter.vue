@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
+import { trans } from "laravel-vue-i18n";
 import {
     ArrowUpRight,
     Facebook,
@@ -142,7 +143,7 @@ const socialLinks = computed(() => {
                 <div class="lg:col-span-4">
                     <Link
                         href="/"
-                        aria-label="Kembali ke halaman utama KITB"
+                        :aria-label="trans('footer.home_aria')"
                         class="inline-flex items-center gap-3"
                     >
                         <div class="flex shrink-0 items-center gap-2">
@@ -184,9 +185,7 @@ const socialLinks = computed(() => {
                             pengaturan?.nama_perusahaan ||
                             "PT. Kawasan Industri Tanjung Buton"
                         }}
-                        merupakan kawasan industri strategis di Kabupaten Siak,
-                        Provinsi Riau, yang dikembangkan untuk mendukung
-                        pertumbuhan industri dan investasi berkelanjutan.
+                        {{ trans("footer.company_description") }}
                     </p>
 
                     <!-- Contact Information -->
@@ -230,57 +229,88 @@ const socialLinks = computed(() => {
                 >
                     <div
                         v-for="group in navGroups.slice(0, 2)"
-                        :key="group.label"
+                        :key="group.translationKey ?? group.label"
                     >
                         <h3
                             class="text-sm font-semibold tracking-tight text-white"
                         >
-                            {{ group.label }}
+                            {{ trans(group.translationKey ?? group.label) }}
                         </h3>
 
                         <ul class="mt-4 space-y-2.5">
-                            <li v-for="item in group.items" :key="item.label">
+                            <li
+                                v-for="item in group.items"
+                                :key="item.translationKey ?? item.label"
+                            >
                                 <Link
                                     :href="item.href"
                                     class="group inline-flex max-w-full items-center gap-1.5 text-sm text-white/55 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                                 >
                                     <span class="truncate">
-                                        {{ item.label }}
+                                        {{
+                                            trans(
+                                                item.translationKey ??
+                                                    item.label,
+                                            )
+                                        }}
                                     </span>
 
                                     <span
                                         v-if="item.badge"
                                         class="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-kitb-teal-300 transition-colors group-hover:bg-kitb-teal-300/10"
                                     >
-                                        {{ item.badge }}
+                                        {{
+                                            item.badgeTranslationKey
+                                                ? trans(
+                                                      item.badgeTranslationKey,
+                                                  )
+                                                : item.badge
+                                        }}
                                     </span>
                                 </Link>
                             </li>
                         </ul>
                     </div>
 
-                    <div v-for="group in navGroups.slice(2)" :key="group.label">
+                    <div
+                        v-for="group in navGroups.slice(2)"
+                        :key="group.translationKey ?? group.label"
+                    >
                         <h3
                             class="text-sm font-semibold tracking-tight text-white"
                         >
-                            {{ group.label }}
+                            {{ trans(group.translationKey ?? group.label) }}
                         </h3>
 
                         <ul class="mt-4 space-y-2.5">
-                            <li v-for="item in group.items" :key="item.label">
+                            <li
+                                v-for="item in group.items"
+                                :key="item.translationKey ?? item.label"
+                            >
                                 <Link
                                     :href="item.href"
                                     class="group inline-flex max-w-full items-center gap-1.5 text-sm text-white/55 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                                 >
                                     <span class="truncate">
-                                        {{ item.label }}
+                                        {{
+                                            trans(
+                                                item.translationKey ??
+                                                    item.label,
+                                            )
+                                        }}
                                     </span>
 
                                     <span
                                         v-if="item.badge"
                                         class="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-kitb-teal-300 transition-colors group-hover:bg-kitb-teal-300/10"
                                     >
-                                        {{ item.badge }}
+                                        {{
+                                            item.badgeTranslationKey
+                                                ? trans(
+                                                      item.badgeTranslationKey,
+                                                  )
+                                                : item.badge
+                                        }}
                                     </span>
                                 </Link>
                             </li>
@@ -291,12 +321,11 @@ const socialLinks = computed(() => {
                 <!-- Contact / CTA -->
                 <div class="lg:col-span-3">
                     <h3 class="text-sm font-semibold tracking-tight text-white">
-                        Kontak Kami
+                        {{ trans("footer.contact_us") }}
                     </h3>
 
                     <p class="mt-4 max-w-sm text-sm leading-6 text-white/55">
-                        Hubungi tim KITB untuk informasi kawasan, peluang
-                        investasi, maupun kunjungan lahan.
+                        {{ trans("footer.contact_description") }}
                     </p>
 
                     <!-- CTA -->
@@ -305,7 +334,9 @@ const socialLinks = computed(() => {
                             :href="visitUrl"
                             class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-kitb-navy-900 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-kitb-sand-50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900 sm:w-auto"
                         >
-                            <span> Ajukan Kunjungan </span>
+                            <span>
+                                {{ trans("navigation.submit_visit") }}
+                            </span>
 
                             <ArrowUpRight class="size-4" aria-hidden="true" />
                         </Link>
@@ -318,7 +349,12 @@ const socialLinks = computed(() => {
                             class="inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm font-medium text-white/65 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                         >
                             <span>
-                                {{ kontakLink.label }}
+                                {{
+                                    trans(
+                                        kontakLink.translationKey ??
+                                            kontakLink.label,
+                                    )
+                                }}
                             </span>
 
                             <ArrowUpRight class="size-3.5" aria-hidden="true" />
@@ -330,7 +366,7 @@ const socialLinks = computed(() => {
                         <p
                             class="text-xs font-semibold uppercase tracking-[0.16em] text-white/40"
                         >
-                            Ikuti Kami
+                            {{ trans("footer.follow_us") }}
                         </p>
 
                         <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -363,7 +399,8 @@ const socialLinks = computed(() => {
                     {{
                         pengaturan?.nama_perusahaan ||
                         "PT. Kawasan Industri Tanjung Buton"
-                    }}. Badan Usaha Milik Daerah, Kabupaten Siak.
+                    }}.
+                    {{ trans("footer.regional_owned_enterprise") }}
                 </p>
 
                 <div
@@ -373,14 +410,14 @@ const socialLinks = computed(() => {
                         href="/kebijakan-privasi"
                         class="transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                     >
-                        Kebijakan Privasi
+                        {{ trans("footer.privacy_policy") }}
                     </Link>
 
                     <Link
                         href="/pengaduan"
                         class="transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                     >
-                        Pengaduan
+                        {{ trans("footer.complaints") }}
                     </Link>
 
                     <span

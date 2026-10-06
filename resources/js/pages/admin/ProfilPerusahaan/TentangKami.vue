@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { router } from "@inertiajs/vue3";
+import { toast } from "vue-sonner";
 import {
     Building2,
     Search,
@@ -12,6 +13,7 @@ import {
     Trash2,
     Upload,
     ExternalLink,
+    Languages,
 } from "lucide-vue-next";
 import AppLayout from "@/layouts/AppLayout.vue";
 
@@ -27,16 +29,30 @@ defineOptions({
 
 interface CompanyProfile {
     id: number;
+
     nama_perusahaan: string;
+
     tentang_kami: string | null;
+    tentang_kami_en: string | null;
+    tentang_kami_zh: string | null;
+
     latar_belakang: string | null;
+    latar_belakang_en: string | null;
+    latar_belakang_zh: string | null;
+
     moto: string | null;
+    moto_en: string | null;
+    moto_zh: string | null;
+
     alamat: string | null;
     email: string | null;
     telepon: string | null;
     website: string | null;
+
     logo: string | null;
+
     aktif: boolean;
+
     created_at: string;
     updated_at: string;
 }
@@ -60,6 +76,7 @@ interface PaginatedData {
 
 interface Props {
     profiles: PaginatedData;
+
     filters: {
         search: string;
         status: string;
@@ -83,7 +100,7 @@ const applyFilter = () => {
     router.get(
         "/admin/profil-perusahaan/tentang-kami",
         {
-            search: search.value || undefined,
+            search: search.value.trim() || undefined,
             status: status.value || undefined,
         },
         {
@@ -166,20 +183,53 @@ const selectedProfile = ref<CompanyProfile | null>(null);
 |--------------------------------------------------------------------------
 */
 
-const emptyForm = () => ({
+interface CompanyProfileForm {
+    nama_perusahaan: string;
+
+    tentang_kami: string;
+    tentang_kami_en: string;
+    tentang_kami_zh: string;
+
+    latar_belakang: string;
+    latar_belakang_en: string;
+    latar_belakang_zh: string;
+
+    moto: string;
+    moto_en: string;
+    moto_zh: string;
+
+    alamat: string;
+    email: string;
+    telepon: string;
+    website: string;
+
+    aktif: boolean;
+}
+
+const emptyForm = (): CompanyProfileForm => ({
     nama_perusahaan: "",
+
     tentang_kami: "",
+    tentang_kami_en: "",
+    tentang_kami_zh: "",
+
     latar_belakang: "",
+    latar_belakang_en: "",
+    latar_belakang_zh: "",
+
     moto: "",
+    moto_en: "",
+    moto_zh: "",
+
     alamat: "",
     email: "",
     telepon: "",
     website: "",
-    logo: "",
+
     aktif: true,
 });
 
-const form = ref(emptyForm());
+const form = ref<CompanyProfileForm>(emptyForm());
 
 const logoFile = ref<File | null>(null);
 const logoPreview = ref<string | null>(null);
@@ -193,10 +243,14 @@ const processingDelete = ref(false);
 |--------------------------------------------------------------------------
 */
 
-const truncate = (text: string | null, length = 100) => {
-    if (!text) return "-";
+const truncate = (text: string | null | undefined, length = 100): string => {
+    if (!text?.trim()) {
+        return "-";
+    }
 
-    return text.length > length ? `${text.substring(0, length)}...` : text;
+    const value = text.trim();
+
+    return value.length > length ? `${value.substring(0, length)}...` : value;
 };
 
 const normalizeWebsite = (website: string): string => {
@@ -213,10 +267,26 @@ const normalizeWebsite = (website: string): string => {
     return `https://${value}`;
 };
 
-const getLogoUrl = (logo: string | null) => {
-    if (!logo) return null;
+const getLogoUrl = (logo: string | null | undefined): string | null => {
+    if (!logo?.trim()) {
+        return null;
+    }
 
-    return `/storage/${logo}`;
+    const value = logo.trim();
+
+    if (/^https?:\/\//i.test(value)) {
+        return value;
+    }
+
+    if (value.startsWith("/storage/")) {
+        return value;
+    }
+
+    if (value.startsWith("/")) {
+        return value;
+    }
+
+    return `/storage/${value}`;
 };
 
 const revokeLogoPreview = () => {
@@ -225,6 +295,30 @@ const revokeLogoPreview = () => {
     }
 
     logoPreview.value = null;
+};
+
+const firstValidationError = (
+    errors: Record<string, string | string[]>,
+): string => {
+    const first = Object.values(errors)[0];
+
+    if (Array.isArray(first)) {
+        return first[0] ?? "Terjadi kesalahan validasi.";
+    }
+
+    return first || "Terjadi kesalahan validasi.";
+};
+
+const hasTranslation = (value: string | null | undefined): boolean => {
+    return Boolean(value?.trim());
+};
+
+const translationCount = (
+    id: string | null | undefined,
+    en: string | null | undefined,
+    zh: string | null | undefined,
+): number => {
+    return [id, en, zh].filter(hasTranslation).length;
 };
 
 /*
@@ -237,9 +331,11 @@ const openCreate = () => {
     revokeLogoPreview();
 
     form.value = emptyForm();
+
     selectedProfile.value = null;
-    modalMode.value = "create";
     logoFile.value = null;
+
+    modalMode.value = "create";
 
     showDetail.value = false;
     showDelete.value = false;
@@ -253,18 +349,29 @@ const openEdit = (profile: CompanyProfile) => {
 
     form.value = {
         nama_perusahaan: profile.nama_perusahaan,
-        tentang_kami: profile.tentang_kami || "",
-        latar_belakang: profile.latar_belakang || "",
-        moto: profile.moto || "",
-        alamat: profile.alamat || "",
-        email: profile.email || "",
-        telepon: profile.telepon || "",
-        website: profile.website || "",
-        logo: profile.logo || "",
-        aktif: profile.aktif,
+
+        tentang_kami: profile.tentang_kami ?? "",
+        tentang_kami_en: profile.tentang_kami_en ?? "",
+        tentang_kami_zh: profile.tentang_kami_zh ?? "",
+
+        latar_belakang: profile.latar_belakang ?? "",
+        latar_belakang_en: profile.latar_belakang_en ?? "",
+        latar_belakang_zh: profile.latar_belakang_zh ?? "",
+
+        moto: profile.moto ?? "",
+        moto_en: profile.moto_en ?? "",
+        moto_zh: profile.moto_zh ?? "",
+
+        alamat: profile.alamat ?? "",
+        email: profile.email ?? "",
+        telepon: profile.telepon ?? "",
+        website: profile.website ?? "",
+
+        aktif: Boolean(profile.aktif),
     };
 
     logoFile.value = null;
+
     modalMode.value = "edit";
 
     showDetail.value = false;
@@ -273,14 +380,18 @@ const openEdit = (profile: CompanyProfile) => {
 };
 
 const closeModal = () => {
-    if (processingForm.value) return;
+    if (processingForm.value) {
+        return;
+    }
 
     showModal.value = false;
 
     revokeLogoPreview();
 
     form.value = emptyForm();
+
     logoFile.value = null;
+
     selectedProfile.value = null;
 };
 
@@ -306,7 +417,9 @@ const openDelete = (profile: CompanyProfile) => {
 };
 
 const closeDelete = () => {
-    if (processingDelete.value) return;
+    if (processingDelete.value) {
+        return;
+    }
 
     showDelete.value = false;
     selectedProfile.value = null;
@@ -320,6 +433,7 @@ const closeDelete = () => {
 
 const handleLogoChange = (event: Event) => {
     const target = event.target as HTMLInputElement;
+
     const file = target.files?.[0] ?? null;
 
     revokeLogoPreview();
@@ -337,7 +451,7 @@ const handleLogoChange = (event: Event) => {
         logoFile.value = null;
         target.value = "";
 
-        window.alert("Format logo harus PNG, JPG, JPEG, atau WEBP.");
+        toast.error("Format logo harus PNG, JPG, JPEG, atau WEBP.");
 
         return;
     }
@@ -346,12 +460,13 @@ const handleLogoChange = (event: Event) => {
         logoFile.value = null;
         target.value = "";
 
-        window.alert("Ukuran logo maksimal 2 MB.");
+        toast.error("Ukuran logo maksimal 2 MB.");
 
         return;
     }
 
     logoFile.value = file;
+
     logoPreview.value = URL.createObjectURL(file);
 };
 
@@ -362,31 +477,102 @@ const handleLogoChange = (event: Event) => {
 */
 
 const submitForm = () => {
-    if (processingForm.value) return;
+    if (processingForm.value) {
+        return;
+    }
 
     const namaPerusahaan = form.value.nama_perusahaan.trim();
 
     if (!namaPerusahaan) {
+        toast.error("Nama perusahaan wajib diisi.");
         return;
     }
 
     const data = new FormData();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Identitas
+    |--------------------------------------------------------------------------
+    */
+
     data.append("nama_perusahaan", namaPerusahaan);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tentang Kami
+    |--------------------------------------------------------------------------
+    */
+
     data.append("tentang_kami", form.value.tentang_kami.trim());
+
+    data.append("tentang_kami_en", form.value.tentang_kami_en.trim());
+
+    data.append("tentang_kami_zh", form.value.tentang_kami_zh.trim());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Latar Belakang
+    |--------------------------------------------------------------------------
+    */
+
     data.append("latar_belakang", form.value.latar_belakang.trim());
+
+    data.append("latar_belakang_en", form.value.latar_belakang_en.trim());
+
+    data.append("latar_belakang_zh", form.value.latar_belakang_zh.trim());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Moto
+    |--------------------------------------------------------------------------
+    */
+
     data.append("moto", form.value.moto.trim());
+
+    data.append("moto_en", form.value.moto_en.trim());
+
+    data.append("moto_zh", form.value.moto_zh.trim());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kontak
+    |--------------------------------------------------------------------------
+    */
+
     data.append("alamat", form.value.alamat.trim());
+
     data.append("email", form.value.email.trim());
+
     data.append("telepon", form.value.telepon.trim());
+
     data.append("website", normalizeWebsite(form.value.website));
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status
+    |--------------------------------------------------------------------------
+    */
+
     data.append("aktif", form.value.aktif ? "1" : "0");
+
+    /*
+    |--------------------------------------------------------------------------
+    | Logo
+    |--------------------------------------------------------------------------
+    */
 
     if (logoFile.value) {
         data.append("logo", logoFile.value);
     }
 
     processingForm.value = true;
+
+    /*
+    |--------------------------------------------------------------------------
+    | CREATE
+    |--------------------------------------------------------------------------
+    */
 
     if (modalMode.value === "create") {
         router.post("/admin/profil-perusahaan/tentang-kami", data, {
@@ -395,9 +581,13 @@ const submitForm = () => {
 
             onSuccess: () => {
                 closeModal();
+
+                toast.success("Profil perusahaan berhasil ditambahkan.");
             },
 
             onError: (errors) => {
+                toast.error(firstValidationError(errors));
+
                 console.error("Gagal menambahkan profil:", errors);
             },
 
@@ -409,8 +599,17 @@ const submitForm = () => {
         return;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATE
+    |--------------------------------------------------------------------------
+    */
+
     if (!selectedProfile.value) {
         processingForm.value = false;
+
+        toast.error("Data profil tidak ditemukan.");
+
         return;
     }
 
@@ -425,9 +624,13 @@ const submitForm = () => {
 
             onSuccess: () => {
                 closeModal();
+
+                toast.success("Profil perusahaan berhasil diperbarui.");
             },
 
             onError: (errors) => {
+                toast.error(firstValidationError(errors));
+
                 console.error("Gagal memperbarui profil:", errors);
             },
 
@@ -458,10 +661,15 @@ const deleteProfile = () => {
 
             onSuccess: () => {
                 showDelete.value = false;
+
                 selectedProfile.value = null;
+
+                toast.success("Profil perusahaan berhasil dihapus.");
             },
 
             onError: (errors) => {
+                toast.error(firstValidationError(errors));
+
                 console.error("Gagal menghapus profil:", errors);
             },
 
@@ -480,6 +688,7 @@ const deleteProfile = () => {
 
 onBeforeUnmount(() => {
     clearTimeout(searchTimeout);
+
     revokeLogoPreview();
 });
 </script>
@@ -495,29 +704,24 @@ onBeforeUnmount(() => {
             class="pointer-events-none absolute inset-x-0 top-0 z-0 h-96 overflow-hidden"
             aria-hidden="true"
         >
-            <!-- Blob kiri -->
             <div
                 class="blob-shape absolute -left-24 -top-32 size-96 rounded-full bg-gradient-to-br from-blue-400/30 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/15 dark:to-transparent"
             ></div>
 
-            <!-- Blob kanan -->
             <div
                 class="blob-shape-delayed absolute -right-20 top-4 size-80 rounded-full bg-gradient-to-tr from-sky-300/30 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10 dark:to-transparent"
             ></div>
 
-            <!-- Blob tengah -->
             <div
                 class="blob-shape-slow absolute left-1/3 -top-40 size-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/10 dark:to-transparent"
             ></div>
 
-            <!-- Grid halus -->
             <div class="absolute inset-0 opacity-40 dark:opacity-20">
                 <div
                     class="h-full w-full bg-[linear-gradient(to_right,#64748b12_1px,transparent_1px),linear-gradient(to_bottom,#64748b12_1px,transparent_1px)] bg-[size:32px_32px]"
                 ></div>
             </div>
 
-            <!-- Fade bawah -->
             <div
                 class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-slate-50/90 dark:to-slate-950/90"
             ></div>
@@ -529,9 +733,7 @@ onBeforeUnmount(() => {
         <div
             class="relative z-10 mx-auto w-full max-w-[1600px] p-4 sm:p-5 lg:p-6 xl:p-8"
         >
-            <!-- =====================================================
-                 HEADER
-            ====================================================== -->
+            <!-- HEADER -->
             <div
                 class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
             >
@@ -552,7 +754,8 @@ onBeforeUnmount(() => {
                         <p
                             class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
                         >
-                            Kelola informasi profil perusahaan.
+                            Kelola informasi profil perusahaan dalam Bahasa
+                            Indonesia, English, dan 中文.
                         </p>
                     </div>
                 </div>
@@ -567,14 +770,11 @@ onBeforeUnmount(() => {
                 </button>
             </div>
 
-            <!-- =====================================================
-                 FILTER
-            ====================================================== -->
+            <!-- FILTER -->
             <div
-                class="mb-5 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm shadow-slate-200/40 backdrop-blur-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
+                class="mb-5 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm shadow-slate-200/40 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
             >
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-                    <!-- Search -->
                     <div class="relative flex-1">
                         <Search
                             class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
@@ -583,12 +783,11 @@ onBeforeUnmount(() => {
                         <input
                             v-model="search"
                             type="text"
-                            placeholder="Cari nama perusahaan, moto, atau email..."
+                            placeholder="Cari nama, moto, konten, atau email..."
                             class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
                         />
                     </div>
 
-                    <!-- Status -->
                     <select
                         v-model="status"
                         class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
@@ -598,7 +797,6 @@ onBeforeUnmount(() => {
                         <option value="0">Nonaktif</option>
                     </select>
 
-                    <!-- Reset -->
                     <button
                         v-if="hasFilter"
                         type="button"
@@ -611,15 +809,12 @@ onBeforeUnmount(() => {
                 </div>
             </div>
 
-            <!-- =====================================================
-                 TABLE CARD
-            ====================================================== -->
+            <!-- TABLE -->
             <div
-                class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-sm transition-all duration-300 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10"
+                class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10"
             >
                 <div class="overflow-x-auto">
-                    <table class="w-full min-w-[950px] text-left text-sm">
-                        <!-- Table Header -->
+                    <table class="w-full min-w-[1050px] text-left text-sm">
                         <thead
                             class="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-800/50"
                         >
@@ -645,6 +840,12 @@ onBeforeUnmount(() => {
                                 <th
                                     class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
                                 >
+                                    Bahasa
+                                </th>
+
+                                <th
+                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                >
                                     Status
                                 </th>
 
@@ -656,7 +857,6 @@ onBeforeUnmount(() => {
                             </tr>
                         </thead>
 
-                        <!-- Table Body -->
                         <tbody
                             class="divide-y divide-slate-100 dark:divide-slate-800"
                         >
@@ -698,19 +898,77 @@ onBeforeUnmount(() => {
                                 </td>
 
                                 <!-- Tentang -->
-                                <td
-                                    class="max-w-md px-6 py-4 text-slate-600 dark:text-slate-300"
-                                >
-                                    {{ truncate(profile.tentang_kami) }}
+                                <td class="max-w-md px-6 py-4">
+                                    <p
+                                        class="line-clamp-3 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{ truncate(profile.tentang_kami) }}
+                                    </p>
                                 </td>
 
                                 <!-- Moto -->
                                 <td class="px-6 py-4">
                                     <span
-                                        class="text-slate-600 dark:text-slate-300"
+                                        class="line-clamp-2 text-slate-600 dark:text-slate-300"
                                     >
                                         {{ profile.moto || "-" }}
                                     </span>
+                                </td>
+
+                                <!-- Bahasa -->
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <span
+                                            class="rounded-md px-2 py-1 text-[10px] font-semibold"
+                                            :class="
+                                                hasTranslation(
+                                                    profile.tentang_kami,
+                                                )
+                                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                                                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600'
+                                            "
+                                        >
+                                            ID
+                                        </span>
+
+                                        <span
+                                            class="rounded-md px-2 py-1 text-[10px] font-semibold"
+                                            :class="
+                                                hasTranslation(
+                                                    profile.tentang_kami_en,
+                                                )
+                                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                                                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600'
+                                            "
+                                        >
+                                            EN
+                                        </span>
+
+                                        <span
+                                            class="rounded-md px-2 py-1 text-[10px] font-semibold"
+                                            :class="
+                                                hasTranslation(
+                                                    profile.tentang_kami_zh,
+                                                )
+                                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                                                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600'
+                                            "
+                                        >
+                                            中文
+                                        </span>
+                                    </div>
+
+                                    <p
+                                        class="mt-1.5 text-[11px] text-slate-400"
+                                    >
+                                        {{
+                                            translationCount(
+                                                profile.tentang_kami,
+                                                profile.tentang_kami_en,
+                                                profile.tentang_kami_zh,
+                                            )
+                                        }}/3 terisi
+                                    </p>
                                 </td>
 
                                 <!-- Status -->
@@ -741,7 +999,6 @@ onBeforeUnmount(() => {
                                 <!-- Aksi -->
                                 <td class="px-6 py-4">
                                     <div class="flex justify-end gap-1">
-                                        <!-- Detail -->
                                         <button
                                             type="button"
                                             class="rounded-xl p-2 text-slate-500 transition-all hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
@@ -751,7 +1008,6 @@ onBeforeUnmount(() => {
                                             <Eye class="size-4" />
                                         </button>
 
-                                        <!-- Edit -->
                                         <button
                                             type="button"
                                             class="rounded-xl p-2 text-slate-500 transition-all hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
@@ -761,7 +1017,6 @@ onBeforeUnmount(() => {
                                             <Pencil class="size-4" />
                                         </button>
 
-                                        <!-- Delete -->
                                         <button
                                             type="button"
                                             class="rounded-xl p-2 text-slate-500 transition-all hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
@@ -776,7 +1031,7 @@ onBeforeUnmount(() => {
 
                             <!-- Empty -->
                             <tr v-if="profiles.data.length === 0">
-                                <td colspan="5" class="px-6 py-16 text-center">
+                                <td colspan="6" class="px-6 py-16 text-center">
                                     <div
                                         class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
                                     >
@@ -800,9 +1055,7 @@ onBeforeUnmount(() => {
                     </table>
                 </div>
 
-                <!-- =================================================
-                     PAGINATION
-                ================================================== -->
+                <!-- Pagination -->
                 <div
                     v-if="profiles.total > 0"
                     class="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
@@ -861,7 +1114,7 @@ onBeforeUnmount(() => {
                 @click.self="closeModal"
             >
                 <div
-                    class="w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
+                    class="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
                 >
                     <!-- Header -->
                     <div
@@ -889,7 +1142,8 @@ onBeforeUnmount(() => {
                             <p
                                 class="mt-1 pl-11 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Lengkapi informasi profil perusahaan.
+                                Lengkapi informasi perusahaan dan terjemahan
+                                konten.
                             </p>
                         </div>
 
@@ -905,189 +1159,567 @@ onBeforeUnmount(() => {
 
                     <!-- Form -->
                     <form
-                        class="max-h-[75vh] overflow-y-auto p-6"
+                        class="max-h-[78vh] overflow-y-auto p-6"
                         @submit.prevent="submitForm"
                     >
-                        <div class="grid gap-5 md:grid-cols-2">
-                            <!-- Nama -->
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                        <div class="space-y-7">
+                            <!-- =================================================
+                                 IDENTITAS
+                            ================================================== -->
+                            <section>
+                                <div class="mb-4 flex items-center gap-3">
+                                    <div
+                                        class="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                    >
+                                        <Building2 class="size-4" />
+                                    </div>
+
+                                    <div>
+                                        <h3
+                                            class="text-sm font-semibold text-slate-900 dark:text-white"
+                                        >
+                                            Identitas Perusahaan
+                                        </h3>
+
+                                        <p class="text-xs text-slate-400">
+                                            Informasi utama perusahaan.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="grid gap-5 md:grid-cols-2">
+                                    <!-- Nama -->
+                                    <div class="md:col-span-2">
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Nama Perusahaan
+                                            <span
+                                                class="ml-0.5 font-bold text-red-500"
+                                                aria-hidden="true"
+                                            >
+                                                *
+                                            </span>
+                                        </label>
+
+                                        <input
+                                            v-model="form.nama_perusahaan"
+                                            type="text"
+                                            required
+                                            maxlength="255"
+                                            placeholder="Contoh: PT Kawasan Industri Tanjung Buton"
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        />
+
+                                        <p
+                                            class="mt-1.5 text-xs text-slate-400"
+                                        >
+                                            Nama resmi perusahaan yang
+                                            ditampilkan di website.
+                                        </p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- =================================================
+                                 MOTO
+                            ================================================== -->
+                            <section
+                                class="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-800/30"
+                            >
+                                <div
+                                    class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
                                 >
-                                    Nama Perusahaan
-                                    <span class="text-red-500">*</span>
-                                </label>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <Languages
+                                                class="size-4 text-blue-600 dark:text-blue-400"
+                                            />
 
-                                <input
-                                    v-model="form.nama_perusahaan"
-                                    type="text"
-                                    required
-                                    placeholder="Contoh: PT Kawasan Industri Tanjung Buton"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                />
+                                            <h3
+                                                class="text-sm font-semibold text-slate-900 dark:text-white"
+                                            >
+                                                Moto Perusahaan
+                                            </h3>
+                                        </div>
 
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Masukkan nama resmi perusahaan yang akan
-                                    ditampilkan di website.
-                                </p>
-                            </div>
+                                        <p
+                                            class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                                        >
+                                            Isi moto dalam tiga bahasa agar
+                                            tampil sesuai bahasa website.
+                                        </p>
+                                    </div>
 
-                            <!-- Moto -->
-                            <div>
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    <span
+                                        class="inline-flex w-fit items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                                    >
+                                        3 Bahasa
+                                    </span>
+                                </div>
+
+                                <div class="grid gap-4 lg:grid-cols-3">
+                                    <!-- ID -->
+                                    <div>
+                                        <label
+                                            class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            <span
+                                                class="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
+                                            >
+                                                ID
+                                            </span>
+
+                                            Bahasa Indonesia
+                                        </label>
+
+                                        <input
+                                            v-model="form.moto"
+                                            type="text"
+                                            maxlength="255"
+                                            placeholder="Menghubungkan Industri, Logistik, dan Peluang Investasi."
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                        />
+                                    </div>
+
+                                    <!-- EN -->
+                                    <div>
+                                        <label
+                                            class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            <span
+                                                class="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
+                                            >
+                                                EN
+                                            </span>
+
+                                            English
+                                        </label>
+
+                                        <input
+                                            v-model="form.moto_en"
+                                            type="text"
+                                            maxlength="255"
+                                            placeholder="Connecting Industry, Logistics, and Investment Opportunities."
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                        />
+                                    </div>
+
+                                    <!-- ZH -->
+                                    <div>
+                                        <label
+                                            class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            <span
+                                                class="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700 dark:bg-sky-950/50 dark:text-sky-400"
+                                            >
+                                                中文
+                                            </span>
+
+                                            Chinese
+                                        </label>
+
+                                        <input
+                                            v-model="form.moto_zh"
+                                            type="text"
+                                            maxlength="255"
+                                            placeholder="连接产业、物流与投资机遇。"
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                        />
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- =================================================
+                                 TENTANG KAMI
+                            ================================================== -->
+                            <section
+                                class="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-800/30"
+                            >
+                                <div
+                                    class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
                                 >
-                                    Moto Perusahaan
-                                </label>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <Languages
+                                                class="size-4 text-blue-600 dark:text-blue-400"
+                                            />
 
-                                <input
-                                    v-model="form.moto"
-                                    type="text"
-                                    placeholder="Contoh: Menghubungkan Industri, Logistik, dan Peluang Investasi."
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                />
+                                            <h3
+                                                class="text-sm font-semibold text-slate-900 dark:text-white"
+                                            >
+                                                Tentang Kami
+                                            </h3>
+                                        </div>
 
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Isi dengan slogan atau moto resmi
-                                    perusahaan.
-                                </p>
-                            </div>
+                                        <p
+                                            class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                                        >
+                                            Jelaskan siapa perusahaan, bidang
+                                            usaha, dan aktivitas utama
+                                            perusahaan.
+                                        </p>
+                                    </div>
 
-                            <!-- Email -->
-                            <div>
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Email Perusahaan
-                                </label>
+                                    <span
+                                        class="inline-flex w-fit items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                                    >
+                                        3 Bahasa
+                                    </span>
+                                </div>
 
-                                <input
-                                    v-model="form.email"
-                                    type="email"
-                                    placeholder="Contoh: info@kitb.co.id"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                />
+                                <div class="grid gap-4 lg:grid-cols-3">
+                                    <!-- ID -->
+                                    <div>
+                                        <label
+                                            class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            <span
+                                                class="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
+                                            >
+                                                ID
+                                            </span>
 
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Gunakan email resmi yang dapat dihubungi.
-                                </p>
-                            </div>
+                                            Bahasa Indonesia
+                                        </label>
 
-                            <!-- Telepon -->
-                            <div>
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Nomor Telepon
-                                </label>
+                                        <textarea
+                                            v-model="form.tentang_kami"
+                                            rows="8"
+                                            maxlength="10000"
+                                            placeholder="PT Kawasan Industri Tanjung Buton (KITB) merupakan perusahaan pengelola kawasan industri..."
+                                            class="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                        ></textarea>
 
-                                <input
-                                    v-model="form.telepon"
-                                    type="text"
-                                    placeholder="Contoh: +62 761 123 456"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                />
+                                        <p
+                                            class="mt-1.5 text-[11px] text-slate-400"
+                                        >
+                                            Versi utama / fallback website.
+                                        </p>
+                                    </div>
 
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Nomor telepon atau layanan resmi perusahaan.
-                                </p>
-                            </div>
+                                    <!-- EN -->
+                                    <div>
+                                        <label
+                                            class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            <span
+                                                class="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
+                                            >
+                                                EN
+                                            </span>
 
-                            <!-- Website -->
-                            <div>
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Website Perusahaan
-                                </label>
+                                            English
+                                        </label>
 
-                                <input
-                                    v-model="form.website"
-                                    type="url"
-                                    inputmode="url"
-                                    autocomplete="url"
-                                    placeholder="https://kitb.co.id"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                />
+                                        <textarea
+                                            v-model="form.tentang_kami_en"
+                                            rows="8"
+                                            maxlength="10000"
+                                            placeholder="PT Kawasan Industri Tanjung Buton (KITB) is an industrial estate management company..."
+                                            class="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                        ></textarea>
 
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Masukkan alamat website resmi perusahaan.
-                                </p>
-                            </div>
+                                        <p
+                                            class="mt-1.5 text-[11px] text-slate-400"
+                                        >
+                                            Digunakan ketika website menggunakan
+                                            English.
+                                        </p>
+                                    </div>
 
-                            <!-- Alamat -->
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Alamat Perusahaan
-                                </label>
+                                    <!-- ZH -->
+                                    <div>
+                                        <label
+                                            class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            <span
+                                                class="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700 dark:bg-sky-950/50 dark:text-sky-400"
+                                            >
+                                                中文
+                                            </span>
 
-                                <textarea
-                                    v-model="form.alamat"
-                                    rows="3"
-                                    placeholder="Contoh: Kampung Mengkapan, Kecamatan Sungai Apit, Kabupaten Siak, Provinsi Riau."
-                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                ></textarea>
+                                            Chinese
+                                        </label>
 
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Tuliskan alamat lengkap kantor atau lokasi
-                                    perusahaan.
-                                </p>
-                            </div>
+                                        <textarea
+                                            v-model="form.tentang_kami_zh"
+                                            rows="8"
+                                            maxlength="10000"
+                                            placeholder="PT Kawasan Industri Tanjung Buton（KITB）是一家工业园区管理公司..."
+                                            class="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                        ></textarea>
 
-                            <!-- Tentang -->
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Tentang Kami
-                                </label>
-
-                                <textarea
-                                    v-model="form.tentang_kami"
-                                    rows="6"
-                                    placeholder="Contoh: PT Kawasan Industri Tanjung Buton (KITB) merupakan perusahaan pengelola kawasan industri..."
-                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                ></textarea>
-
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Jelaskan secara singkat siapa perusahaan
-                                    ini, bidangnya, dan apa yang dilakukan.
-                                </p>
-                            </div>
-
-                            <!-- Latar Belakang -->
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Latar Belakang
-                                </label>
-
-                                <textarea
-                                    v-model="form.latar_belakang"
-                                    rows="6"
-                                    placeholder="Contoh: Kawasan Industri Tanjung Buton dikembangkan dengan mempertimbangkan posisi strategis wilayah..."
-                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                ></textarea>
-
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Jelaskan alasan, sejarah singkat, atau dasar
-                                    pengembangan perusahaan/kawasan.
-                                </p>
-                            </div>
-
-                            <!-- Logo -->
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Logo Perusahaan
-                                </label>
+                                        <p
+                                            class="mt-1.5 text-[11px] text-slate-400"
+                                        >
+                                            Digunakan ketika website menggunakan
+                                            中文.
+                                        </p>
+                                    </div>
+                                </div>
 
                                 <div
-                                    class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4 transition-colors dark:border-slate-700 dark:bg-slate-800/50"
+                                    class="mt-4 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50/70 px-3.5 py-3 dark:border-amber-900/30 dark:bg-amber-950/20"
+                                >
+                                    <Languages
+                                        class="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                                    />
+
+                                    <p
+                                        class="text-xs leading-5 text-amber-700 dark:text-amber-400"
+                                    >
+                                        Jika versi English atau 中文
+                                        dikosongkan, website otomatis
+                                        menggunakan versi Bahasa Indonesia.
+                                    </p>
+                                </div>
+                            </section>
+
+                            <!-- =================================================
+                                 LATAR BELAKANG
+                            ================================================== -->
+                            <section
+                                class="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-800/30"
+                            >
+                                <div
+                                    class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+                                >
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <Languages
+                                                class="size-4 text-blue-600 dark:text-blue-400"
+                                            />
+
+                                            <h3
+                                                class="text-sm font-semibold text-slate-900 dark:text-white"
+                                            >
+                                                Latar Belakang
+                                            </h3>
+                                        </div>
+
+                                        <p
+                                            class="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                                        >
+                                            Jelaskan sejarah, alasan, konteks,
+                                            atau dasar pengembangan perusahaan /
+                                            kawasan.
+                                        </p>
+                                    </div>
+
+                                    <span
+                                        class="inline-flex w-fit items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                                    >
+                                        3 Bahasa
+                                    </span>
+                                </div>
+
+                                <div class="grid gap-4 lg:grid-cols-3">
+                                    <!-- ID -->
+                                    <div>
+                                        <label
+                                            class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            <span
+                                                class="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
+                                            >
+                                                ID
+                                            </span>
+
+                                            Bahasa Indonesia
+                                        </label>
+
+                                        <textarea
+                                            v-model="form.latar_belakang"
+                                            rows="8"
+                                            maxlength="10000"
+                                            placeholder="Kawasan Industri Tanjung Buton dikembangkan dengan mempertimbangkan posisi strategis wilayah..."
+                                            class="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                        ></textarea>
+                                    </div>
+
+                                    <!-- EN -->
+                                    <div>
+                                        <label
+                                            class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            <span
+                                                class="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
+                                            >
+                                                EN
+                                            </span>
+
+                                            English
+                                        </label>
+
+                                        <textarea
+                                            v-model="form.latar_belakang_en"
+                                            rows="8"
+                                            maxlength="10000"
+                                            placeholder="The Tanjung Buton Industrial Estate was developed by considering the strategic position of the region..."
+                                            class="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                        ></textarea>
+                                    </div>
+
+                                    <!-- ZH -->
+                                    <div>
+                                        <label
+                                            class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300"
+                                        >
+                                            <span
+                                                class="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700 dark:bg-sky-950/50 dark:text-sky-400"
+                                            >
+                                                中文
+                                            </span>
+
+                                            Chinese
+                                        </label>
+
+                                        <textarea
+                                            v-model="form.latar_belakang_zh"
+                                            rows="8"
+                                            maxlength="10000"
+                                            placeholder="丹绒布东工业园区的开发充分考虑了该地区的战略地理位置..."
+                                            class="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                        ></textarea>
+                                    </div>
+                                </div>
+
+                                <p class="mt-4 text-xs text-slate-400">
+                                    Versi English dan 中文 bersifat opsional.
+                                    Jika kosong, website menggunakan versi
+                                    Indonesia.
+                                </p>
+                            </section>
+
+                            <!-- =================================================
+                                 KONTAK
+                            ================================================== -->
+                            <section>
+                                <div class="mb-4 flex items-center gap-3">
+                                    <div
+                                        class="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                    >
+                                        <Building2 class="size-4" />
+                                    </div>
+
+                                    <div>
+                                        <h3
+                                            class="text-sm font-semibold text-slate-900 dark:text-white"
+                                        >
+                                            Kontak & Lokasi
+                                        </h3>
+
+                                        <p class="text-xs text-slate-400">
+                                            Informasi yang dapat digunakan
+                                            pengunjung untuk menghubungi
+                                            perusahaan.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="grid gap-5 md:grid-cols-2">
+                                    <!-- Email -->
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Email Perusahaan
+                                        </label>
+
+                                        <input
+                                            v-model="form.email"
+                                            type="email"
+                                            maxlength="255"
+                                            autocomplete="email"
+                                            placeholder="Contoh: info@kitb.co.id"
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        />
+                                    </div>
+
+                                    <!-- Telepon -->
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Nomor Telepon
+                                        </label>
+
+                                        <input
+                                            v-model="form.telepon"
+                                            type="text"
+                                            maxlength="50"
+                                            autocomplete="tel"
+                                            placeholder="Contoh: +62 761 123 456"
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        />
+                                    </div>
+
+                                    <!-- Website -->
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Website Perusahaan
+                                        </label>
+
+                                        <input
+                                            v-model="form.website"
+                                            type="url"
+                                            inputmode="url"
+                                            autocomplete="url"
+                                            maxlength="255"
+                                            placeholder="https://tanjungbuton-industrial.co.id"
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        />
+                                    </div>
+
+                                    <!-- Alamat -->
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Alamat Perusahaan
+                                        </label>
+
+                                        <textarea
+                                            v-model="form.alamat"
+                                            rows="3"
+                                            maxlength="500"
+                                            placeholder="Kampung Mengkapan, Kecamatan Sungai Apit, Kabupaten Siak, Provinsi Riau."
+                                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        ></textarea>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- =================================================
+                                 LOGO
+                            ================================================== -->
+                            <section>
+                                <div class="mb-4 flex items-center gap-3">
+                                    <div
+                                        class="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                    >
+                                        <Upload class="size-4" />
+                                    </div>
+
+                                    <div>
+                                        <h3
+                                            class="text-sm font-semibold text-slate-900 dark:text-white"
+                                        >
+                                            Logo Perusahaan
+                                        </h3>
+
+                                        <p class="text-xs text-slate-400">
+                                            Gunakan logo dengan kualitas yang
+                                            baik.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-800/50"
                                 >
                                     <div
                                         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
@@ -1131,7 +1763,8 @@ onBeforeUnmount(() => {
                                 </div>
 
                                 <p class="mt-1.5 text-xs text-slate-400">
-                                    Pilih file baru jika ingin mengganti logo.
+                                    Pada mode edit, logo lama tetap digunakan
+                                    jika tidak memilih file baru.
                                 </p>
 
                                 <!-- New Preview -->
@@ -1141,7 +1774,7 @@ onBeforeUnmount(() => {
                                 >
                                     <img
                                         :src="logoPreview"
-                                        alt="Preview logo"
+                                        alt="Preview logo baru"
                                         class="size-16 rounded-xl border border-slate-200 bg-white object-contain p-2 dark:border-slate-700"
                                     />
 
@@ -1190,11 +1823,13 @@ onBeforeUnmount(() => {
                                         </p>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
 
-                            <!-- Status -->
-                            <div
-                                class="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-2 dark:border-slate-700 dark:bg-slate-800/50"
+                            <!-- =================================================
+                                 STATUS
+                            ================================================== -->
+                            <section
+                                class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50"
                             >
                                 <div class="flex items-start gap-3">
                                     <input
@@ -1215,19 +1850,17 @@ onBeforeUnmount(() => {
                                         <p
                                             class="mt-1 text-xs leading-5 text-slate-400"
                                         >
-                                            Jika dicentang, profil dapat
-                                            ditampilkan dan digunakan pada
-                                            bagian website yang membutuhkan
-                                            informasi perusahaan.
+                                            Profil aktif dapat digunakan pada
+                                            halaman publik website.
                                         </p>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
                         </div>
 
                         <!-- Footer -->
                         <div
-                            class="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800"
+                            class="mt-7 flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800"
                         >
                             <button
                                 type="button"
@@ -1275,23 +1908,32 @@ onBeforeUnmount(() => {
                 @click.self="closeDetail"
             >
                 <div
-                    class="w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
+                    class="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
                 >
                     <!-- Header -->
                     <div
                         class="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-6 py-4 dark:border-slate-800 dark:bg-slate-800/40"
                     >
                         <div>
-                            <h2
-                                class="text-lg font-semibold text-slate-900 dark:text-white"
-                            >
-                                Detail Profil Perusahaan
-                            </h2>
+                            <div class="flex items-center gap-2.5">
+                                <div
+                                    class="flex size-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+                                >
+                                    <Eye class="size-4" />
+                                </div>
+
+                                <h2
+                                    class="text-lg font-semibold text-slate-900 dark:text-white"
+                                >
+                                    Detail Profil Perusahaan
+                                </h2>
+                            </div>
 
                             <p
-                                class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
+                                class="mt-1 pl-11 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Informasi lengkap perusahaan.
+                                Informasi lengkap perusahaan dan konten
+                                multilingual.
                             </p>
                         </div>
 
@@ -1305,13 +1947,13 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- Content -->
-                    <div class="max-h-[70vh] space-y-6 overflow-y-auto p-6">
+                    <div class="max-h-[75vh] space-y-6 overflow-y-auto p-6">
                         <!-- Identity -->
                         <div
-                            class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50"
+                            class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center dark:border-slate-800 dark:bg-slate-800/50"
                         >
                             <div
-                                class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
+                                class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
                             >
                                 <img
                                     v-if="selectedProfile.logo"
@@ -1322,16 +1964,42 @@ onBeforeUnmount(() => {
 
                                 <Building2
                                     v-else
-                                    class="size-7 text-blue-500"
+                                    class="size-8 text-blue-500"
                                 />
                             </div>
 
                             <div class="min-w-0">
-                                <h3
-                                    class="truncate text-lg font-semibold text-slate-900 dark:text-white"
-                                >
-                                    {{ selectedProfile.nama_perusahaan }}
-                                </h3>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3
+                                        class="text-lg font-semibold text-slate-900 dark:text-white"
+                                    >
+                                        {{ selectedProfile.nama_perusahaan }}
+                                    </h3>
+
+                                    <span
+                                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                                        :class="
+                                            selectedProfile.aktif
+                                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                        "
+                                    >
+                                        <span
+                                            class="size-1.5 rounded-full"
+                                            :class="
+                                                selectedProfile.aktif
+                                                    ? 'bg-emerald-500'
+                                                    : 'bg-slate-400'
+                                            "
+                                        ></span>
+
+                                        {{
+                                            selectedProfile.aktif
+                                                ? "Aktif"
+                                                : "Nonaktif"
+                                        }}
+                                    </span>
+                                </div>
 
                                 <p
                                     class="mt-1 text-sm text-slate-500 dark:text-slate-400"
@@ -1344,157 +2012,317 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
+                        <!-- Moto -->
+                        <section>
+                            <div class="mb-3 flex items-center gap-2">
+                                <Languages
+                                    class="size-4 text-blue-600 dark:text-blue-400"
+                                />
+
+                                <h3
+                                    class="text-sm font-semibold text-slate-900 dark:text-white"
+                                >
+                                    Moto Perusahaan
+                                </h3>
+                            </div>
+
+                            <div class="grid gap-4 lg:grid-cols-3">
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
+                                >
+                                    <span
+                                        class="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
+                                    >
+                                        ID
+                                    </span>
+
+                                    <p
+                                        class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{ selectedProfile.moto || "-" }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
+                                >
+                                    <span
+                                        class="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
+                                    >
+                                        EN
+                                    </span>
+
+                                    <p
+                                        class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{ selectedProfile.moto_en || "-" }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
+                                >
+                                    <span
+                                        class="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-950/50 dark:text-sky-400"
+                                    >
+                                        中文
+                                    </span>
+
+                                    <p
+                                        class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{ selectedProfile.moto_zh || "-" }}
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
                         <!-- Tentang -->
-                        <div>
-                            <p
-                                class="text-xs font-semibold uppercase tracking-wide text-slate-400"
-                            >
-                                Tentang Kami
-                            </p>
+                        <section>
+                            <div class="mb-3 flex items-center gap-2">
+                                <Languages
+                                    class="size-4 text-blue-600 dark:text-blue-400"
+                                />
 
-                            <p
-                                class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
-                            >
-                                {{ selectedProfile.tentang_kami || "-" }}
-                            </p>
-                        </div>
-
-                        <!-- Latar -->
-                        <div>
-                            <p
-                                class="text-xs font-semibold uppercase tracking-wide text-slate-400"
-                            >
-                                Latar Belakang
-                            </p>
-
-                            <p
-                                class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
-                            >
-                                {{ selectedProfile.latar_belakang || "-" }}
-                            </p>
-                        </div>
-
-                        <!-- Detail -->
-                        <div class="grid gap-5 sm:grid-cols-2">
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                <h3
+                                    class="text-sm font-semibold text-slate-900 dark:text-white"
                                 >
-                                    Moto
-                                </p>
-
-                                <p
-                                    class="mt-1 text-sm text-slate-700 dark:text-slate-200"
-                                >
-                                    {{ selectedProfile.moto || "-" }}
-                                </p>
+                                    Tentang Kami
+                                </h3>
                             </div>
 
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                            <div class="grid gap-4 lg:grid-cols-3">
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
                                 >
-                                    Email
-                                </p>
+                                    <span
+                                        class="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
+                                    >
+                                        ID
+                                    </span>
 
-                                <p
-                                    class="mt-1 break-all text-sm text-slate-700 dark:text-slate-200"
+                                    <p
+                                        class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{
+                                            selectedProfile.tentang_kami || "-"
+                                        }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
                                 >
-                                    {{ selectedProfile.email || "-" }}
-                                </p>
+                                    <span
+                                        class="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
+                                    >
+                                        EN
+                                    </span>
+
+                                    <p
+                                        class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{
+                                            selectedProfile.tentang_kami_en ||
+                                            "-"
+                                        }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
+                                >
+                                    <span
+                                        class="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-950/50 dark:text-sky-400"
+                                    >
+                                        中文
+                                    </span>
+
+                                    <p
+                                        class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{
+                                            selectedProfile.tentang_kami_zh ||
+                                            "-"
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Latar Belakang -->
+                        <section>
+                            <div class="mb-3 flex items-center gap-2">
+                                <Languages
+                                    class="size-4 text-blue-600 dark:text-blue-400"
+                                />
+
+                                <h3
+                                    class="text-sm font-semibold text-slate-900 dark:text-white"
+                                >
+                                    Latar Belakang
+                                </h3>
                             </div>
 
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                            <div class="grid gap-4 lg:grid-cols-3">
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
                                 >
-                                    Telepon
-                                </p>
+                                    <span
+                                        class="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
+                                    >
+                                        ID
+                                    </span>
 
-                                <p
-                                    class="mt-1 text-sm text-slate-700 dark:text-slate-200"
+                                    <p
+                                        class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{
+                                            selectedProfile.latar_belakang ||
+                                            "-"
+                                        }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
                                 >
-                                    {{ selectedProfile.telepon || "-" }}
-                                </p>
+                                    <span
+                                        class="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400"
+                                    >
+                                        EN
+                                    </span>
+
+                                    <p
+                                        class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{
+                                            selectedProfile.latar_belakang_en ||
+                                            "-"
+                                        }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
+                                >
+                                    <span
+                                        class="rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-950/50 dark:text-sky-400"
+                                    >
+                                        中文
+                                    </span>
+
+                                    <p
+                                        class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{
+                                            selectedProfile.latar_belakang_zh ||
+                                            "-"
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Contact -->
+                        <section>
+                            <div class="mb-3 flex items-center gap-2">
+                                <Building2
+                                    class="size-4 text-blue-600 dark:text-blue-400"
+                                />
+
+                                <h3
+                                    class="text-sm font-semibold text-slate-900 dark:text-white"
+                                >
+                                    Kontak & Informasi
+                                </h3>
                             </div>
 
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
                                 >
-                                    Website
-                                </p>
+                                    <p
+                                        class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                    >
+                                        Email
+                                    </p>
 
-                                <a
-                                    v-if="selectedProfile.website"
-                                    :href="
-                                        normalizeWebsite(
-                                            selectedProfile.website,
-                                        )
-                                    "
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="mt-1 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                    <p
+                                        class="mt-2 break-all text-sm text-slate-700 dark:text-slate-200"
+                                    >
+                                        {{ selectedProfile.email || "-" }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
                                 >
-                                    {{ selectedProfile.website }}
+                                    <p
+                                        class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                    >
+                                        Telepon
+                                    </p>
 
-                                    <ExternalLink class="size-3.5" />
-                                </a>
+                                    <p
+                                        class="mt-2 text-sm text-slate-700 dark:text-slate-200"
+                                    >
+                                        {{ selectedProfile.telepon || "-" }}
+                                    </p>
+                                </div>
 
-                                <p
-                                    v-else
-                                    class="mt-1 text-sm text-slate-700 dark:text-slate-200"
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
                                 >
-                                    -
-                                </p>
+                                    <p
+                                        class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                    >
+                                        Website
+                                    </p>
+
+                                    <a
+                                        v-if="selectedProfile.website"
+                                        :href="
+                                            normalizeWebsite(
+                                                selectedProfile.website,
+                                            )
+                                        "
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="mt-2 inline-flex items-center gap-1.5 break-all text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                    >
+                                        {{ selectedProfile.website }}
+
+                                        <ExternalLink
+                                            class="size-3.5 shrink-0"
+                                        />
+                                    </a>
+
+                                    <p
+                                        v-else
+                                        class="mt-2 text-sm text-slate-700 dark:text-slate-200"
+                                    >
+                                        -
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40"
+                                >
+                                    <p
+                                        class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                    >
+                                        Alamat
+                                    </p>
+
+                                    <p
+                                        class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{ selectedProfile.alamat || "-" }}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-
-                        <!-- Alamat -->
-                        <div>
-                            <p
-                                class="text-xs font-semibold uppercase tracking-wide text-slate-400"
-                            >
-                                Alamat
-                            </p>
-
-                            <p
-                                class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
-                            >
-                                {{ selectedProfile.alamat || "-" }}
-                            </p>
-                        </div>
-
-                        <!-- Status -->
-                        <div>
-                            <p
-                                class="text-xs font-semibold uppercase tracking-wide text-slate-400"
-                            >
-                                Status
-                            </p>
-
-                            <span
-                                class="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-                                :class="
-                                    selectedProfile.aktif
-                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                                "
-                            >
-                                <span
-                                    class="size-1.5 rounded-full"
-                                    :class="
-                                        selectedProfile.aktif
-                                            ? 'bg-emerald-500'
-                                            : 'bg-slate-400'
-                                    "
-                                ></span>
-
-                                {{
-                                    selectedProfile.aktif ? "Aktif" : "Nonaktif"
-                                }}
-                            </span>
-                        </div>
+                        </section>
                     </div>
                 </div>
             </div>
@@ -1512,14 +2340,12 @@ onBeforeUnmount(() => {
                 <div
                     class="w-full max-w-md rounded-3xl border border-white/10 bg-white p-6 shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
                 >
-                    <!-- Icon -->
                     <div
                         class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
                     >
                         <Trash2 class="size-6" />
                     </div>
 
-                    <!-- Text -->
                     <div class="mt-5 text-center">
                         <h2
                             class="text-lg font-semibold text-slate-900 dark:text-white"
@@ -1536,11 +2362,14 @@ onBeforeUnmount(() => {
                             >
                                 {{ selectedProfile.nama_perusahaan }}
                             </span>
-                            ? Data yang sudah dihapus tidak dapat dikembalikan.
+                            ?
+
+                            <br />
+
+                            Data yang sudah dihapus tidak dapat dikembalikan.
                         </p>
                     </div>
 
-                    <!-- Buttons -->
                     <div
                         class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"
                     >

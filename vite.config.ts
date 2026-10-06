@@ -3,6 +3,7 @@ import { wayfinder } from "@laravel/vite-plugin-wayfinder";
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
 import laravel from "laravel-vite-plugin";
+import i18n from "laravel-vue-i18n/vite";
 import { defineConfig, lazyPlugins } from "vite-plus";
 
 export default defineConfig({
@@ -28,6 +29,8 @@ export default defineConfig({
         wayfinder({
             formVariants: true,
         }),
+
+        i18n(),
     ]),
 
     server: {
@@ -41,6 +44,7 @@ export default defineConfig({
                 "**/.claude/**",
                 "**/.cursor/**",
                 "**/.junie/**",
+                "**/.vendor/**",
                 "**/vendor/**",
             ],
         },
@@ -57,6 +61,7 @@ export default defineConfig({
             "resources/js/routes/**",
             "resources/js/wayfinder/**",
         ],
+
         options: {
             denyWarnings: true,
             typeAware: true,

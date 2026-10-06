@@ -42,6 +42,7 @@ use App\Http\Controllers\Guest\TentangKamiController;
 use App\Http\Controllers\PublicKunjunganLahanController;
 use App\Http\Controllers\PublicLamaranController;
 use App\Http\Controllers\PublicLowonganKerjaController;
+use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Route;
 
@@ -64,6 +65,23 @@ Route::get(
     '/',
     [HomeController::class, 'index']
 )->name('home');
+
+
+/*
+|--------------------------------------------------------------------------
+| Ganti Bahasa
+|--------------------------------------------------------------------------
+*/
+
+Route::post('/locale', function (Request $request) {
+    $validated = $request->validate([
+        'locale' => ['required', 'in:id,en,zh'],
+    ]);
+
+    session(['locale' => $validated['locale']]);
+
+    return back();
+})->name('locale.switch');
 
 /*
 |--------------------------------------------------------------------------

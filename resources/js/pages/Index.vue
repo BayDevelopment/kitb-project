@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-
 import { Head, Link } from "@inertiajs/vue3";
-
+import { trans } from "laravel-vue-i18n";
 import {
     ArrowRight,
     BriefcaseBusiness,
@@ -37,158 +36,163 @@ defineOptions({
 
 interface CompanyProfile {
     id?: number;
-    nama?: string;
-    nama_perusahaan?: string;
-    judul?: string;
-    deskripsi?: string;
-    tentang?: string;
-    logo?: string;
-    logo_path?: string;
-    [key: string]: unknown;
+    nama?: string | null;
+    nama_perusahaan?: string | null;
+    judul?: string | null;
+    deskripsi?: string | null;
+    tentang?: string | null;
+    logo?: string | null;
+    logo_path?: string | null;
+    index?: number | null;
 }
 
 interface SambutanDirektur {
     id?: number;
-    nama_direktur?: string;
-    jabatan_direktur?: string;
-    sambutan_direktur?: string;
-    foto_direktur?: string;
-    status?: boolean;
-    [key: string]: unknown;
+    nama_direktur?: string | null;
+    jabatan_direktur?: string | null;
+    sambutan_direktur?: string | null;
+    foto_direktur?: string | null;
+    status?: string | boolean | number | null;
+    index?: number | null;
 }
 
 interface Misi {
     id?: number;
-    judul?: string;
-    title?: string;
-    deskripsi?: string;
-    desc?: string;
-    isi?: string;
-    urutan?: number;
-    [key: string]: unknown;
+    judul?: string | null;
+    title?: string | null;
+    deskripsi?: string | null;
+    desc?: string | null;
+    isi?: string | null;
+    urutan?: number | null;
+    index?: number | null;
 }
 
 interface Visi {
     id?: number;
-    judul?: string;
-    title?: string;
-    visi?: string;
-    deskripsi?: string;
+    judul?: string | null;
+    title?: string | null;
+    visi?: string | null;
+    deskripsi?: string | null;
     misis?: Misi[];
-    [key: string]: unknown;
 }
 
 interface AnakUsaha {
     id: number;
-    nama?: string;
-    nama_perusahaan?: string;
-    judul?: string;
-    deskripsi?: string;
-    logo?: string;
-    logo_path?: string;
-    gambar?: string;
-    gambar_path?: string;
-    website?: string;
-    aktif?: boolean;
-    [key: string]: unknown;
+    nama?: string | null;
+    nama_perusahaan?: string | null;
+    judul?: string | null;
+    deskripsi?: string | null;
+    logo?: string | null;
+    logo_path?: string | null;
+    gambar?: string | null;
+    gambar_path?: string | null;
+    website?: string | null;
+    aktif?: boolean | number | string | null;
 }
 
 interface MitraPerusahaan {
     id: number;
-    nama_perusahaan: string;
-    slug?: string;
+    nama_perusahaan?: string | null;
+    slug?: string | null;
     logo?: string | null;
     website?: string | null;
-    aktif?: boolean;
-    urutan?: number;
-    [key: string]: unknown;
+    aktif?: boolean | number | string | null;
+    urutan?: number | null;
 }
 
 interface ProfilKawasan {
-    id?: number;
-    judul?: string;
-    slug?: string;
-    deskripsi?: string;
-    luas_kawasan?: number | string;
-    lokasi?: string;
-    tahun_berdiri?: number | string;
-    status?: boolean;
-    gambar?: string;
-    gambar_path?: string;
-    [key: string]: unknown;
+    id: number;
+    judul?: string | null;
+    slug?: string | null;
+    deskripsi?: string | null;
+    luas_kawasan?: number | string | null;
+    lokasi?: string | null;
+    tahun_berdiri?: number | string | null;
+    status?: string | boolean | number | null;
+    gambar?: string | null;
+    gambar_path?: string | null;
 }
 
 interface PetaKawasan {
-    id?: number;
-    judul?: string;
-    gambar?: string;
-    gambar_path?: string;
-    keterangan?: string;
-    deskripsi?: string;
-    aktif?: boolean;
-    [key: string]: unknown;
+    id: number;
+    judul?: string | null;
+    gambar?: string | null;
+    gambar_path?: string | null;
+    keterangan?: string | null;
+    deskripsi?: string | null;
+    aktif?: boolean | number | string | null;
 }
 
 interface PeluangInvestasi {
     id: number;
-    judul?: string;
-    nama?: string;
-    sektor?: string;
-    deskripsi?: string;
-    luas_lahan?: number | string;
-    status?: string;
-    gambar?: string;
-    gambar_path?: string;
-    urutan?: number;
-    [key: string]: unknown;
+    judul?: string | null;
+    nama?: string | null;
+    sektor?: string | null;
+    deskripsi?: string | null;
+    luas_lahan?: number | string | null;
+    status?: string | boolean | number | null;
+    gambar?: string | null;
+    gambar_path?: string | null;
+    urutan?: number | null;
 }
 
 interface Rute {
     id: number;
-    nama?: string;
-    judul?: string;
-    asal?: string;
-    tujuan?: string;
-    jalur?: string;
-    rute?: string;
-    jarak?: number | string;
-    distance?: string;
-    waktu_tempuh?: string;
-    waktu?: string;
-    deskripsi?: string;
-    [key: string]: unknown;
+    nama?: string | null;
+    judul?: string | null;
+    asal?: string | null;
+    tujuan?: string | null;
+    jalur?: string | null;
+    rute?: string | null;
+    jarak?: string | number | null;
+    distance?: string | number | null;
+    waktu_tempuh?: string | number | null;
+    waktu?: string | number | null;
+    deskripsi?: string | null;
 }
 
 interface Berita {
     id: number;
-    judul?: string;
-    title?: string;
-    slug?: string;
-    excerpt?: string;
-    ringkasan?: string;
-    deskripsi?: string;
-    gambar?: string;
-    gambar_path?: string;
-    thumbnail?: string;
+    judul?: string | null;
+    title?: string | null;
+    slug?: string | null;
+    excerpt?: string | null;
+    ringkasan?: string | null;
+    deskripsi?: string | null;
+    gambar?: string | null;
+    gambar_path?: string | null;
+    thumbnail?: string | null;
     published_at?: string | null;
-    created_at?: string;
-    is_featured?: boolean;
-    [key: string]: unknown;
+    created_at?: string | null;
+    is_featured?: boolean | number | string | null;
 }
 
 interface Lowongan {
     id: number;
-    judul?: string;
-    slug?: string;
-    departemen?: string;
-    lokasi?: string;
-    tipe_pekerjaan?: string;
-    deskripsi?: string;
+    judul?: string | null;
+    slug?: string | null;
+    departemen?: string | null;
+    lokasi?: string | null;
+    tipe_pekerjaan?: string | null;
+    deskripsi?: string | null;
     tanggal_mulai?: string | null;
     tanggal_tutup?: string | null;
-    status?: string;
-    unggulan?: boolean;
-    [key: string]: unknown;
+    status?: string | null;
+    unggulan?: boolean | number | string | null;
+}
+
+interface StatItem {
+    label: string;
+    target: number;
+    decimals: number;
+    suffix?: string;
+}
+
+interface LandStat {
+    label: string;
+    target: number;
+    decimals: number;
+    unit: string;
 }
 
 /* =========================================================
@@ -225,172 +229,17 @@ const props = withDefaults(
 );
 
 /* =========================================================
- * MOTION
- * ========================================================= */
-
-const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-type FadeElement = HTMLElement & {
-    __fadeObserver?: IntersectionObserver;
-};
-
-const vFadeIn = {
-    mounted(el: FadeElement) {
-        if (prefersReducedMotion) {
-            el.classList.add("fade-in-visible");
-            return;
-        }
-
-        el.classList.add("fade-in");
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (!entry.isIntersecting) return;
-
-                    el.classList.add("fade-in-visible");
-                    observer.unobserve(el);
-                });
-            },
-            {
-                threshold: 0.12,
-                rootMargin: "0px 0px -50px 0px",
-            },
-        );
-
-        observer.observe(el);
-        el.__fadeObserver = observer;
-    },
-
-    unmounted(el: FadeElement) {
-        el.__fadeObserver?.disconnect();
-        delete el.__fadeObserver;
-    },
-};
-
-type CountElement = HTMLElement & {
-    __countObserver?: IntersectionObserver;
-    __countTimeout?: ReturnType<typeof setTimeout>;
-    __countFrame?: number;
-};
-
-function formatNumber(value: number | string | undefined, decimals = 0) {
-    const number = Number(value ?? 0);
-
-    if (Number.isNaN(number)) {
-        return "0";
-    }
-
-    return number.toLocaleString("id-ID", {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-    });
-}
-
-const vCountUp = {
-    mounted(
-        el: CountElement,
-        binding: {
-            value?: Record<string, unknown>;
-        },
-    ) {
-        const {
-            target,
-            decimals = 0,
-            duration = 1400,
-            delay = 0,
-        } = binding.value || {};
-
-        const numericTarget = Number(target ?? 0);
-        const decimalPlaces = Number(decimals);
-
-        el.textContent = formatNumber(0, decimalPlaces);
-
-        if (prefersReducedMotion || Number.isNaN(numericTarget)) {
-            el.textContent = formatNumber(
-                Number.isNaN(numericTarget) ? 0 : numericTarget,
-                decimalPlaces,
-            );
-
-            return;
-        }
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (!entry.isIntersecting) return;
-
-                    observer.unobserve(el);
-
-                    el.__countTimeout = setTimeout(() => {
-                        const start = performance.now();
-
-                        const tick = (now: number) => {
-                            const progress = Math.min(
-                                (now - start) / Number(duration),
-                                1,
-                            );
-
-                            const eased = 1 - Math.pow(1 - progress, 3);
-
-                            el.textContent = formatNumber(
-                                numericTarget * eased,
-                                decimalPlaces,
-                            );
-
-                            if (progress < 1) {
-                                el.__countFrame = requestAnimationFrame(tick);
-                            } else {
-                                el.textContent = formatNumber(
-                                    numericTarget,
-                                    decimalPlaces,
-                                );
-                            }
-                        };
-
-                        el.__countFrame = requestAnimationFrame(tick);
-                    }, Number(delay));
-                });
-            },
-            {
-                threshold: 0.4,
-                rootMargin: "0px 0px -40px 0px",
-            },
-        );
-
-        observer.observe(el);
-        el.__countObserver = observer;
-    },
-
-    unmounted(el: CountElement) {
-        el.__countObserver?.disconnect();
-
-        if (el.__countTimeout) {
-            clearTimeout(el.__countTimeout);
-        }
-
-        if (el.__countFrame) {
-            cancelAnimationFrame(el.__countFrame);
-        }
-
-        delete el.__countObserver;
-        delete el.__countTimeout;
-        delete el.__countFrame;
-    },
-};
-
-/* =========================================================
  * HELPERS
  * ========================================================= */
 
-function firstValue(
-    object: Record<string, unknown> | null | undefined,
+function firstValue<T extends Record<string, any>>(
+    object: T | null | undefined,
     keys: string[],
     fallback = "",
 ): string {
-    if (!object) return fallback;
+    if (!object) {
+        return fallback;
+    }
 
     for (const key of keys) {
         const value = object[key];
@@ -407,439 +256,313 @@ function firstValue(
     return fallback;
 }
 
-function numericValue(
-    object: Record<string, unknown> | null | undefined,
-    keys: string[],
-    fallback = 0,
-): number {
-    if (!object) return fallback;
+function numericValue(value: unknown, fallback = 0): number {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+    }
 
-    for (const key of keys) {
-        const raw = object[key];
+    if (typeof value === "string") {
+        const normalized = value.replace(/\s/g, "").replace(/,/g, "");
+        const number = Number(normalized);
 
-        if (raw === null || raw === undefined || String(raw).trim() === "") {
-            continue;
-        }
-
-        const value = Number(raw);
-
-        if (!Number.isNaN(value)) {
-            return value;
-        }
+        return Number.isFinite(number) ? number : fallback;
     }
 
     return fallback;
 }
 
-/**
- * Ubah path relatif disk "public" menjadi URL browser.
- *
- * Contoh:
- * mitra-perusahaan/logo.png
- * menjadi:
- * /storage/mitra-perusahaan/logo.png
- */
-function storageUrl(path?: string) {
-    if (!path) return "";
+function formatNumber(
+    value: number | string | null | undefined,
+    decimals = 0,
+): string {
+    const number = numericValue(value);
 
-    if (/^(https?:)?\/\//i.test(path) || path.startsWith("/storage/")) {
-        return path;
-    }
-
-    return `/storage/${path.replace(/^\/+/, "")}`;
+    return new Intl.NumberFormat("id-ID", {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+    }).format(number);
 }
 
-function truncate(text: string, length = 150) {
-    if (!text) return "";
-
-    return text.length > length ? `${text.substring(0, length).trim()}…` : text;
-}
-
-function formatDate(date?: string | null) {
-    if (!date) return "";
-
-    const parsed = new Date(date);
-
-    if (Number.isNaN(parsed.getTime())) {
-        return date;
+function truncate(value: string | null | undefined, length = 150): string {
+    if (!value) {
+        return "";
     }
 
-    return parsed.toLocaleDateString("id-ID", {
+    const text = String(value).trim();
+
+    if (text.length <= length) {
+        return text;
+    }
+
+    return `${text.slice(0, length).trimEnd()}…`;
+}
+
+function formatDate(value: string | null | undefined): string {
+    if (!value) {
+        return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat("id-ID", {
         day: "2-digit",
         month: "short",
         year: "numeric",
-    });
+    }).format(date);
 }
 
-function jobTypeLabel(type?: string) {
-    if (!type) return "Posisi tersedia";
+function storageUrl(path: string | null | undefined): string {
+    if (!path) {
+        return "";
+    }
 
-    const labels: Record<string, string> = {
-        full_time: "Full Time",
-        part_time: "Part Time",
-        contract: "Kontrak",
-        internship: "Magang",
-        freelance: "Freelance",
-    };
+    const value = String(path).trim();
 
-    return labels[type] ?? type;
-}
-
-/* =========================================================
- * MITRA PERUSAHAAN
- * ========================================================= */
-
-const displayedMitraPerusahaans = computed(() =>
-    props.mitraPerusahaans.filter((mitra) => mitra.aktif !== false),
-);
-
-const hasMitraPerusahaan = computed(
-    () => displayedMitraPerusahaans.value.length > 0,
-);
-
-const mitraCarousel = ref<HTMLElement | null>(null);
-
-const mitraAutoplayPaused = ref(false);
-
-let mitraAutoplayTimer: ReturnType<typeof setInterval> | null = null;
-
-function mitraPerusahaanName(mitra: MitraPerusahaan) {
-    return firstValue(mitra, ["nama_perusahaan"], "Mitra perusahaan");
-}
-
-function mitraPerusahaanImage(mitra: MitraPerusahaan) {
-    return storageUrl(mitra.logo ?? "");
-}
-
-function normalizeWebsite(website?: string | null) {
-    if (!website) return "";
-
-    const value = website.trim();
-
-    if (!value) return "";
+    if (!value) {
+        return "";
+    }
 
     if (
         /^https?:\/\//i.test(value) ||
-        /^mailto:/i.test(value) ||
-        /^tel:/i.test(value)
+        value.startsWith("data:") ||
+        value.startsWith("blob:")
     ) {
+        return value;
+    }
+
+    if (value.startsWith("/storage/")) {
+        return value;
+    }
+
+    if (value.startsWith("/")) {
+        return value;
+    }
+
+    return `/storage/${value.replace(/^\/+/, "")}`;
+}
+
+function normalizeWebsite(website: string | null | undefined): string {
+    if (!website) {
+        return "";
+    }
+
+    const value = website.trim();
+
+    if (!value) {
+        return "";
+    }
+
+    if (/^https?:\/\//i.test(value)) {
         return value;
     }
 
     return `https://${value}`;
 }
 
-/**
- * Mengambil jarak scroll berdasarkan lebar card pertama.
- * Jadi tetap responsif saat ukuran card berubah di desktop,
- * tablet, maupun mobile.
- */
-function getMitraScrollAmount(): number {
-    const container = mitraCarousel.value;
-
-    if (!container) {
-        return 0;
+function hasValue(value: unknown): boolean {
+    if (value === null || value === undefined) {
+        return false;
     }
 
-    const card = container.querySelector<HTMLElement>("[data-mitra-card]");
-
-    if (!card) {
-        return Math.max(container.clientWidth * 0.85, 280);
+    if (typeof value === "string") {
+        return value.trim() !== "";
     }
 
-    const computedStyle = window.getComputedStyle(container);
+    const number = Number(value);
 
-    const gap =
-        Number.parseFloat(computedStyle.columnGap) ||
-        Number.parseFloat(computedStyle.gap) ||
-        24;
-
-    return card.getBoundingClientRect().width + gap;
+    return Number.isFinite(number) && number > 0;
 }
 
-/**
- * Carousel kanan / kiri.
- *
- * Jika sudah sampai paling kanan:
- * next -> kembali ke awal.
- *
- * Jika berada di awal:
- * prev -> lompat ke item terakhir.
- */
-function scrollMitra(direction: "next" | "prev"): void {
-    const container = mitraCarousel.value;
-
-    if (!container) {
-        return;
+function jobTypeLabel(value: string | null | undefined): string {
+    if (!value) {
+        return trans("home.career.position_available");
     }
 
-    const maxScroll = Math.max(
-        0,
-        container.scrollWidth - container.clientWidth,
-    );
+    const labels: Record<string, string> = {
+        full_time: "Full Time",
+        part_time: "Part Time",
+        contract: "Contract",
+        internship: "Internship",
+        freelance: "Freelance",
+        remote: "Remote",
+        hybrid: "Hybrid",
+    };
 
-    if (maxScroll <= 0) {
-        return;
-    }
-
-    const amount = getMitraScrollAmount();
-
-    const behavior: ScrollBehavior = prefersReducedMotion ? "auto" : "smooth";
-
-    if (direction === "next") {
-        const isAtEnd = container.scrollLeft >= maxScroll - 8;
-
-        if (isAtEnd) {
-            container.scrollTo({
-                left: 0,
-                behavior,
-            });
-
-            return;
-        }
-
-        container.scrollBy({
-            left: amount,
-            behavior,
-        });
-
-        return;
-    }
-
-    const isAtStart = container.scrollLeft <= 8;
-
-    if (isAtStart) {
-        container.scrollTo({
-            left: maxScroll,
-            behavior,
-        });
-
-        return;
-    }
-
-    container.scrollBy({
-        left: -amount,
-        behavior,
-    });
-}
-
-function pauseMitraAutoplay() {
-    mitraAutoplayPaused.value = true;
-}
-
-function resumeMitraAutoplay() {
-    mitraAutoplayPaused.value = false;
-}
-
-function stopMitraAutoplay() {
-    if (mitraAutoplayTimer !== null) {
-        clearInterval(mitraAutoplayTimer);
-        mitraAutoplayTimer = null;
-    }
-}
-
-function startMitraAutoplay() {
-    stopMitraAutoplay();
-
-    if (prefersReducedMotion || displayedMitraPerusahaans.value.length <= 1) {
-        return;
-    }
-
-    mitraAutoplayTimer = setInterval(() => {
-        if (mitraAutoplayPaused.value) {
-            return;
-        }
-
-        scrollMitra("next");
-    }, 4500);
+    return labels[value] ?? value;
 }
 
 /* =========================================================
- * RICH TEXT - SAMBUTAN DIREKTUR
+ * REDUCED MOTION
  * ========================================================= */
 
-const RICH_ALLOWED_TAGS = new Set([
-    "P",
-    "BR",
-    "STRONG",
-    "B",
-    "EM",
-    "I",
-    "U",
-    "S",
-    "MARK",
-    "SUB",
-    "SUP",
-    "SPAN",
-    "DIV",
-    "A",
-    "UL",
-    "OL",
-    "LI",
-    "H1",
-    "H2",
-    "H3",
-    "H4",
-    "H5",
-    "H6",
-    "BLOCKQUOTE",
-    "HR",
-    "IMG",
-    "FIGURE",
-    "FIGCAPTION",
-    "TABLE",
-    "THEAD",
-    "TBODY",
-    "TR",
-    "TH",
-    "TD",
-]);
+const prefersReducedMotion = ref(false);
 
-const RICH_DROP_TAGS = new Set([
-    "SCRIPT",
-    "STYLE",
-    "IFRAME",
-    "OBJECT",
-    "EMBED",
-    "FORM",
-    "INPUT",
-    "BUTTON",
-    "TEXTAREA",
-    "SELECT",
-    "LINK",
-    "META",
-    "SVG",
-    "MATH",
-]);
+function updateReducedMotion(): void {
+    if (typeof window === "undefined") {
+        return;
+    }
 
-const RICH_ALLOWED_ATTRS = new Set([
-    "href",
-    "target",
-    "rel",
-    "src",
-    "alt",
-    "title",
-    "colspan",
-    "rowspan",
-    "start",
-    "width",
-    "height",
-]);
-
-const RICH_ALIGNS = new Set(["left", "center", "right", "justify"]);
-
-function escapeHtml(text: string) {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+    prefersReducedMotion.value = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+    ).matches;
 }
 
-function looksLikeHtml(text: string) {
-    return /<\/?[a-z][\s\S]*?>/i.test(text);
-}
+/* =========================================================
+ * FADE IN DIRECTIVE
+ * ========================================================= */
 
-function plainTextToHtml(text: string) {
-    return text
-        .split(/\n{2,}/)
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
-        .join("");
-}
+const fadeObservers = new WeakMap<Element, IntersectionObserver>();
 
-function stripTags(html: string) {
-    return html
-        .replace(/<(br|\/p|\/div|\/li|\/h[1-6])\s*\/?>/gi, "\n")
-        .replace(/<[^>]*>/g, "")
-        .replace(/&nbsp;/g, " ")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
-}
+const vFadeIn = {
+    mounted(element: HTMLElement) {
+        element.classList.add("fade-in");
 
-function cleanRichNode(parent: Element) {
-    Array.from(parent.childNodes).forEach((child) => {
-        if (child.nodeType === Node.COMMENT_NODE) {
-            child.remove();
+        if (
+            prefersReducedMotion.value ||
+            typeof window === "undefined" ||
+            !("IntersectionObserver" in window)
+        ) {
+            element.classList.add("fade-in-visible");
             return;
         }
 
-        if (child.nodeType !== Node.ELEMENT_NODE) {
-            return;
-        }
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        element.classList.add("fade-in-visible");
 
-        const el = child as HTMLElement;
-        const tag = el.tagName;
+                        observer.unobserve(element);
+                    }
+                });
+            },
+            {
+                threshold: 0.08,
+                rootMargin: "0px 0px -40px 0px",
+            },
+        );
 
-        if (RICH_DROP_TAGS.has(tag)) {
-            el.remove();
-            return;
-        }
+        fadeObservers.set(element, observer);
+        observer.observe(element);
+    },
 
-        cleanRichNode(el);
+    unmounted(element: HTMLElement) {
+        fadeObservers.get(element)?.disconnect();
+        fadeObservers.delete(element);
+    },
+};
 
-        if (!RICH_ALLOWED_TAGS.has(tag)) {
-            el.replaceWith(...Array.from(el.childNodes));
-            return;
-        }
+/* =========================================================
+ * COUNT UP DIRECTIVE
+ * ========================================================= */
 
-        const align = el.style?.textAlign;
+interface CountUpOptions {
+    target: number;
+    decimals?: number;
+    delay?: number;
+}
 
-        Array.from(el.attributes).forEach((attr) => {
-            if (!RICH_ALLOWED_ATTRS.has(attr.name)) {
-                el.removeAttribute(attr.name);
+const countUpCleanup = new WeakMap<Element, () => void>();
+
+const vCountUp = {
+    mounted(element: HTMLElement, binding: { value: CountUpOptions }) {
+        const target = numericValue(binding.value?.target);
+
+        const decimals = numericValue(binding.value?.decimals);
+
+        const delay = numericValue(binding.value?.delay);
+
+        let frame = 0;
+        let timeout = 0;
+        let observer: IntersectionObserver | null = null;
+        let started = false;
+
+        const render = (value: number) => {
+            element.textContent = formatNumber(value, decimals);
+        };
+
+        const cleanup = () => {
+            if (frame) {
+                cancelAnimationFrame(frame);
             }
-        });
 
-        if (align && RICH_ALIGNS.has(align)) {
-            el.style.textAlign = align;
-        }
-
-        if (tag === "A") {
-            const href = el.getAttribute("href") ?? "";
-
-            if (!/^(https?:|mailto:|tel:|\/|#)/i.test(href)) {
-                el.removeAttribute("href");
-            } else if (/^https?:/i.test(href)) {
-                el.setAttribute("target", "_blank");
-
-                el.setAttribute("rel", "noopener noreferrer");
+            if (timeout) {
+                window.clearTimeout(timeout);
             }
-        }
 
-        if (tag === "IMG") {
-            const src = el.getAttribute("src") ?? "";
+            observer?.disconnect();
+        };
 
-            if (!/^(https?:|\/|data:image\/)/i.test(src)) {
-                el.remove();
+        countUpCleanup.set(element, cleanup);
+
+        const start = () => {
+            if (started) {
                 return;
             }
 
-            el.setAttribute("loading", "lazy");
+            started = true;
 
-            el.setAttribute("decoding", "async");
+            if (prefersReducedMotion.value) {
+                render(target);
+                return;
+            }
+
+            const duration = 1100;
+            const startTime = performance.now();
+
+            const animate = (currentTime: number) => {
+                const elapsed = currentTime - startTime;
+
+                const progress = Math.min(elapsed / duration, 1);
+
+                const eased = 1 - Math.pow(1 - progress, 3);
+
+                render(target * eased);
+
+                if (progress < 1) {
+                    frame = requestAnimationFrame(animate);
+                } else {
+                    render(target);
+                }
+            };
+
+            timeout = window.setTimeout(() => {
+                frame = requestAnimationFrame(animate);
+            }, delay);
+        };
+
+        if (
+            typeof window === "undefined" ||
+            !("IntersectionObserver" in window)
+        ) {
+            start();
+            return;
         }
-    });
-}
 
-function sanitizeRichText(raw: string): string {
-    if (!raw.trim()) {
-        return "";
-    }
+        observer = new IntersectionObserver(
+            (entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    start();
+                    observer?.disconnect();
+                }
+            },
+            {
+                threshold: 0.25,
+            },
+        );
 
-    const source = looksLikeHtml(raw) ? raw : plainTextToHtml(raw);
+        observer.observe(element);
+    },
 
-    if (typeof DOMParser === "undefined") {
-        return plainTextToHtml(stripTags(source));
-    }
-
-    const doc = new DOMParser().parseFromString(source, "text/html");
-
-    cleanRichNode(doc.body);
-
-    return doc.body.innerHTML;
-}
+    unmounted(element: HTMLElement) {
+        countUpCleanup.get(element)?.();
+        countUpCleanup.delete(element);
+    },
+};
 
 /* =========================================================
  * COMPANY
@@ -866,7 +589,6 @@ const companyDescription = computed(() =>
  * ========================================================= */
 
 const isMounted = ref(false);
-
 const sambutanExpanded = ref(false);
 
 const direkturName = computed(() =>
@@ -885,26 +607,164 @@ const direkturRaw = computed(() =>
     firstValue(props.sambutanDirektur, ["sambutan_direktur"]),
 );
 
-const direkturHtml = computed(() =>
-    isMounted.value
-        ? sanitizeRichText(direkturRaw.value)
-        : plainTextToHtml(
-              stripTags(direkturRaw.value.replace(/<\/(p|div)>/gi, "\n\n")),
-          ),
-);
+function stripTags(value: string): string {
+    if (typeof document === "undefined") {
+        return value.replace(/<[^>]*>/g, " ");
+    }
 
-const sambutanIsLong = computed(
-    () => stripTags(direkturRaw.value).length > 900,
-);
+    const element = document.createElement("div");
 
-const hasSambutanDirektur = computed(
-    () =>
-        Boolean(props.sambutanDirektur?.status) &&
-        Boolean(direkturName.value || direkturRaw.value),
-);
+    element.innerHTML = value;
+
+    return (element.textContent || element.innerText || "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function plainTextToHtml(value: string): string {
+    return value
+        .split(/\n{2,}/)
+        .map((paragraph) => {
+            const text = paragraph.trim().replace(/\n/g, "<br>");
+
+            return text ? `<p>${text}</p>` : "";
+        })
+        .filter(Boolean)
+        .join("");
+}
+
+function cleanRichNode(node: Node, documentRef: Document): Node | null {
+    if (node.nodeType === Node.TEXT_NODE) {
+        return documentRef.createTextNode(node.textContent || "");
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+        return null;
+    }
+
+    const source = node as HTMLElement;
+
+    const allowedTags = new Set([
+        "P",
+        "BR",
+        "STRONG",
+        "B",
+        "EM",
+        "I",
+        "U",
+        "UL",
+        "OL",
+        "LI",
+        "BLOCKQUOTE",
+        "A",
+        "H2",
+        "H3",
+        "H4",
+    ]);
+
+    const tag = source.tagName.toUpperCase();
+
+    if (!allowedTags.has(tag)) {
+        const fragment = documentRef.createDocumentFragment();
+
+        Array.from(source.childNodes).forEach((child) => {
+            const cleaned = cleanRichNode(child, documentRef);
+
+            if (cleaned) {
+                fragment.appendChild(cleaned);
+            }
+        });
+
+        return fragment;
+    }
+
+    const target = documentRef.createElement(tag.toLowerCase());
+
+    if (tag === "A") {
+        const href = source.getAttribute("href") || "";
+
+        if (
+            /^https?:\/\//i.test(href) ||
+            href.startsWith("/") ||
+            href.startsWith("#")
+        ) {
+            target.setAttribute("href", href);
+
+            if (/^https?:\/\//i.test(href)) {
+                target.setAttribute("target", "_blank");
+
+                target.setAttribute("rel", "noopener noreferrer");
+            }
+        }
+    }
+
+    Array.from(source.childNodes).forEach((child) => {
+        const cleaned = cleanRichNode(child, documentRef);
+
+        if (cleaned) {
+            target.appendChild(cleaned);
+        }
+    });
+
+    return target;
+}
+
+function sanitizeRichText(value: string): string {
+    if (!value) {
+        return "";
+    }
+
+    if (typeof DOMParser === "undefined") {
+        return plainTextToHtml(stripTags(value));
+    }
+
+    const parser = new DOMParser();
+
+    const parsed = parser.parseFromString(value, "text/html");
+
+    const container = parsed.createElement("div");
+
+    Array.from(parsed.body.childNodes).forEach((node) => {
+        const cleaned = cleanRichNode(node, parsed);
+
+        if (cleaned) {
+            container.appendChild(cleaned);
+        }
+    });
+
+    return container.innerHTML;
+}
+
+const direkturHtml = computed(() => {
+    if (!direkturRaw.value) {
+        return "";
+    }
+
+    const raw = direkturRaw.value.trim();
+
+    if (!raw.includes("<")) {
+        return plainTextToHtml(raw);
+    }
+
+    return sanitizeRichText(raw);
+});
+
+const sambutanIsLong = computed(() => {
+    return stripTags(direkturRaw.value).length > 700;
+});
+
+const hasSambutanDirektur = computed(() => {
+    return Boolean(
+        props.sambutanDirektur &&
+        (direkturName.value ||
+            direkturPosition.value ||
+            direkturRaw.value ||
+            direkturPhoto.value),
+    );
+});
 
 /* =========================================================
- * VISION & MISSION
+ * VISI & MISI
  * ========================================================= */
 
 const visionText = computed(() =>
@@ -920,15 +780,11 @@ const hasVisionMission = computed(
 );
 
 /* =========================================================
- * AREA
+ * PROFIL KAWASAN
  * ========================================================= */
 
 const kawasanName = computed(() =>
-    firstValue(
-        props.profilKawasan,
-        ["judul"],
-        "Kawasan Industri Tanjung Buton",
-    ),
+    firstValue(props.profilKawasan, ["judul"], trans("home.area.eyebrow")),
 );
 
 const kawasanDescription = computed(() =>
@@ -936,12 +792,18 @@ const kawasanDescription = computed(() =>
 );
 
 const kawasanArea = computed(() =>
-    numericValue(props.profilKawasan, ["luas_kawasan"]),
+    numericValue(props.profilKawasan?.luas_kawasan),
 );
 
-const kawasanAreaDecimals = computed(() =>
-    Number.isInteger(kawasanArea.value) ? 0 : 1,
-);
+const kawasanAreaDecimals = computed(() => {
+    const value = props.profilKawasan?.luas_kawasan;
+
+    if (typeof value === "string" && value.includes(".")) {
+        return Math.min(value.split(".")[1]?.length ?? 0, 2);
+    }
+
+    return Number.isInteger(numericValue(value)) ? 0 : 2;
+});
 
 const kawasanLocation = computed(() =>
     firstValue(props.profilKawasan, ["lokasi"]),
@@ -952,106 +814,38 @@ const kawasanYear = computed(() =>
 );
 
 const kawasanImage = computed(() =>
-    firstValue(props.profilKawasan, ["gambar_path", "gambar"]),
+    storageUrl(firstValue(props.profilKawasan, ["gambar_path", "gambar"])),
 );
 
 /* =========================================================
- * MAP
+ * MASTER PLAN
  * ========================================================= */
 
 const mapTitle = computed(() =>
-    firstValue(
-        props.petaKawasan,
-        ["judul"],
-        "Peta kawasan & tahapan pengembangan",
-    ),
+    firstValue(props.petaKawasan, ["judul"], trans("home.area.master_plan")),
 );
 
 const mapImage = computed(() =>
-    firstValue(props.petaKawasan, ["gambar_path", "gambar"]),
+    storageUrl(firstValue(props.petaKawasan, ["gambar_path", "gambar"])),
 );
 
 const mapDescription = computed(() =>
-    firstValue(props.petaKawasan, ["keterangan", "deskripsi"]),
+    firstValue(props.petaKawasan, ["deskripsi", "keterangan"]),
 );
 
 /* =========================================================
- * HERO STATS
- * ========================================================= */
-
-const stats = computed(() => {
-    const items: Array<{
-        target: number;
-        decimals: number;
-        suffix: string;
-        label: string;
-    }> = [];
-
-    if (kawasanArea.value > 0) {
-        items.push({
-            target: kawasanArea.value,
-            decimals: kawasanAreaDecimals.value,
-            suffix: "Ha",
-            label: "Luas kawasan pengembangan",
-        });
-    }
-
-    if (props.anakUsahas.length > 0) {
-        items.push({
-            target: props.anakUsahas.length,
-            decimals: 0,
-            suffix: "",
-            label: "Entitas dalam ekosistem KITB",
-        });
-    }
-
-    if (props.rutes.length > 0) {
-        items.push({
-            target: props.rutes.length,
-            decimals: 0,
-            suffix: "",
-            label: "Rute pelayaran aktif",
-        });
-    }
-
-    if (props.beritas.length > 0) {
-        items.push({
-            target: props.beritas.length,
-            decimals: 0,
-            suffix: "",
-            label: "Informasi terbaru tersedia",
-        });
-    }
-
-    return items.slice(0, 4);
-});
-
-const landStats = computed(() =>
-    kawasanArea.value > 0
-        ? [
-              {
-                  target: kawasanArea.value,
-                  decimals: kawasanAreaDecimals.value,
-                  unit: "Ha",
-                  label: "Total wilayah pengembangan KITB",
-              },
-          ]
-        : [],
-);
-
-/* =========================================================
- * DEVELOPMENT DATA
+ * DEVELOPMENT STAGES
  * ========================================================= */
 
 const developmentStages = [
     {
         number: "01",
-        title: "Kawasan industri",
+        title: "Kawasan Industri",
         desc: "Kavling industri, fasilitas pendukung, perdagangan & jasa, area perkantoran, serta fasilitas penunjang dalam satu estate layout terpadu.",
     },
     {
         number: "02",
-        title: "Kawasan pelabuhan",
+        title: "Kawasan Pelabuhan",
         desc: "Area migas, CPO, dry bulk, kontainer & pergudangan, serta fasilitas galangan kapal untuk mendukung arus logistik ekspor-impor.",
     },
     {
@@ -1062,90 +856,298 @@ const developmentStages = [
 ];
 
 /* =========================================================
- * ROUTES
+ * STATS
  * ========================================================= */
 
-const displayedRoutes = computed<Rute[]>(() => props.rutes.slice(0, 6));
+const stats = computed<StatItem[]>(() => {
+    const result: StatItem[] = [];
+
+    if (kawasanArea.value > 0) {
+        result.push({
+            label: trans("home.area.area_size"),
+            target: kawasanArea.value,
+            decimals: kawasanAreaDecimals.value,
+            suffix: "Ha",
+        });
+    }
+
+    if (props.anakUsahas.length) {
+        result.push({
+            label: trans("home.subsidiaries.eyebrow"),
+            target: props.anakUsahas.length,
+            decimals: 0,
+        });
+    }
+
+    if (props.rutes.length) {
+        result.push({
+            label: trans("home.location.shipping_routes"),
+            target: props.rutes.length,
+            decimals: 0,
+        });
+    }
+
+    if (props.beritas.length) {
+        result.push({
+            label: trans("home.news.eyebrow"),
+            target: props.beritas.length,
+            decimals: 0,
+        });
+    }
+
+    return result.slice(0, 4);
+});
+
+const landStats = computed<LandStat[]>(() => {
+    if (kawasanArea.value <= 0) {
+        return [];
+    }
+
+    return [
+        {
+            label: trans("home.area.area_size"),
+            target: kawasanArea.value,
+            decimals: kawasanAreaDecimals.value,
+            unit: "Ha",
+        },
+    ];
+});
+
+/* =========================================================
+ * RUTE
+ * ========================================================= */
+
+const displayedRoutes = computed(() => props.rutes.slice(0, 6));
 
 const hasLocationSection = computed(
     () => Boolean(kawasanLocation.value) || displayedRoutes.value.length > 0,
 );
 
-function routePath(r: Rute) {
-    return firstValue(
-        r,
-        ["jalur", "rute", "deskripsi"],
-        [firstValue(r, ["asal"]), firstValue(r, ["tujuan"])]
-            .filter(Boolean)
-            .join(" – "),
-    );
+function routePath(route: Rute): string {
+    const direct = firstValue(route, ["rute", "jalur"]);
+
+    if (direct) {
+        return direct;
+    }
+
+    const asal = firstValue(route, ["asal"]);
+
+    const tujuan = firstValue(route, ["tujuan"]);
+
+    if (asal && tujuan) {
+        return `${asal} → ${tujuan}`;
+    }
+
+    return "";
 }
 
-function routeName(r: Rute, index: number) {
-    return firstValue(r, ["nama", "judul"], `Rute ${index + 1}`);
+function routeName(route: Rute, index: number): string {
+    return firstValue(
+        route,
+        ["nama", "judul"],
+        `${trans("home.location.route")} ${String(index + 1).padStart(2, "0")}`,
+    );
 }
 
 /* =========================================================
- * INVESTMENT / NEWS / SUBSIDIARIES
+ * MITRA PERUSAHAAN
  * ========================================================= */
 
-function investmentTitle(item: PeluangInvestasi) {
-    return firstValue(item, ["judul", "nama"], "Peluang investasi");
-}
+const displayedMitraPerusahaans = computed(() =>
+    [...props.mitraPerusahaans]
+        .filter((item) => {
+            if (item.aktif === undefined || item.aktif === null) {
+                return true;
+            }
 
-function investmentImage(item: PeluangInvestasi) {
-    return firstValue(item, ["gambar_path", "gambar"]);
-}
+            return (
+                item.aktif === true || item.aktif === 1 || item.aktif === "1"
+            );
+        })
+        .sort((a, b) => numericValue(a.urutan) - numericValue(b.urutan)),
+);
 
-function investmentDescription(item: PeluangInvestasi) {
-    return firstValue(item, ["deskripsi"]);
-}
+const hasMitraPerusahaan = computed(
+    () => displayedMitraPerusahaans.value.length > 0,
+);
 
-function hasValue(value: unknown) {
-    return value !== null && value !== undefined && value !== "";
-}
+const mitraCarousel = ref<HTMLElement | null>(null);
 
-function beritaTitle(berita: Berita) {
-    return firstValue(berita, ["judul", "title"], "Berita KITB");
-}
+const mitraAutoplayPaused = ref(false);
 
-function beritaImage(berita: Berita) {
-    return firstValue(berita, ["gambar_path", "gambar", "thumbnail"]);
-}
+let mitraAutoplayTimer: number | null = null;
 
-function beritaExcerpt(berita: Berita) {
-    return firstValue(berita, ["excerpt", "ringkasan", "deskripsi"]);
-}
-
-function anakUsahaName(anak: AnakUsaha) {
+function mitraPerusahaanName(mitra: MitraPerusahaan): string {
     return firstValue(
-        anak,
-        ["nama_perusahaan", "nama", "judul"],
-        "Anak Usaha KITB",
+        mitra,
+        ["nama_perusahaan", "slug"],
+        trans("home.partners.title"),
     );
 }
 
-function anakUsahaImage(anak: AnakUsaha) {
-    return firstValue(anak, ["logo_path", "logo", "gambar_path", "gambar"]);
+function mitraPerusahaanImage(mitra: MitraPerusahaan): string {
+    return storageUrl(mitra.logo);
+}
+
+function scrollMitra(direction: "prev" | "next"): void {
+    const container = mitraCarousel.value;
+
+    if (!container) {
+        return;
+    }
+
+    const card = container.querySelector<HTMLElement>("[data-mitra-card]");
+
+    if (!card) {
+        return;
+    }
+
+    const gap = Number.parseFloat(getComputedStyle(container).gap) || 0;
+
+    const amount = card.getBoundingClientRect().width + gap;
+
+    const maxScroll = container.scrollWidth - container.clientWidth;
+
+    let nextLeft =
+        container.scrollLeft + (direction === "next" ? amount : -amount);
+
+    if (direction === "next" && nextLeft >= maxScroll - 4) {
+        nextLeft = 0;
+    }
+
+    if (direction === "prev" && nextLeft <= 4) {
+        nextLeft = maxScroll;
+    }
+
+    container.scrollTo({
+        left: Math.max(0, nextLeft),
+        behavior: prefersReducedMotion.value ? "auto" : "smooth",
+    });
+}
+
+function stopMitraAutoplay(): void {
+    if (mitraAutoplayTimer !== null) {
+        window.clearInterval(mitraAutoplayTimer);
+
+        mitraAutoplayTimer = null;
+    }
+}
+
+function startMitraAutoplay(): void {
+    stopMitraAutoplay();
+
+    if (
+        prefersReducedMotion.value ||
+        displayedMitraPerusahaans.value.length <= 1
+    ) {
+        return;
+    }
+
+    mitraAutoplayTimer = window.setInterval(() => {
+        if (!mitraAutoplayPaused.value) {
+            scrollMitra("next");
+        }
+    }, 4500);
+}
+
+function pauseMitraAutoplay(): void {
+    mitraAutoplayPaused.value = true;
+}
+
+function resumeMitraAutoplay(): void {
+    mitraAutoplayPaused.value = false;
+}
+
+/* =========================================================
+ * INVESTASI
+ * ========================================================= */
+
+function investmentTitle(item: PeluangInvestasi): string {
+    return firstValue(item, ["judul", "nama"], trans("home.investment.title"));
+}
+
+function investmentDescription(item: PeluangInvestasi): string {
+    return firstValue(item, ["deskripsi"]);
+}
+
+function investmentImage(item: PeluangInvestasi): string {
+    return storageUrl(firstValue(item, ["gambar_path", "gambar"]));
+}
+
+/* =========================================================
+ * BERITA
+ * ========================================================= */
+
+function beritaTitle(item: Berita): string {
+    return firstValue(item, ["judul", "title"], trans("home.news.title"));
+}
+
+function beritaExcerpt(item: Berita): string {
+    return firstValue(item, ["excerpt", "ringkasan", "deskripsi"]);
+}
+
+function beritaImage(item: Berita): string {
+    return storageUrl(firstValue(item, ["gambar_path", "gambar", "thumbnail"]));
+}
+
+/* =========================================================
+ * ANAK USAHA
+ * ========================================================= */
+
+function anakUsahaName(item: AnakUsaha): string {
+    return firstValue(
+        item,
+        ["nama_perusahaan", "nama", "judul"],
+        trans("home.subsidiaries.title"),
+    );
+}
+
+function anakUsahaImage(item: AnakUsaha): string {
+    return storageUrl(
+        firstValue(item, ["logo_path", "logo", "gambar_path", "gambar"]),
+    );
 }
 
 /* =========================================================
  * LIFECYCLE
  * ========================================================= */
 
+let mediaQueryList: MediaQueryList | null = null;
+
+function handleMotionChange(event: MediaQueryListEvent): void {
+    prefersReducedMotion.value = event.matches;
+
+    if (event.matches) {
+        stopMitraAutoplay();
+    } else if (isMounted.value) {
+        startMitraAutoplay();
+    }
+}
+
 onMounted(() => {
     isMounted.value = true;
+
+    updateReducedMotion();
+
+    if (typeof window !== "undefined") {
+        mediaQueryList = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+        mediaQueryList.addEventListener("change", handleMotionChange);
+    }
 
     startMitraAutoplay();
 });
 
 onBeforeUnmount(() => {
     stopMitraAutoplay();
+
+    if (mediaQueryList) {
+        mediaQueryList.removeEventListener("change", handleMotionChange);
+    }
 });
 </script>
-
 <template>
-    <Head :title="`${companyName} — Beyond Industry, Towards the Future`" />
+    <Head :title="companyName" />
 
     <div
         class="kitb-landing relative min-h-screen overflow-x-clip bg-kitb-sand-50 text-kitb-ink-900 antialiased"
@@ -1205,15 +1207,15 @@ onBeforeUnmount(() => {
                         <span
                             class="h-1.5 w-1.5 shrink-0 rounded-full bg-kitb-teal-500"
                         />
-                        Badan Usaha Milik Daerah · Kabupaten Siak
+
+                        {{ trans("home.hero.badge") }}
                     </div>
 
                     <h1
                         class="mb-6 max-w-4xl font-display font-bold leading-[1.06] tracking-[-0.025em] text-kitb-green-900 sm:mb-7"
                         style="font-size: clamp(2.25rem, 5.8vw, 5rem)"
                     >
-                        Kawasan industri yang berdiri tepat di bibir
-                        <span class="text-kitb-navy-900">Selat Malaka.</span>
+                        {{ trans("home.hero.title") }}
                     </h1>
 
                     <p
@@ -1229,7 +1231,8 @@ onBeforeUnmount(() => {
                             :href="visitUrl"
                             class="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-medium text-white sm:w-auto"
                         >
-                            Ajukan kunjungan lahan
+                            {{ trans("home.hero.submit_visit") }}
+
                             <ArrowRight class="h-4 w-4" />
                         </a>
 
@@ -1237,13 +1240,13 @@ onBeforeUnmount(() => {
                             href="#kawasan"
                             class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-black/15 px-7 py-3.5 text-[15px] font-medium text-kitb-ink-900 transition-all duration-200 hover:-translate-y-0.5 hover:border-kitb-green-700/30 hover:bg-white/60 sm:w-auto"
                         >
-                            Lihat kawasan
+                            {{ trans("home.hero.view_area") }}
+
                             <ChevronRight class="h-4 w-4" />
                         </a>
                     </div>
                 </div>
 
-                <!-- Hero statistics -->
                 <div
                     v-if="stats.length"
                     v-fade-in
@@ -1283,7 +1286,6 @@ onBeforeUnmount(() => {
 
         <!-- =====================================================
              TENTANG KAMI
-             (digabung dari dua section yang sebelumnya duplikat)
              ===================================================== -->
 
         <section
@@ -1294,6 +1296,7 @@ onBeforeUnmount(() => {
                 class="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full bg-kitb-teal-100/50 blur-3xl"
                 aria-hidden="true"
             />
+
             <div
                 class="pointer-events-none absolute -right-32 bottom-0 h-80 w-80 rounded-full bg-slate-200/60 blur-3xl"
                 aria-hidden="true"
@@ -1304,14 +1307,14 @@ onBeforeUnmount(() => {
                     v-fade-in
                     class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-center lg:gap-16"
                 >
-                    <!-- Profil perusahaan -->
                     <div class="min-w-0">
                         <div class="mb-5 flex items-center gap-3">
                             <span class="h-px w-10 bg-kitb-teal-500" />
+
                             <p
                                 class="text-[12px] font-semibold uppercase tracking-[0.16em] text-kitb-teal-600"
                             >
-                                Tentang KITB
+                                {{ trans("home.company.eyebrow") }}
                             </p>
                         </div>
 
@@ -1319,7 +1322,7 @@ onBeforeUnmount(() => {
                             class="max-w-3xl font-display font-bold leading-[1.08] tracking-[-0.025em] text-kitb-green-900"
                             style="font-size: clamp(1.8rem, 4vw, 3.2rem)"
                         >
-                            Bukan sekadar penyedia lahan.
+                            {{ trans("home.company.title") }}
                         </h2>
 
                         <div
@@ -1330,21 +1333,19 @@ onBeforeUnmount(() => {
                             </p>
 
                             <p>
-                                Mengusung moto
+                                {{ trans("home.company.description") }}
+
                                 <span
                                     class="font-display font-semibold text-kitb-green-800"
                                 >
-                                    “Beyond Industry, Towards the Future,”
+                                    {{ trans("home.company.smart_green") }}
                                 </span>
-                                KITB dikembangkan sebagai ekosistem
-                                <strong
-                                    class="font-semibold text-kitb-green-800"
-                                >
-                                    Smart &amp; Green Industrial Estate
-                                </strong>
-                                yang mendorong hilirisasi bernilai tambah
-                                tinggi, efisiensi operasional, dan pertumbuhan
-                                ekonomi daerah.
+
+                                {{
+                                    trans(
+                                        "home.company.description_continuation",
+                                    )
+                                }}
                             </p>
                         </div>
 
@@ -1362,8 +1363,9 @@ onBeforeUnmount(() => {
                                 <p
                                     class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400"
                                 >
-                                    Perusahaan
+                                    {{ trans("home.company.company_label") }}
                                 </p>
+
                                 <p
                                     class="mt-0.5 font-display font-semibold text-slate-800"
                                 >
@@ -1377,7 +1379,8 @@ onBeforeUnmount(() => {
                                 href="/profil-perusahaan/tentang-kami"
                                 class="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-kitb-teal-300 hover:text-kitb-teal-700 hover:shadow-md"
                             >
-                                Selengkapnya
+                                {{ trans("home.company.learn_more") }}
+
                                 <ArrowRight
                                     class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
                                 />
@@ -1385,7 +1388,6 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <!-- Kartu pendukung -->
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
                         <div
                             class="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
@@ -1399,14 +1401,11 @@ onBeforeUnmount(() => {
                             <h3
                                 class="font-display text-lg font-semibold text-slate-900"
                             >
-                                Smart Industrial Park
+                                {{ trans("home.company.smart_title") }}
                             </h3>
 
                             <p class="mt-2 text-sm leading-7 text-slate-500">
-                                Digitalisasi dan otomasi untuk efisiensi
-                                operasional tenant, dengan pendekatan
-                                terintegrasi yang berorientasi pada kebutuhan
-                                industri masa depan.
+                                {{ trans("home.company.smart_description") }}
                             </p>
                         </div>
 
@@ -1422,13 +1421,11 @@ onBeforeUnmount(() => {
                             <h3
                                 class="font-display text-lg font-semibold text-white"
                             >
-                                Green Industrial Estate
+                                {{ trans("home.company.green_title") }}
                             </h3>
 
                             <p class="mt-2 text-sm leading-7 text-white/60">
-                                Efisiensi sumber daya dan pengelolaan kawasan
-                                yang selaras dengan keberlanjutan lingkungan dan
-                                ekosistem sekitar.
+                                {{ trans("home.company.green_description") }}
                             </p>
                         </div>
                     </div>
@@ -1437,7 +1434,7 @@ onBeforeUnmount(() => {
         </section>
 
         <!-- =====================================================
-             SAMBUTAN DIREKTUR (rich HTML)
+             SAMBUTAN DIREKTUR
              ===================================================== -->
 
         <section
@@ -1449,6 +1446,7 @@ onBeforeUnmount(() => {
                 class="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full bg-kitb-teal-100/60 blur-3xl"
                 aria-hidden="true"
             />
+
             <div
                 class="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-kitb-navy-100/60 blur-3xl"
                 aria-hidden="true"
@@ -1464,7 +1462,6 @@ onBeforeUnmount(() => {
                             : ''
                     "
                 >
-                    <!-- Foto -->
                     <figure
                         v-if="direkturPhoto"
                         class="relative mx-auto w-full max-w-[22rem] sm:max-w-sm lg:sticky lg:top-28 lg:mx-0 lg:max-w-md"
@@ -1473,6 +1470,7 @@ onBeforeUnmount(() => {
                             class="pointer-events-none absolute -left-8 -top-8 h-32 w-32 rounded-full bg-kitb-teal-300/25 blur-2xl"
                             aria-hidden="true"
                         />
+
                         <div
                             class="pointer-events-none absolute -bottom-10 -right-8 h-40 w-40 rounded-full bg-kitb-navy-300/25 blur-3xl"
                             aria-hidden="true"
@@ -1488,8 +1486,11 @@ onBeforeUnmount(() => {
                                     :src="direkturPhoto"
                                     :alt="
                                         direkturName
-                                            ? `Foto ${direkturName}`
-                                            : 'Foto Direktur KITB'
+                                            ? trans(
+                                                  'home.director.photo_alt_named',
+                                                  { name: direkturName },
+                                              )
+                                            : trans('home.director.photo_alt')
                                     "
                                     class="aspect-[4/5] h-auto w-full object-cover object-top transition-transform duration-700 hover:scale-[1.025]"
                                     loading="lazy"
@@ -1498,7 +1499,6 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <!-- Nama & jabatan (tampil di bawah foto pada mobile/tablet) -->
                         <figcaption
                             v-if="direkturName || direkturPosition"
                             class="relative mt-5 text-center lg:hidden"
@@ -1509,6 +1509,7 @@ onBeforeUnmount(() => {
                             >
                                 {{ direkturName }}
                             </p>
+
                             <p
                                 v-if="direkturPosition"
                                 class="mt-0.5 text-sm font-medium text-kitb-teal-600"
@@ -1518,14 +1519,14 @@ onBeforeUnmount(() => {
                         </figcaption>
                     </figure>
 
-                    <!-- Isi sambutan -->
                     <div class="relative min-w-0">
                         <div class="mb-5 flex items-center gap-3">
                             <span class="h-px w-10 bg-kitb-teal-500" />
+
                             <p
                                 class="text-[12px] font-semibold uppercase tracking-[0.16em] text-kitb-teal-600"
                             >
-                                Sambutan Direktur
+                                {{ trans("home.director.eyebrow") }}
                             </p>
                         </div>
 
@@ -1537,7 +1538,6 @@ onBeforeUnmount(() => {
                                 aria-hidden="true"
                             />
 
-                            <!-- Konten rich text -->
                             <div class="relative">
                                 <div
                                     class="rich-content"
@@ -1565,9 +1565,10 @@ onBeforeUnmount(() => {
                             >
                                 {{
                                     sambutanExpanded
-                                        ? "Tampilkan lebih sedikit"
-                                        : "Baca selengkapnya"
+                                        ? trans("home.director.show_less")
+                                        : trans("home.director.read_more")
                                 }}
+
                                 <ChevronDown
                                     class="h-4 w-4 transition-transform duration-300"
                                     :class="
@@ -1576,7 +1577,6 @@ onBeforeUnmount(() => {
                                 />
                             </button>
 
-                            <!-- Tanda tangan -->
                             <div
                                 v-if="direkturName || direkturPosition"
                                 class="mt-8 border-t border-slate-200 pt-6"
@@ -1587,6 +1587,7 @@ onBeforeUnmount(() => {
                                 >
                                     {{ direkturName }}
                                 </p>
+
                                 <p
                                     v-if="direkturPosition"
                                     class="mt-1 text-sm font-medium text-kitb-teal-600"
@@ -1644,7 +1645,7 @@ onBeforeUnmount(() => {
                     <p
                         class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-300"
                     >
-                        Visi
+                        {{ trans("home.vision_mission.vision") }}
                     </p>
 
                     <h2
@@ -1660,7 +1661,7 @@ onBeforeUnmount(() => {
                     <p
                         class="mb-8 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-300"
                     >
-                        Misi
+                        {{ trans("home.vision_mission.mission") }}
                     </p>
 
                     <div
@@ -1670,7 +1671,9 @@ onBeforeUnmount(() => {
                             v-for="(m, i) in missions"
                             :key="m.id ?? i"
                             v-fade-in
-                            :style="{ transitionDelay: `${i * 90}ms` }"
+                            :style="{
+                                transitionDelay: `${i * 90}ms`,
+                            }"
                             class="relative border-white/10 pb-8 md:pb-0"
                             :class="
                                 i < missions.length - 1
@@ -1684,6 +1687,7 @@ onBeforeUnmount(() => {
                                 >
                                     {{ String(i + 1).padStart(2, "0") }}
                                 </span>
+
                                 <span class="h-px w-10 bg-white/15" />
                             </div>
 
@@ -1694,7 +1698,15 @@ onBeforeUnmount(() => {
                                     firstValue(
                                         m,
                                         ["judul", "title"],
-                                        `Misi ${i + 1}`,
+                                        trans(
+                                            "home.vision_mission.mission_fallback",
+                                            {
+                                                number: String(i + 1).padStart(
+                                                    2,
+                                                    "0",
+                                                ),
+                                            },
+                                        ),
                                     )
                                 }}
                             </h3>
@@ -1726,27 +1738,24 @@ onBeforeUnmount(() => {
         >
             <div class="mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
                 <div class="grid items-start gap-10 md:grid-cols-12 md:gap-12">
-                    <!-- Informasi lokasi -->
                     <div class="md:col-span-5" v-fade-in>
                         <p
                             class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
                         >
-                            Keunggulan geografis
+                            {{ trans("home.location.eyebrow") }}
                         </p>
 
                         <h2
                             class="mb-6 font-display font-bold leading-[1.08] tracking-[-0.02em] text-kitb-green-900"
                             style="font-size: clamp(1.8rem, 3.4vw, 2.8rem)"
                         >
-                            Menghadap langsung jalur pelayaran strategis.
+                            {{ trans("home.location.title") }}
                         </h2>
 
                         <p
                             class="mb-8 text-[16px] leading-[1.8] text-kitb-ink-900/70"
                         >
-                            Tanjung Buton berada di kawasan yang memberikan
-                            akses strategis terhadap jaringan perdagangan dan
-                            logistik regional melalui Selat Malaka.
+                            {{ trans("home.location.description") }}
                         </p>
 
                         <div class="space-y-4">
@@ -1759,12 +1768,14 @@ onBeforeUnmount(() => {
                                 >
                                     <Navigation class="h-4 w-4" />
                                 </div>
+
                                 <div>
                                     <div
                                         class="mb-0.5 text-[13px] font-medium text-kitb-ink-900/45"
                                     >
-                                        Lokasi
+                                        {{ trans("home.location.location") }}
                                     </div>
+
                                     <p class="text-[15px] text-kitb-ink-900/70">
                                         {{ kawasanLocation }}
                                     </p>
@@ -1780,12 +1791,14 @@ onBeforeUnmount(() => {
                                 >
                                     <CalendarDays class="h-4 w-4" />
                                 </div>
+
                                 <div>
                                     <div
                                         class="mb-0.5 text-[13px] font-medium text-kitb-ink-900/45"
                                     >
-                                        Tahun berdiri
+                                        {{ trans("home.location.established") }}
                                     </div>
+
                                     <p class="text-[15px] text-kitb-ink-900/70">
                                         {{ kawasanYear }}
                                     </p>
@@ -1798,23 +1811,30 @@ onBeforeUnmount(() => {
                                 >
                                     <Ship class="h-4 w-4" />
                                 </div>
+
                                 <div>
                                     <div
                                         class="mb-0.5 text-[13px] font-medium text-kitb-ink-900/45"
                                     >
-                                        Konektivitas maritim
+                                        {{
+                                            trans(
+                                                "home.location.maritime_connectivity",
+                                            )
+                                        }}
                                     </div>
+
                                     <p class="text-[15px] text-kitb-ink-900/70">
-                                        Terhubung dengan jaringan pelayaran
-                                        regional melalui kawasan pelabuhan
-                                        Tanjung Buton.
+                                        {{
+                                            trans(
+                                                "home.location.maritime_description",
+                                            )
+                                        }}
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Rute -->
                     <div
                         v-if="displayedRoutes.length"
                         v-fade-in
@@ -1832,12 +1852,21 @@ onBeforeUnmount(() => {
                                         <div
                                             class="text-[11px] font-semibold uppercase tracking-[0.12em] text-kitb-teal-600"
                                         >
-                                            Rute pelayaran
+                                            {{
+                                                trans(
+                                                    "home.location.shipping_routes",
+                                                )
+                                            }}
                                         </div>
+
                                         <div
                                             class="mt-1 font-display text-lg font-semibold text-kitb-green-900"
                                         >
-                                            Akses menuju jalur utama
+                                            {{
+                                                trans(
+                                                    "home.location.main_access",
+                                                )
+                                            }}
                                         </div>
                                     </div>
 
@@ -1855,25 +1884,38 @@ onBeforeUnmount(() => {
                                                 scope="col"
                                                 class="px-4 py-3.5 text-[12px] font-medium text-white sm:px-5"
                                             >
-                                                Rute
+                                                {{
+                                                    trans("home.location.route")
+                                                }}
                                             </th>
+
                                             <th
                                                 scope="col"
                                                 class="px-4 py-3.5 text-[12px] font-medium text-white sm:px-5"
                                             >
-                                                Jalur
+                                                {{
+                                                    trans("home.location.path")
+                                                }}
                                             </th>
+
                                             <th
                                                 scope="col"
                                                 class="px-4 py-3.5 text-[12px] font-medium text-white sm:px-5"
                                             >
-                                                Jarak
+                                                {{
+                                                    trans(
+                                                        "home.location.distance",
+                                                    )
+                                                }}
                                             </th>
+
                                             <th
                                                 scope="col"
                                                 class="px-4 py-3.5 text-[12px] font-medium text-white sm:px-5"
                                             >
-                                                Waktu
+                                                {{
+                                                    trans("home.location.time")
+                                                }}
                                             </th>
                                         </tr>
                                     </thead>
@@ -1891,11 +1933,13 @@ onBeforeUnmount(() => {
                                             >
                                                 {{ routeName(r, index) }}
                                             </td>
+
                                             <td
                                                 class="px-4 py-4 text-kitb-ink-900/70 sm:px-5"
                                             >
                                                 {{ routePath(r) || "—" }}
                                             </td>
+
                                             <td
                                                 class="whitespace-nowrap px-4 py-4 text-kitb-ink-900/70 sm:px-5"
                                             >
@@ -1907,6 +1951,7 @@ onBeforeUnmount(() => {
                                                     )
                                                 }}
                                             </td>
+
                                             <td
                                                 class="whitespace-nowrap px-4 py-4 text-kitb-ink-900/70 sm:px-5"
                                             >
@@ -1932,15 +1977,15 @@ onBeforeUnmount(() => {
                                 <p
                                     class="text-[12px] leading-relaxed text-kitb-ink-900/45"
                                 >
-                                    Menampilkan hingga 6 rute pelayaran aktif
-                                    terbaru.
+                                    {{ trans("home.location.route_note") }}
                                 </p>
 
                                 <Link
                                     href="/hubungan-investor/rute-pelayaran-lokasi"
                                     class="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-kitb-green-700/15 bg-white px-4 py-2.5 text-[12px] font-semibold text-kitb-green-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-kitb-green-700/25 hover:bg-kitb-green-700 hover:text-white"
                                 >
-                                    Lihat semua rute
+                                    {{ trans("home.location.view_all_routes") }}
+
                                     <ArrowRight class="h-3.5 w-3.5" />
                                 </Link>
                             </div>
@@ -1982,7 +2027,7 @@ onBeforeUnmount(() => {
                         <p
                             class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
                         >
-                            Profil kawasan
+                            {{ trans("home.area.eyebrow") }}
                         </p>
 
                         <h2
@@ -2010,8 +2055,9 @@ onBeforeUnmount(() => {
                                 <div
                                     class="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-kitb-ink-900/40"
                                 >
-                                    Luas kawasan
+                                    {{ trans("home.area.area_size") }}
                                 </div>
+
                                 <div
                                     class="font-display text-2xl font-bold text-kitb-green-800 sm:text-3xl"
                                 >
@@ -2021,10 +2067,12 @@ onBeforeUnmount(() => {
                                             kawasanAreaDecimals,
                                         )
                                     }}
+
                                     <span
                                         class="text-sm font-medium text-kitb-ink-900/45"
-                                        >Ha</span
                                     >
+                                        Ha
+                                    </span>
                                 </div>
                             </div>
 
@@ -2035,8 +2083,9 @@ onBeforeUnmount(() => {
                                 <div
                                     class="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-kitb-ink-900/40"
                                 >
-                                    Tahun berdiri
+                                    {{ trans("home.area.established") }}
                                 </div>
+
                                 <div
                                     class="font-display text-2xl font-bold text-kitb-green-800 sm:text-3xl"
                                 >
@@ -2070,6 +2119,7 @@ onBeforeUnmount(() => {
                                     class="flex items-center gap-2 text-sm font-medium text-white"
                                 >
                                     <MapPin class="h-4 w-4 shrink-0" />
+
                                     {{ kawasanLocation }}
                                 </div>
                             </div>
@@ -2077,7 +2127,6 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <!-- Statistik lahan -->
                 <div
                     v-if="landStats.length"
                     v-fade-in
@@ -2100,9 +2149,10 @@ onBeforeUnmount(() => {
                             >
                                 0
                             </span>
-                            <span class="ml-1 align-top text-xl">{{
-                                land.unit
-                            }}</span>
+
+                            <span class="ml-1 align-top text-xl">
+                                {{ land.unit }}
+                            </span>
                         </div>
 
                         <div
@@ -2113,7 +2163,6 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <!-- Tahapan pengembangan -->
                 <div
                     class="mt-16 border-t border-black/10 pt-12 md:mt-20 md:pt-16"
                 >
@@ -2121,14 +2170,14 @@ onBeforeUnmount(() => {
                         <p
                             class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
                         >
-                            Pengembangan kawasan
+                            {{ trans("home.area.development") }}
                         </p>
 
                         <h3
                             class="font-display font-bold leading-[1.1] text-kitb-green-900"
                             style="font-size: clamp(1.6rem, 3vw, 2.4rem)"
                         >
-                            Infrastruktur dibangun sebagai satu ekosistem.
+                            {{ trans("home.area.development_title") }}
                         </h3>
                     </div>
 
@@ -2137,7 +2186,9 @@ onBeforeUnmount(() => {
                             v-for="(stage, i) in developmentStages"
                             :key="stage.number"
                             v-fade-in
-                            :style="{ transitionDelay: `${i * 100}ms` }"
+                            :style="{
+                                transitionDelay: `${i * 100}ms`,
+                            }"
                             class="group relative overflow-hidden rounded-2xl border border-black/5 bg-white/65 p-6 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5"
                         >
                             <div class="mb-7 flex items-center justify-between">
@@ -2146,6 +2197,7 @@ onBeforeUnmount(() => {
                                 >
                                     {{ stage.number }}
                                 </span>
+
                                 <MoveRight
                                     class="h-5 w-5 text-kitb-teal-500 transition-transform duration-300 group-hover:translate-x-1"
                                 />
@@ -2166,7 +2218,6 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <!-- Master plan -->
                 <div
                     v-if="props.petaKawasan && mapImage"
                     class="mt-16 border-t border-black/10 pt-12 md:mt-20 md:pt-16"
@@ -2179,7 +2230,7 @@ onBeforeUnmount(() => {
                             <p
                                 class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
                             >
-                                Master plan KITB
+                                {{ trans("home.area.master_plan") }}
                             </p>
 
                             <h3
@@ -2203,8 +2254,9 @@ onBeforeUnmount(() => {
                                 <div
                                     class="mb-1 text-[11px] font-medium uppercase tracking-[0.1em] text-white/45"
                                 >
-                                    Total luas kawasan
+                                    {{ trans("home.area.total_area") }}
                                 </div>
+
                                 <div class="font-display text-3xl font-bold">
                                     {{
                                         formatNumber(
@@ -2212,10 +2264,12 @@ onBeforeUnmount(() => {
                                             kawasanAreaDecimals,
                                         )
                                     }}
+
                                     <span
                                         class="text-lg font-medium text-white/55"
-                                        >Ha</span
                                     >
+                                        Ha
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -2228,7 +2282,11 @@ onBeforeUnmount(() => {
                                     :href="mapImage"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    :aria-label="`Buka ${mapTitle} dalam ukuran penuh`"
+                                    :aria-label="
+                                        trans('home.area.map_full_size', {
+                                            title: mapTitle,
+                                        })
+                                    "
                                     class="relative block"
                                 >
                                     <img
@@ -2246,7 +2304,12 @@ onBeforeUnmount(() => {
                                             class="mb-5 inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-kitb-navy-900 shadow-lg"
                                         >
                                             <ExternalLink class="h-3.5 w-3.5" />
-                                            Buka ukuran penuh
+
+                                            {{
+                                                trans(
+                                                    "home.area.open_full_size",
+                                                )
+                                            }}
                                         </span>
                                     </div>
                                 </a>
@@ -2255,8 +2318,7 @@ onBeforeUnmount(() => {
                             <p
                                 class="mt-3 text-[12.5px] leading-relaxed text-kitb-ink-900/45"
                             >
-                                Ketuk atau klik peta untuk melihat gambar dalam
-                                ukuran penuh.
+                                {{ trans("home.area.map_note") }}
                             </p>
                         </div>
                     </div>
@@ -2282,14 +2344,14 @@ onBeforeUnmount(() => {
                         <p
                             class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
                         >
-                            Anak usaha
+                            {{ trans("home.subsidiaries.eyebrow") }}
                         </p>
 
                         <h2
                             class="font-display font-bold leading-[1.08] text-kitb-green-900"
                             style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
                         >
-                            Bagian dari ekosistem KITB.
+                            {{ trans("home.subsidiaries.title") }}
                         </h2>
                     </div>
 
@@ -2303,7 +2365,9 @@ onBeforeUnmount(() => {
                         v-for="(anak, index) in props.anakUsahas"
                         :key="anak.id"
                         v-fade-in
-                        :style="{ transitionDelay: `${index * 80}ms` }"
+                        :style="{
+                            transitionDelay: `${index * 80}ms`,
+                        }"
                         class="group rounded-2xl border border-black/5 bg-white/60 p-5 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5 sm:p-6"
                     >
                         <div
@@ -2317,6 +2381,7 @@ onBeforeUnmount(() => {
                                 loading="lazy"
                                 decoding="async"
                             />
+
                             <Building2
                                 v-else
                                 class="h-7 w-7 text-kitb-green-700/40"
@@ -2338,12 +2403,13 @@ onBeforeUnmount(() => {
 
                         <a
                             v-if="anak.website"
-                            :href="anak.website"
+                            :href="normalizeWebsite(anak.website)"
                             target="_blank"
                             rel="noopener noreferrer"
                             class="inline-flex items-center gap-2 text-[13px] font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900"
                         >
-                            Kunjungi website
+                            {{ trans("home.subsidiaries.visit_website") }}
+
                             <ExternalLink class="h-3.5 w-3.5" />
                         </a>
                     </article>
@@ -2352,11 +2418,11 @@ onBeforeUnmount(() => {
         </section>
 
         <!-- =====================================================
-     MITRA PERUSAHAAN
-     ===================================================== -->
+             MITRA PERUSAHAAN
+             ===================================================== -->
 
         <section
-            v-if="props.mitraPerusahaans.length"
+            v-if="hasMitraPerusahaan"
             id="mitra-perusahaan"
             class="relative overflow-hidden bg-white py-16 sm:py-24 md:py-32"
         >
@@ -2371,7 +2437,6 @@ onBeforeUnmount(() => {
             />
 
             <div class="relative mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
-                <!-- Header -->
                 <div
                     v-fade-in
                     class="mb-10 flex flex-col gap-6 md:mb-14 md:flex-row md:items-end md:justify-between"
@@ -2380,33 +2445,30 @@ onBeforeUnmount(() => {
                         <p
                             class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
                         >
-                            Mitra perusahaan
+                            {{ trans("home.partners.eyebrow") }}
                         </p>
 
                         <h2
                             class="font-display font-bold leading-[1.08] text-kitb-green-900"
                             style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
                         >
-                            Tumbuh bersama mitra strategis.
+                            {{ trans("home.partners.title") }}
                         </h2>
 
                         <p
                             class="mt-5 max-w-xl text-[15px] leading-[1.8] text-kitb-ink-900/60"
                         >
-                            Membangun kolaborasi dan sinergi bersama berbagai
-                            mitra untuk memperkuat ekosistem industri dan
-                            mendukung pertumbuhan kawasan.
+                            {{ trans("home.partners.description") }}
                         </p>
                     </div>
 
-                    <!-- Navigation -->
                     <div
-                        v-if="props.mitraPerusahaans.length > 1"
+                        v-if="displayedMitraPerusahaans.length > 1"
                         class="flex shrink-0 items-center gap-2"
                     >
                         <button
                             type="button"
-                            aria-label="Mitra perusahaan sebelumnya"
+                            :aria-label="trans('home.partners.previous')"
                             class="group flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-kitb-green-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-kitb-teal-300 hover:bg-kitb-green-700 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-kitb-teal-500/40 focus:ring-offset-2"
                             @click="scrollMitra('prev')"
                             @mouseenter="pauseMitraAutoplay"
@@ -2419,7 +2481,7 @@ onBeforeUnmount(() => {
 
                         <button
                             type="button"
-                            aria-label="Mitra perusahaan berikutnya"
+                            :aria-label="trans('home.partners.next')"
                             class="group flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-kitb-green-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-kitb-teal-300 hover:bg-kitb-green-700 hover:text-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-kitb-teal-500/40 focus:ring-offset-2"
                             @click="scrollMitra('next')"
                             @mouseenter="pauseMitraAutoplay"
@@ -2432,33 +2494,32 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <!-- Carousel -->
                 <div class="relative">
                     <div
                         ref="mitraCarousel"
                         class="mitra-carousel flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-6"
                         tabindex="0"
-                        aria-label="Daftar mitra perusahaan"
+                        :aria-label="trans('home.partners.list')"
                         @mouseenter="pauseMitraAutoplay"
                         @mouseleave="resumeMitraAutoplay"
                         @focusin="pauseMitraAutoplay"
                         @focusout="resumeMitraAutoplay"
                     >
                         <article
-                            v-for="(mitra, index) in props.mitraPerusahaans"
+                            v-for="(mitra, index) in displayedMitraPerusahaans"
                             :key="mitra.id"
                             data-mitra-card
                             v-fade-in
-                            :style="{ transitionDelay: `${index * 70}ms` }"
+                            :style="{
+                                transitionDelay: `${index * 70}ms`,
+                            }"
                             class="group relative w-[82%] shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-kitb-teal-200 hover:shadow-xl hover:shadow-kitb-navy-900/5 sm:w-[calc(50%-12px)] sm:p-6 lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)]"
                         >
-                            <!-- Decorative glow -->
                             <div
                                 class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-kitb-teal-100/50 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
                                 aria-hidden="true"
                             />
 
-                            <!-- Logo -->
                             <div
                                 class="relative mb-5 flex h-24 items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/80 p-4 transition-colors duration-300 group-hover:bg-kitb-teal-50/40"
                             >
@@ -2478,7 +2539,6 @@ onBeforeUnmount(() => {
                                 />
                             </div>
 
-                            <!-- Info -->
                             <div class="relative min-w-0">
                                 <h3
                                     class="line-clamp-2 font-display text-base font-semibold leading-[1.4] text-kitb-green-900 transition-colors duration-300 group-hover:text-kitb-navy-900 sm:text-lg"
@@ -2494,23 +2554,25 @@ onBeforeUnmount(() => {
                                     class="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900 focus:outline-none focus:ring-2 focus:ring-kitb-teal-500/40 focus:ring-offset-2"
                                     @click.stop
                                 >
-                                    Kunjungi website
+                                    {{ trans("home.partners.visit_website") }}
+
                                     <ExternalLink class="h-3.5 w-3.5" />
                                 </a>
                             </div>
                         </article>
                     </div>
 
-                    <!-- Decorative bottom line -->
                     <div
-                        v-if="props.mitraPerusahaans.length > 1"
+                        v-if="displayedMitraPerusahaans.length > 1"
                         class="mt-2 flex items-center gap-3"
                         aria-hidden="true"
                     >
                         <div class="h-px flex-1 bg-slate-100" />
+
                         <span
                             class="h-1.5 w-1.5 rounded-full bg-kitb-teal-500/60"
                         />
+
                         <div class="h-px flex-1 bg-slate-100" />
                     </div>
                 </div>
@@ -2552,21 +2614,20 @@ onBeforeUnmount(() => {
                         <p
                             class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-300"
                         >
-                            Peluang investasi
+                            {{ trans("home.investment.eyebrow") }}
                         </p>
 
                         <h2
                             class="font-display font-bold leading-[1.08] text-white"
                             style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
                         >
-                            Ruang untuk tumbuh bersama.
+                            {{ trans("home.investment.title") }}
                         </h2>
 
                         <p
                             class="mt-5 max-w-xl text-[15px] leading-[1.8] text-white/55"
                         >
-                            Temukan peluang investasi yang tersedia di dalam
-                            ekosistem kawasan industri dan maritim KITB.
+                            {{ trans("home.investment.description") }}
                         </p>
                     </div>
 
@@ -2580,7 +2641,9 @@ onBeforeUnmount(() => {
                         v-for="(investment, index) in props.peluangInvestasi"
                         :key="investment.id"
                         v-fade-in
-                        :style="{ transitionDelay: `${index * 80}ms` }"
+                        :style="{
+                            transitionDelay: `${index * 80}ms`,
+                        }"
                         class="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.08]"
                     >
                         <div
@@ -2626,13 +2689,15 @@ onBeforeUnmount(() => {
                                 v-if="hasValue(investment.luas_lahan)"
                                 class="flex items-center justify-between border-t border-white/10 pt-4"
                             >
-                                <span class="text-[12px] text-white/40"
-                                    >Luas lahan</span
-                                >
+                                <span class="text-[12px] text-white/40">
+                                    {{ trans("home.investment.land_size") }}
+                                </span>
+
                                 <span
                                     class="font-display font-semibold text-white"
                                 >
-                                    {{ formatNumber(investment.luas_lahan) }} Ha
+                                    {{ formatNumber(investment.luas_lahan) }}
+                                    Ha
                                 </span>
                             </div>
                         </div>
@@ -2659,21 +2724,20 @@ onBeforeUnmount(() => {
                         <p
                             class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
                         >
-                            Pusat informasi
+                            {{ trans("home.news.eyebrow") }}
                         </p>
 
                         <h2
                             class="font-display font-bold leading-[1.08] text-kitb-green-900"
                             style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
                         >
-                            Berita terbaru dari KITB.
+                            {{ trans("home.news.title") }}
                         </h2>
 
                         <p
                             class="mt-5 max-w-xl text-[15px] leading-[1.8] text-kitb-ink-900/60"
                         >
-                            Ikuti informasi dan perkembangan terbaru seputar
-                            Kawasan Industri Tanjung Buton.
+                            {{ trans("home.news.description") }}
                         </p>
                     </div>
 
@@ -2681,7 +2745,8 @@ onBeforeUnmount(() => {
                         href="/berita"
                         class="hidden shrink-0 items-center gap-2 text-sm font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900 md:inline-flex"
                     >
-                        Lihat semua berita
+                        {{ trans("home.news.view_all") }}
+
                         <ArrowRight class="h-4 w-4" />
                     </Link>
                 </div>
@@ -2691,7 +2756,9 @@ onBeforeUnmount(() => {
                         v-for="(berita, index) in props.beritas"
                         :key="berita.id"
                         v-fade-in
-                        :style="{ transitionDelay: `${index * 100}ms` }"
+                        :style="{
+                            transitionDelay: `${index * 100}ms`,
+                        }"
                         class="group overflow-hidden rounded-2xl border border-black/5 bg-white/65 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5"
                     >
                         <Link
@@ -2720,6 +2787,7 @@ onBeforeUnmount(() => {
                                     class="mb-3 flex items-center gap-2 text-[12px] text-kitb-ink-900/45"
                                 >
                                     <CalendarDays class="h-3.5 w-3.5" />
+
                                     {{
                                         formatDate(
                                             berita.published_at ??
@@ -2744,7 +2812,8 @@ onBeforeUnmount(() => {
                                 <div
                                     class="mt-5 inline-flex items-center gap-2 text-[13px] font-semibold text-kitb-green-700 transition-colors group-hover:text-kitb-navy-900"
                                 >
-                                    Baca selengkapnya
+                                    {{ trans("home.news.read_more") }}
+
                                     <ArrowRight
                                         class="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1"
                                     />
@@ -2759,7 +2828,8 @@ onBeforeUnmount(() => {
                         href="/berita"
                         class="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-kitb-green-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-kitb-green-700/20 hover:shadow-md"
                     >
-                        Lihat semua berita
+                        {{ trans("home.news.view_all") }}
+
                         <ArrowRight class="h-4 w-4" />
                     </Link>
                 </div>
@@ -2801,21 +2871,20 @@ onBeforeUnmount(() => {
                         <p
                             class="mb-4 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-600"
                         >
-                            Karier
+                            {{ trans("home.career.eyebrow") }}
                         </p>
 
                         <h2
                             class="font-display font-bold leading-[1.08] text-kitb-green-900"
                             style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
                         >
-                            Bangun masa depan bersama KITB.
+                            {{ trans("home.career.title") }}
                         </h2>
 
                         <p
                             class="mt-5 max-w-xl text-[15px] leading-[1.8] text-kitb-ink-900/60"
                         >
-                            Bergabung dengan tim yang sedang membangun ekosistem
-                            industri dan maritim masa depan.
+                            {{ trans("home.career.description") }}
                         </p>
                     </div>
 
@@ -2823,7 +2892,8 @@ onBeforeUnmount(() => {
                         href="/karier"
                         class="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900"
                     >
-                        Lihat semua lowongan
+                        {{ trans("home.career.view_all") }}
+
                         <ArrowRight class="h-4 w-4" />
                     </Link>
                 </div>
@@ -2834,7 +2904,9 @@ onBeforeUnmount(() => {
                         :key="job.id"
                         :href="job.slug ? `/karier/${job.slug}` : '/karier'"
                         v-fade-in
-                        :style="{ transitionDelay: `${index * 80}ms` }"
+                        :style="{
+                            transitionDelay: `${index * 80}ms`,
+                        }"
                         class="group grid gap-4 rounded-2xl border border-black/5 bg-white/70 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5 sm:p-6 md:grid-cols-[1fr_auto] md:items-center md:gap-5"
                     >
                         <div class="min-w-0">
@@ -2843,7 +2915,7 @@ onBeforeUnmount(() => {
                                     v-if="job.unggulan"
                                     class="inline-flex items-center gap-1 rounded-full bg-kitb-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-kitb-amber-700"
                                 >
-                                    Unggulan
+                                    {{ trans("home.career.featured") }}
                                 </span>
 
                                 <span
@@ -2860,7 +2932,7 @@ onBeforeUnmount(() => {
                                     firstValue(
                                         job,
                                         ["judul"],
-                                        "Posisi tersedia",
+                                        trans("home.career.position_available"),
                                     )
                                 }}
                             </h3>
@@ -2878,6 +2950,7 @@ onBeforeUnmount(() => {
                                     class="inline-flex items-center gap-1.5"
                                 >
                                     <BriefcaseBusiness class="h-3.5 w-3.5" />
+
                                     {{ job.departemen }}
                                 </span>
 
@@ -2886,6 +2959,7 @@ onBeforeUnmount(() => {
                                     class="inline-flex items-center gap-1.5"
                                 >
                                     <MapPin class="h-3.5 w-3.5" />
+
                                     {{ job.lokasi }}
                                 </span>
 
@@ -2894,7 +2968,12 @@ onBeforeUnmount(() => {
                                     class="inline-flex items-center gap-1.5"
                                 >
                                     <Clock3 class="h-3.5 w-3.5" />
-                                    Tutup {{ formatDate(job.tanggal_tutup) }}
+
+                                    {{
+                                        trans("home.career.closing", {
+                                            date: formatDate(job.tanggal_tutup),
+                                        })
+                                    }}
                                 </span>
                             </div>
                         </div>
@@ -2955,23 +3034,20 @@ onBeforeUnmount(() => {
                         <p
                             class="mb-5 text-[13px] font-semibold uppercase tracking-[0.14em] text-kitb-teal-300"
                         >
-                            Naik ke panggung industri global
+                            {{ trans("home.cta.eyebrow") }}
                         </p>
 
                         <h2
                             class="mx-auto max-w-3xl font-display font-bold leading-[1.12] text-white"
                             style="font-size: clamp(1.7rem, 3.8vw, 3rem)"
                         >
-                            Bersama para mitra dan investor, kami siap membangun
-                            masa depan industri Indonesia.
+                            {{ trans("home.cta.title") }}
                         </h2>
 
                         <p
                             class="mx-auto mt-5 max-w-xl text-[14px] leading-[1.8] text-white/60 sm:text-[15px]"
                         >
-                            Mari diskusikan kebutuhan lahan, peluang investasi,
-                            dan potensi kolaborasi di Kawasan Industri Tanjung
-                            Buton.
+                            {{ trans("home.cta.description") }}
                         </p>
 
                         <div class="mt-8 sm:mt-10">
@@ -2979,7 +3055,8 @@ onBeforeUnmount(() => {
                                 :href="visitUrl"
                                 class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-3.5 text-[15px] font-medium text-[#163a70] shadow-lg shadow-black/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/95 sm:w-auto"
                             >
-                                Mulai diskusi investasi
+                                {{ trans("home.cta.start_discussion") }}
+
                                 <ArrowRight class="h-4 w-4" />
                             </a>
                         </div>
