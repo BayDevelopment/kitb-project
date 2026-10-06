@@ -14,11 +14,23 @@ return new class extends Migration
         Schema::create('anak_usahas', function (Blueprint $table) {
             $table->id();
 
+            // Nama perusahaan
             $table->string('nama');
+            $table->string('nama_en')->nullable();
+            $table->string('nama_zh')->nullable();
+
+            // Logo
             $table->string('logo')->nullable();
+
+            // Deskripsi perusahaan
             $table->text('deskripsi')->nullable();
+            $table->text('deskripsi_en')->nullable();
+            $table->text('deskripsi_zh')->nullable();
+
+            // Website perusahaan
             $table->string('website')->nullable();
 
+            // Pengaturan tampilan
             $table->unsignedSmallInteger('urutan')->default(0);
             $table->boolean('aktif')->default(true);
 

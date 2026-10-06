@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import {
     ArrowDown,
     ArrowUp,
     Building2,
+    Check,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
     Eye,
     FileText,
+    Globe,
     Image as ImageIcon,
     Pencil,
     Plus,
@@ -21,6 +23,11 @@ import {
     X,
 } from "lucide-vue-next";
 import AppLayout from "@/layouts/AppLayout.vue";
+import {
+    currentLanguage,
+    localizedValue,
+    type LanguageCode,
+} from "@/composables/useLocale";
 
 defineOptions({
     layout: AppLayout,
@@ -34,9 +41,17 @@ defineOptions({
 
 interface Infrastruktur {
     id: number;
+
     nama: string;
+    nama_en: string | null;
+    nama_zh: string | null;
+
     slug: string;
+
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
     gambar: string | null;
     urutan: number;
     aktif: boolean;
@@ -73,8 +88,12 @@ interface InfrastrukturPagination {
 
 interface FormErrors {
     nama?: string;
+    nama_en?: string;
+    nama_zh?: string;
     slug?: string;
     deskripsi?: string;
+    deskripsi_en?: string;
+    deskripsi_zh?: string;
     gambar?: string;
     urutan?: string;
     aktif?: string;
@@ -95,6 +114,43 @@ const props = defineProps<{
 }>();
 
 const BASE_URL = "/admin/kawasan/infrastruktur";
+
+/**
+ * |--------------------------------------------------------------------------
+ * | Language
+ * |--------------------------------------------------------------------------
+ *
+ * currentLanguage (useLocal) = bahasa tampilan tabel.
+ * activeLanguage / detailLanguage = tab bahasa lokal di modal form / detail,
+ * supaya mengedit tidak mengubah bahasa tampilan global.
+ */
+
+const languageTabs: { code: LanguageCode; flag: string; label: string }[] = [
+    { code: "id", flag: "🇮🇩", label: "Indonesia" },
+    { code: "en", flag: "🇬🇧", label: "English" },
+    { code: "zh", flag: "🇨🇳", label: "中文" },
+];
+
+const activeLanguage = ref<LanguageCode>("id");
+const detailLanguage = ref<LanguageCode>("id");
+
+const languageLabel = computed(
+    () =>
+        languageTabs.find((tab) => tab.code === activeLanguage.value)?.label ??
+        "Indonesia",
+);
+
+const fieldKey = (field: "nama" | "deskripsi", lang: LanguageCode): string =>
+    lang === "id" ? field : `${field}_${lang}`;
+
+const hasTranslation = (item: Infrastruktur, lang: LanguageCode): boolean => {
+    const record = item as unknown as Record<string, unknown>;
+
+    return (
+        String(record[fieldKey("nama", lang)] ?? "").trim() !== "" ||
+        String(record[fieldKey("deskripsi", lang)] ?? "").trim() !== ""
+    );
+};
 
 /**
  * |--------------------------------------------------------------------------
@@ -145,15 +201,21 @@ const selectedInfrastruktur = ref<Infrastruktur | null>(null);
  * |--------------------------------------------------------------------------
  */
 
-const form = ref({
+const emptyForm = () => ({
     nama: "",
+    nama_en: "",
+    nama_zh: "",
     slug: "",
     deskripsi: "",
+    deskripsi_en: "",
+    deskripsi_zh: "",
     gambar: null as File | null,
     urutan: "",
     aktif: true,
     remove_gambar: false,
 });
+
+const form = ref(emptyForm());
 
 const existingImage = ref<string | null>(null);
 const previewUrl = ref<string | null>(null);
@@ -165,10 +227,30 @@ const processingMoveId = ref<number | null>(null);
 
 const errors = ref<FormErrors>({});
 
+const hasLanguageError = (lang: LanguageCode): boolean => {
+    const record = errors.value as Record<string, string | undefined>;
+
+    return Boolean(
+        record[fieldKey("nama", lang)] || record[fieldKey("deskripsi", lang)],
+    );
+};
+
+const focusFirstErrorLanguage = (): void => {
+    const firstWithError = languageTabs.find((tab) =>
+        hasLanguageError(tab.code),
+    );
+
+    if (firstWithError) {
+        activeLanguage.value = firstWithError.code;
+    }
+};
+
 /**
  * |--------------------------------------------------------------------------
  * | Slug (preview saja, backend/model yang menentukan slug final)
  * |--------------------------------------------------------------------------
+ *
+ * Slug selalu dibuat dari nama Bahasa Indonesia.
  */
 
 const isHydratingForm = ref(false);
@@ -315,6 +397,28 @@ const getRowNumber = (index: number): number =>
     (getCurrentPage() - 1) * getPerPage() + index + 1;
 
 /**
+ * Nama/deskripsi sesuai bahasa tampilan (useLocal), fallback ke Indonesia.
+ */
+const displayName = (item: Infrastruktur): string =>
+    localizedValue(item as unknown as Record<string, unknown>, "nama");
+
+const displayDescription = (item: Infrastruktur): string =>
+    localizedValue(item as unknown as Record<string, unknown>, "deskripsi");
+
+/**
+ * Nama/deskripsi untuk tab bahasa tertentu (tanpa fallback) di modal detail.
+ */
+const getDetailValue = (
+    item: Infrastruktur,
+    field: "nama" | "deskripsi",
+): string => {
+    const record = item as unknown as Record<string, unknown>;
+    const value = record[fieldKey(field, detailLanguage.value)];
+
+    return toStringValue(value as string | null | undefined);
+};
+
+/**
  * Posisi global (lintas halaman) untuk menonaktifkan tombol naik/turun.
  * Controller menukar urutan dengan tetangga terdekat, sehingga hanya
  * item pertama (paling atas) dan terakhir (paling bawah) yang tidak bisa pindah.
@@ -403,18 +507,11 @@ const navButtonClass = (url: string | null): string =>
 const resetForm = (): void => {
     isHydratingForm.value = true;
 
-    form.value = {
-        nama: "",
-        slug: "",
-        deskripsi: "",
-        gambar: null,
-        urutan: "",
-        aktif: true,
-        remove_gambar: false,
-    };
+    form.value = emptyForm();
 
     existingImage.value = null;
     errors.value = {};
+    activeLanguage.value = "id";
 
     if (previewUrl.value) {
         URL.revokeObjectURL(previewUrl.value);
@@ -467,13 +564,18 @@ const openEdit = (item: Infrastruktur): void => {
     }
 
     errors.value = {};
+    activeLanguage.value = "id";
 
     isHydratingForm.value = true;
 
     form.value = {
         nama: toStringValue(item.nama),
+        nama_en: toStringValue(item.nama_en),
+        nama_zh: toStringValue(item.nama_zh),
         slug: toStringValue(item.slug),
         deskripsi: toStringValue(item.deskripsi),
+        deskripsi_en: toStringValue(item.deskripsi_en),
+        deskripsi_zh: toStringValue(item.deskripsi_zh),
         gambar: null,
         urutan: toStringValue(item.urutan),
         aktif: Boolean(item.aktif),
@@ -587,8 +689,9 @@ const removeExistingImage = (): void => {
  * | Submit
  * |--------------------------------------------------------------------------
  *
- * Slug tidak dikirim. Controller hanya menerima:
- * nama, deskripsi, gambar, urutan, aktif, remove_gambar (edit).
+ * Slug tidak dikirim. Controller menerima:
+ * nama, nama_en, nama_zh, deskripsi, deskripsi_en, deskripsi_zh,
+ * gambar, urutan, aktif, remove_gambar (edit).
  */
 
 const submit = (): void => {
@@ -599,11 +702,18 @@ const submit = (): void => {
     errors.value = {};
 
     const nama = toStringValue(form.value.nama);
+    const namaEn = toStringValue(form.value.nama_en);
+    const namaZh = toStringValue(form.value.nama_zh);
+
     const deskripsi = toStringValue(form.value.deskripsi);
+    const deskripsiEn = toStringValue(form.value.deskripsi_en);
+    const deskripsiZh = toStringValue(form.value.deskripsi_zh);
+
     const urutan = toStringValue(form.value.urutan);
 
     if (!nama) {
-        errors.value.nama = "Nama infrastruktur wajib diisi.";
+        errors.value.nama = "Nama infrastruktur (Indonesia) wajib diisi.";
+        activeLanguage.value = "id";
 
         return;
     }
@@ -611,6 +721,7 @@ const submit = (): void => {
     if (!slugify(nama)) {
         errors.value.nama =
             "Nama harus mengandung huruf atau angka agar slug dapat dibuat.";
+        activeLanguage.value = "id";
 
         return;
     }
@@ -621,7 +732,11 @@ const submit = (): void => {
     const formData = new FormData();
 
     formData.append("nama", nama);
+    formData.append("nama_en", namaEn);
+    formData.append("nama_zh", namaZh);
     formData.append("deskripsi", deskripsi);
+    formData.append("deskripsi_en", deskripsiEn);
+    formData.append("deskripsi_zh", deskripsiZh);
     formData.append("urutan", urutan || "0");
     formData.append("aktif", form.value.aktif ? "1" : "0");
 
@@ -655,6 +770,8 @@ const submit = (): void => {
         onError: (serverErrors) => {
             errors.value = serverErrors as FormErrors;
 
+            focusFirstErrorLanguage();
+
             console.error("Gagal menyimpan infrastruktur:", serverErrors);
         },
 
@@ -676,6 +793,7 @@ const submit = (): void => {
 
 const openDetail = (item: Infrastruktur): void => {
     selectedInfrastruktur.value = item;
+    detailLanguage.value = "id";
 
     showFormModal.value = false;
     showDeleteModal.value = false;
@@ -1041,7 +1159,7 @@ onBeforeUnmount(() => {
                         <input
                             v-model="search"
                             type="search"
-                            placeholder="Cari nama atau deskripsi infrastruktur..."
+                            placeholder="Cari nama atau deskripsi infrastruktur (ID / EN / 中文)..."
                             class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
                             @input="submitSearch"
                         />
@@ -1090,11 +1208,42 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <span
-                            class="self-start rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:self-auto"
-                        >
-                            {{ getTotal() }} data
-                        </span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- LANGUAGE VIEW (useLocal) -->
+
+                            <div
+                                class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800"
+                                role="group"
+                                aria-label="Bahasa tampilan tabel"
+                            >
+                                <Globe
+                                    class="ml-1.5 size-3.5 text-slate-400"
+                                    aria-hidden="true"
+                                />
+
+                                <button
+                                    v-for="tab in languageTabs"
+                                    :key="tab.code"
+                                    type="button"
+                                    :aria-pressed="currentLanguage === tab.code"
+                                    class="rounded-lg px-2.5 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                    :class="
+                                        currentLanguage === tab.code
+                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                    "
+                                    @click="currentLanguage = tab.code"
+                                >
+                                    {{ tab.code.toUpperCase() }}
+                                </button>
+                            </div>
+
+                            <span
+                                class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            >
+                                {{ getTotal() }} data
+                            </span>
+                        </div>
                     </div>
 
                     <!-- DATA -->
@@ -1185,7 +1334,7 @@ onBeforeUnmount(() => {
                                                                 item.gambar,
                                                             )!
                                                         "
-                                                        :alt="item.nama"
+                                                        :alt="displayName(item)"
                                                         class="size-full object-cover"
                                                     />
 
@@ -1199,7 +1348,7 @@ onBeforeUnmount(() => {
                                                     <p
                                                         class="max-w-[260px] truncate font-semibold text-slate-800 dark:text-slate-100"
                                                     >
-                                                        {{ item.nama }}
+                                                        {{ displayName(item) }}
                                                     </p>
 
                                                     <p
@@ -1208,11 +1357,41 @@ onBeforeUnmount(() => {
                                                         /{{ item.slug }}
                                                     </p>
 
-                                                    <p
-                                                        class="mt-1 text-xs text-slate-400 dark:text-slate-500"
+                                                    <div
+                                                        class="mt-1 flex items-center gap-1.5"
                                                     >
-                                                        ID #{{ item.id }}
-                                                    </p>
+                                                        <span
+                                                            class="text-xs text-slate-400 dark:text-slate-500"
+                                                        >
+                                                            ID #{{ item.id }}
+                                                        </span>
+
+                                                        <span
+                                                            v-for="tab in languageTabs"
+                                                            :key="tab.code"
+                                                            :title="
+                                                                hasTranslation(
+                                                                    item,
+                                                                    tab.code,
+                                                                )
+                                                                    ? `${tab.label}: terisi`
+                                                                    : `${tab.label}: belum diisi`
+                                                            "
+                                                            class="rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                                                            :class="
+                                                                hasTranslation(
+                                                                    item,
+                                                                    tab.code,
+                                                                )
+                                                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                                                            "
+                                                        >
+                                                            {{
+                                                                tab.code.toUpperCase()
+                                                            }}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -1225,7 +1404,9 @@ onBeforeUnmount(() => {
                                             >
                                                 {{
                                                     truncate(
-                                                        item.deskripsi,
+                                                        displayDescription(
+                                                            item,
+                                                        ),
                                                         150,
                                                     )
                                                 }}
@@ -1584,39 +1765,255 @@ onBeforeUnmount(() => {
 
                     <form
                         class="max-h-[calc(100dvh-8rem)] overflow-y-auto"
+                        novalidate
                         @submit.prevent="submit"
                     >
                         <div class="grid gap-5 p-4 sm:p-6 md:grid-cols-2">
-                            <!-- NAMA -->
+                            <!-- LANGUAGE TABS -->
 
                             <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 dark:border-slate-700 dark:bg-slate-800/50"
                                 >
-                                    Nama Infrastruktur
-                                    <span class="text-red-500">*</span>
-                                </label>
+                                    <div
+                                        class="grid grid-cols-3 gap-1"
+                                        role="tablist"
+                                    >
+                                        <button
+                                            v-for="tab in languageTabs"
+                                            :key="tab.code"
+                                            type="button"
+                                            role="tab"
+                                            :aria-selected="
+                                                activeLanguage === tab.code
+                                            "
+                                            class="relative rounded-xl px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                            :class="
+                                                activeLanguage === tab.code
+                                                    ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                                                    : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200'
+                                            "
+                                            @click="activeLanguage = tab.code"
+                                        >
+                                            {{ tab.flag }} {{ tab.label }}
 
-                                <input
-                                    v-model="form.nama"
-                                    type="text"
-                                    maxlength="150"
-                                    required
-                                    placeholder="Contoh: Jalan Utama Kawasan"
-                                    class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                    :class="{
-                                        'border-red-400 focus:border-red-500':
-                                            errors.nama,
-                                    }"
-                                />
-
-                                <p
-                                    v-if="errors.nama"
-                                    class="mt-1.5 text-xs text-red-500"
-                                >
-                                    {{ errors.nama }}
-                                </p>
+                                            <span
+                                                v-if="
+                                                    hasLanguageError(tab.code)
+                                                "
+                                                class="absolute right-2 top-2 size-2 rounded-full bg-red-500"
+                                                aria-label="Ada kesalahan pada bahasa ini"
+                                            ></span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- LANGUAGE NOTICE -->
+
+                            <div class="md:col-span-2">
+                                <div
+                                    class="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/20"
+                                >
+                                    <div
+                                        class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+                                    >
+                                        <Check class="size-4" />
+                                    </div>
+
+                                    <div>
+                                        <p
+                                            class="text-sm font-semibold text-blue-800 dark:text-blue-300"
+                                        >
+                                            {{ languageLabel }}
+                                        </p>
+
+                                        <p
+                                            class="mt-0.5 text-xs leading-5 text-blue-600/80 dark:text-blue-400/80"
+                                        >
+                                            Isi nama dan deskripsi untuk bahasa
+                                            yang sedang dipilih. Jika bahasa
+                                            lain dikosongkan, tampilan akan
+                                            memakai Bahasa Indonesia.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ================= INDONESIA ================= -->
+
+                            <template v-if="activeLanguage === 'id'">
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Nama Infrastruktur
+                                        <span class="text-red-500">*</span>
+                                    </label>
+
+                                    <input
+                                        v-model="form.nama"
+                                        type="text"
+                                        maxlength="150"
+                                        placeholder="Contoh: Jalan Utama Kawasan"
+                                        class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.nama,
+                                        }"
+                                    />
+
+                                    <p
+                                        v-if="errors.nama"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.nama }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Deskripsi
+                                    </label>
+
+                                    <textarea
+                                        v-model="form.deskripsi"
+                                        rows="6"
+                                        maxlength="10000"
+                                        placeholder="Tuliskan deskripsi lengkap mengenai infrastruktur..."
+                                        class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.deskripsi,
+                                        }"
+                                    ></textarea>
+
+                                    <p
+                                        v-if="errors.deskripsi"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.deskripsi }}
+                                    </p>
+                                </div>
+                            </template>
+
+                            <!-- ================= ENGLISH ================= -->
+
+                            <template v-else-if="activeLanguage === 'en'">
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Infrastructure Name
+                                    </label>
+
+                                    <input
+                                        v-model="form.nama_en"
+                                        type="text"
+                                        maxlength="150"
+                                        placeholder="Example: Main Estate Road"
+                                        class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.nama_en,
+                                        }"
+                                    />
+
+                                    <p
+                                        v-if="errors.nama_en"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.nama_en }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Description
+                                    </label>
+
+                                    <textarea
+                                        v-model="form.deskripsi_en"
+                                        rows="6"
+                                        maxlength="10000"
+                                        placeholder="Write a complete description of the infrastructure..."
+                                        class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.deskripsi_en,
+                                        }"
+                                    ></textarea>
+
+                                    <p
+                                        v-if="errors.deskripsi_en"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.deskripsi_en }}
+                                    </p>
+                                </div>
+                            </template>
+
+                            <!-- ================= CHINESE ================= -->
+
+                            <template v-else>
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        基础设施名称
+                                    </label>
+
+                                    <input
+                                        v-model="form.nama_zh"
+                                        type="text"
+                                        maxlength="150"
+                                        placeholder="例如：园区主干道"
+                                        class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.nama_zh,
+                                        }"
+                                    />
+
+                                    <p
+                                        v-if="errors.nama_zh"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.nama_zh }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        描述
+                                    </label>
+
+                                    <textarea
+                                        v-model="form.deskripsi_zh"
+                                        rows="6"
+                                        maxlength="10000"
+                                        placeholder="请填写基础设施的完整描述..."
+                                        class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.deskripsi_zh,
+                                        }"
+                                    ></textarea>
+
+                                    <p
+                                        v-if="errors.deskripsi_zh"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.deskripsi_zh }}
+                                    </p>
+                                </div>
+                            </template>
 
                             <!-- SLUG -->
 
@@ -1656,10 +2053,10 @@ onBeforeUnmount(() => {
                                     ></span>
 
                                     <span>
-                                        Slug dibuat otomatis oleh sistem
-                                        berdasarkan nama infrastruktur dan tidak
-                                        dapat diubah secara manual. Slug final
-                                        dapat berbeda jika sudah digunakan.
+                                        Slug dibuat otomatis oleh sistem dari
+                                        nama Bahasa Indonesia dan tidak dapat
+                                        diubah secara manual. Slug final dapat
+                                        berbeda jika sudah digunakan.
                                     </span>
                                 </p>
 
@@ -1754,35 +2151,6 @@ onBeforeUnmount(() => {
                                     class="mt-1.5 text-xs text-red-500"
                                 >
                                     {{ errors.urutan }}
-                                </p>
-                            </div>
-
-                            <!-- DESKRIPSI -->
-
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Deskripsi
-                                </label>
-
-                                <textarea
-                                    v-model="form.deskripsi"
-                                    rows="6"
-                                    maxlength="10000"
-                                    placeholder="Tuliskan deskripsi lengkap mengenai infrastruktur..."
-                                    class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                    :class="{
-                                        'border-red-400 focus:border-red-500':
-                                            errors.deskripsi,
-                                    }"
-                                ></textarea>
-
-                                <p
-                                    v-if="errors.deskripsi"
-                                    class="mt-1.5 text-xs text-red-500"
-                                >
-                                    {{ errors.deskripsi }}
                                 </p>
                             </div>
 
@@ -1979,7 +2347,7 @@ onBeforeUnmount(() => {
                                 :src="
                                     getImageUrl(selectedInfrastruktur.gambar)!
                                 "
-                                :alt="selectedInfrastruktur.nama"
+                                :alt="displayName(selectedInfrastruktur)"
                                 class="max-h-80 w-full object-cover"
                             />
 
@@ -1999,12 +2367,41 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <div class="mt-5">
+                        <!-- LANGUAGE TABS -->
+
+                        <div
+                            class="mt-5 inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800"
+                            role="tablist"
+                        >
+                            <button
+                                v-for="tab in languageTabs"
+                                :key="tab.code"
+                                type="button"
+                                role="tab"
+                                :aria-selected="detailLanguage === tab.code"
+                                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                :class="
+                                    detailLanguage === tab.code
+                                        ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                "
+                                @click="detailLanguage = tab.code"
+                            >
+                                {{ tab.flag }} {{ tab.label }}
+                            </button>
+                        </div>
+
+                        <div class="mt-4">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h3
                                     class="text-xl font-semibold text-slate-900 dark:text-white"
                                 >
-                                    {{ selectedInfrastruktur.nama }}
+                                    {{
+                                        getDetailValue(
+                                            selectedInfrastruktur,
+                                            "nama",
+                                        ) || "-"
+                                    }}
                                 </h3>
 
                                 <span
@@ -2081,7 +2478,12 @@ onBeforeUnmount(() => {
                                 class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
                             >
                                 <p class="whitespace-pre-line">
-                                    {{ selectedInfrastruktur.deskripsi || "-" }}
+                                    {{
+                                        getDetailValue(
+                                            selectedInfrastruktur,
+                                            "deskripsi",
+                                        ) || "-"
+                                    }}
                                 </p>
                             </div>
                         </div>
@@ -2146,7 +2548,8 @@ onBeforeUnmount(() => {
                             >
                                 {{ selectedInfrastruktur.nama }}
                             </span>
-                            ? Data yang sudah dihapus tidak dapat dikembalikan.
+                            ? Seluruh terjemahan (ID, EN, 中文) akan ikut
+                            terhapus dan tidak dapat dikembalikan.
                         </p>
                     </div>
 

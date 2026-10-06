@@ -14,8 +14,12 @@ class Infrastruktur extends Model
 
     protected $fillable = [
         'nama',
+        'nama_en',
+        'nama_zh',
         'slug',
         'deskripsi',
+        'deskripsi_en',
+        'deskripsi_zh',
         'gambar',
         'urutan',
         'aktif',

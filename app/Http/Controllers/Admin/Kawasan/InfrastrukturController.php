@@ -21,16 +21,29 @@ class InfrastrukturController extends Controller
      */
     public function index(Request $request): Response
     {
+        $search = trim($request->string('search')->toString());
+
         $infrastrukturs = Infrastruktur::query()
-            ->ordered()
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query
+                        ->where('nama', 'like', "%{$search}%")
+                        ->orWhere('nama_en', 'like', "%{$search}%")
+                        ->orWhere('nama_zh', 'like', "%{$search}%")
+                        ->orWhere('deskripsi', 'like', "%{$search}%")
+                        ->orWhere('deskripsi_en', 'like', "%{$search}%")
+                        ->orWhere('deskripsi_zh', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('urutan')
+            ->orderBy('id')
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('admin/Kawasan/Infrastruktur', [
             'infrastrukturs' => $infrastrukturs,
-
             'filters' => [
-                'search' => $request->string('search')->toString(),
+                'search' => $search,
             ],
         ]);
     }
@@ -40,37 +53,7 @@ class InfrastrukturController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'nama' => [
-                'required',
-                'string',
-                'max:150',
-            ],
-
-            'deskripsi' => [
-                'nullable',
-                'string',
-                'max:10000',
-            ],
-
-            'gambar' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:2048',
-            ],
-
-            'urutan' => [
-                'nullable',
-                'integer',
-                'min:0',
-            ],
-
-            'aktif' => [
-                'nullable',
-                'boolean',
-            ],
-        ]);
+        $validated = $this->validateInfrastruktur($request);
 
         try {
             DB::transaction(function () use ($request, $validated): void {
@@ -84,19 +67,29 @@ class InfrastrukturController extends Controller
 
                 Infrastruktur::create([
                     'nama' => trim($validated['nama']),
+                    'nama_en' => isset($validated['nama_en'])
+                        ? trim($validated['nama_en'])
+                        : null,
+                    'nama_zh' => isset($validated['nama_zh'])
+                        ? trim($validated['nama_zh'])
+                        : null,
+
+                    'slug' => Infrastruktur::generateUniqueSlug(
+                        trim($validated['nama'])
+                    ),
 
                     'deskripsi' => isset($validated['deskripsi'])
                         ? trim($validated['deskripsi'])
                         : null,
+                    'deskripsi_en' => isset($validated['deskripsi_en'])
+                        ? trim($validated['deskripsi_en'])
+                        : null,
+                    'deskripsi_zh' => isset($validated['deskripsi_zh'])
+                        ? trim($validated['deskripsi_zh'])
+                        : null,
 
                     'gambar' => $gambar,
-
-                    /*
-                     * Jika urutan 0, Model dapat menangani
-                     * penentuan posisi berikutnya.
-                     */
                     'urutan' => $validated['urutan'] ?? 0,
-
                     'aktif' => $validated['aktif'] ?? true,
                 ]);
             });
@@ -125,42 +118,7 @@ class InfrastrukturController extends Controller
         Request $request,
         Infrastruktur $infrastruktur
     ): RedirectResponse {
-        $validated = $request->validate([
-            'nama' => [
-                'required',
-                'string',
-                'max:150',
-            ],
-
-            'deskripsi' => [
-                'nullable',
-                'string',
-                'max:10000',
-            ],
-
-            'gambar' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:2048',
-            ],
-
-            'urutan' => [
-                'nullable',
-                'integer',
-                'min:0',
-            ],
-
-            'aktif' => [
-                'nullable',
-                'boolean',
-            ],
-
-            'remove_gambar' => [
-                'nullable',
-                'boolean',
-            ],
-        ]);
+        $validated = $this->validateInfrastruktur($request);
 
         try {
             DB::transaction(function () use (
@@ -170,6 +128,20 @@ class InfrastrukturController extends Controller
             ): void {
                 $oldGambar = $infrastruktur->gambar;
                 $newGambar = $oldGambar;
+
+                /*
+                 * Generate slug baru jika nama berubah.
+                 */
+                $nama = trim($validated['nama']);
+
+                $slug = $infrastruktur->slug;
+
+                if ($infrastruktur->nama !== $nama) {
+                    $slug = Infrastruktur::generateUniqueSlug(
+                        $nama,
+                        $infrastruktur->id
+                    );
+                }
 
                 /*
                  * Upload gambar baru jika ada.
@@ -192,16 +164,28 @@ class InfrastrukturController extends Controller
                 }
 
                 $infrastruktur->update([
-                    'nama' => trim($validated['nama']),
+                    'nama' => $nama,
+                    'nama_en' => isset($validated['nama_en'])
+                        ? trim($validated['nama_en'])
+                        : null,
+                    'nama_zh' => isset($validated['nama_zh'])
+                        ? trim($validated['nama_zh'])
+                        : null,
+
+                    'slug' => $slug,
 
                     'deskripsi' => isset($validated['deskripsi'])
                         ? trim($validated['deskripsi'])
                         : null,
+                    'deskripsi_en' => isset($validated['deskripsi_en'])
+                        ? trim($validated['deskripsi_en'])
+                        : null,
+                    'deskripsi_zh' => isset($validated['deskripsi_zh'])
+                        ? trim($validated['deskripsi_zh'])
+                        : null,
 
                     'gambar' => $newGambar,
-
                     'urutan' => $validated['urutan'] ?? 0,
-
                     'aktif' => $validated['aktif'] ?? false,
                 ]);
 
@@ -356,6 +340,7 @@ class InfrastrukturController extends Controller
                             ? 'desc'
                             : 'asc'
                     )
+                    ->orderBy('id', $direction === 'up' ? 'desc' : 'asc')
                     ->first();
 
                 /*
@@ -404,6 +389,79 @@ class InfrastrukturController extends Controller
             'message' => $direction === 'up'
                 ? 'Infrastruktur berhasil dipindahkan ke atas.'
                 : 'Infrastruktur berhasil dipindahkan ke bawah.',
+        ]);
+    }
+
+    /**
+     * Validasi data infrastruktur.
+     */
+    private function validateInfrastruktur(Request $request): array
+    {
+        return $request->validate([
+            // Indonesia
+            'nama' => [
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            // English
+            'nama_en' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            // Chinese
+            'nama_zh' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            // Indonesia
+            'deskripsi' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            // English
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            // Chinese
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            'gambar' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048',
+            ],
+
+            'urutan' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
+
+            'aktif' => [
+                'nullable',
+                'boolean',
+            ],
+
+            'remove_gambar' => [
+                'nullable',
+                'boolean',
+            ],
         ]);
     }
 }

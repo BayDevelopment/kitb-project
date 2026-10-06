@@ -7,9 +7,7 @@ import {
     ref,
     watch,
 } from "vue";
-
 import { Head, Link } from "@inertiajs/vue3";
-
 import {
     Building2,
     CalendarDays,
@@ -23,8 +21,8 @@ import {
     Pause,
     Play,
 } from "lucide-vue-next";
-
 import PublicLayout from "@/layouts/PublicLayout.vue";
+import { currentLanguage, type LanguageCode } from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
@@ -38,7 +36,11 @@ interface ProfilKawasan {
     id: number;
     judul: string;
     slug: string;
+
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
     luas_kawasan: string | number | null;
     lokasi: string | null;
     tahun_berdiri: number | null;
@@ -54,10 +56,183 @@ const kawasans = computed<ProfilKawasan[]>(() => {
 });
 
 /* ============================================================
+   LOCALIZATION
+============================================================= */
+
+type LocalizedField = "deskripsi";
+
+const getLocalizedValue = (
+    item: ProfilKawasan | null | undefined,
+    field: LocalizedField,
+): string => {
+    if (!item) {
+        return "";
+    }
+
+    const language = currentLanguage.value as LanguageCode;
+
+    if (field === "deskripsi") {
+        if (language === "en") {
+            return item.deskripsi_en?.trim() || item.deskripsi?.trim() || "";
+        }
+
+        if (language === "zh") {
+            return item.deskripsi_zh?.trim() || item.deskripsi?.trim() || "";
+        }
+
+        return item.deskripsi?.trim() || "";
+    }
+
+    return "";
+};
+
+const translations = computed(() => {
+    const language = currentLanguage.value as LanguageCode;
+
+    const data: Record<
+        LanguageCode,
+        {
+            home: string;
+            industrialArea: string;
+            profile: string;
+            industrialAreaProfile: string;
+            exploreDescription: string;
+            areas: string;
+            playAutoplay: string;
+            pauseAutoplay: string;
+            previous: string;
+            next: string;
+            photo: string;
+            areaProfile: string;
+            areaSize: string;
+            location: string;
+            established: string;
+            hectare: string;
+            viewMap: string;
+            readDetail: string;
+            fullInformation: string;
+            exploreKitb: string;
+            knowMore: string;
+            infrastructure: string;
+            facilities: string;
+            emptyTitle: string;
+            emptyDescription: string;
+            backHome: string;
+            loading: string;
+            slideOf: string;
+            view: string;
+        }
+    > = {
+        id: {
+            home: "Beranda",
+            industrialArea: "Kawasan Industri",
+            profile: "Profil Kawasan",
+            industrialAreaProfile: "Profil Kawasan Industri",
+            exploreDescription:
+                "Jelajahi informasi kawasan industri melalui profil dan karakteristik setiap kawasan yang tersedia.",
+            areas: "Kawasan",
+            playAutoplay: "Putar otomatis slide",
+            pauseAutoplay: "Jeda putar otomatis slide",
+            previous: "Profil kawasan sebelumnya",
+            next: "Profil kawasan berikutnya",
+            photo: "Foto",
+            areaProfile: "Profil Kawasan",
+            areaSize: "Luas Kawasan",
+            location: "Lokasi",
+            established: "Tahun Berdiri",
+            hectare: "Ha",
+            viewMap: "Lihat Peta Kawasan",
+            readDetail: "Baca Detail",
+            fullInformation: "Informasi Lengkap",
+            exploreKitb: "Jelajahi KITB",
+            knowMore: "Kenali lebih jauh kawasan kami",
+            infrastructure: "Infrastruktur",
+            facilities: "Fasilitas",
+            emptyTitle: "Profil kawasan belum tersedia",
+            emptyDescription:
+                "Informasi profil kawasan industri belum tersedia atau sedang diperbarui. Silakan kembali lagi nanti.",
+            backHome: "Kembali ke Beranda",
+            loading: "Memuat profil kawasan",
+            slideOf: "dari",
+            view: "Lihat",
+        },
+
+        en: {
+            home: "Home",
+            industrialArea: "Industrial Area",
+            profile: "Area Profile",
+            industrialAreaProfile: "Industrial Area Profile",
+            exploreDescription:
+                "Explore industrial area information through the profile and characteristics of each available area.",
+            areas: "Areas",
+            playAutoplay: "Play slides automatically",
+            pauseAutoplay: "Pause automatic slides",
+            previous: "Previous industrial area profile",
+            next: "Next industrial area profile",
+            photo: "Photo",
+            areaProfile: "Area Profile",
+            areaSize: "Area Size",
+            location: "Location",
+            established: "Established",
+            hectare: "Ha",
+            viewMap: "View Area Map",
+            readDetail: "Read Details",
+            fullInformation: "Full Information",
+            exploreKitb: "Explore KITB",
+            knowMore: "Learn more about our industrial area",
+            infrastructure: "Infrastructure",
+            facilities: "Facilities",
+            emptyTitle: "Area profile is not available",
+            emptyDescription:
+                "Industrial area profile information is currently unavailable or being updated. Please check back later.",
+            backHome: "Back to Home",
+            loading: "Loading area profile",
+            slideOf: "of",
+            view: "View",
+        },
+
+        zh: {
+            home: "首页",
+            industrialArea: "工业园区",
+            profile: "园区概况",
+            industrialAreaProfile: "工业园区概况",
+            exploreDescription:
+                "通过园区概况和各园区的主要特点，了解更多工业园区信息。",
+            areas: "园区",
+            playAutoplay: "播放幻灯片",
+            pauseAutoplay: "暂停幻灯片",
+            previous: "上一个园区",
+            next: "下一个园区",
+            photo: "照片",
+            areaProfile: "园区概况",
+            areaSize: "园区面积",
+            location: "位置",
+            established: "成立年份",
+            hectare: "公顷",
+            viewMap: "查看园区地图",
+            readDetail: "阅读详情",
+            fullInformation: "详细信息",
+            exploreKitb: "探索 KITB",
+            knowMore: "进一步了解我们的园区",
+            infrastructure: "基础设施",
+            facilities: "设施",
+            emptyTitle: "暂无园区概况",
+            emptyDescription:
+                "工业园区概况信息暂不可用或正在更新，请稍后再回来查看。",
+            backHome: "返回首页",
+            loading: "正在加载园区概况",
+            slideOf: "共",
+            view: "查看",
+        },
+    };
+
+    return data[language] ?? data.id;
+});
+
+/* ============================================================
    SKELETON
 ============================================================= */
 
-// Jika data kosong, langsung tampilkan empty state tanpa skeleton
 const isLoading = ref(kawasans.value.length > 0);
 
 let skeletonTimer: ReturnType<typeof setTimeout> | null = null;
@@ -97,7 +272,10 @@ const setupReveal = () => {
                 revealObserver?.unobserve(entry.target);
             });
         },
-        { threshold: 0.08, rootMargin: "0px 0px -40px 0px" },
+        {
+            threshold: 0.08,
+            rootMargin: "0px 0px -40px 0px",
+        },
     );
 
     elements.forEach((element) => revealObserver?.observe(element));
@@ -110,7 +288,6 @@ const setupReveal = () => {
 const AUTOPLAY_MS = 6500;
 
 const currentIndex = ref(0);
-
 const isHovering = ref(false);
 const isFocusWithin = ref(false);
 const isDragging = ref(false);
@@ -136,8 +313,6 @@ const autoplayEnabled = computed(() => {
 
 /* ============================================================
    AUTOPLAY
-   (timer di-reset setiap pindah slide, jadi klik manual tidak
-   langsung diikuti pindah otomatis)
 ============================================================= */
 
 const clearAutoplay = () => {
@@ -187,6 +362,7 @@ function goToSlide(index: number): void {
 }
 
 const nextSlide = () => goToSlide(currentIndex.value + 1);
+
 const previousSlide = () => goToSlide(currentIndex.value - 1);
 
 watch(totalSlides, (total) => {
@@ -198,7 +374,19 @@ watch(totalSlides, (total) => {
 });
 
 /* ============================================================
-   KEYBOARD (hanya saat carousel punya fokus)
+   LANGUAGE CHANGE
+============================================================= */
+
+watch(
+    () => currentLanguage.value,
+    async () => {
+        await nextTick();
+        setupReveal();
+    },
+);
+
+/* ============================================================
+   KEYBOARD
 ============================================================= */
 
 const handleKeydown = (event: KeyboardEvent) => {
@@ -223,6 +411,7 @@ const handleFocusIn = () => {
 
 const handleFocusOut = (event: FocusEvent) => {
     const container = event.currentTarget as HTMLElement | null;
+
     const next = event.relatedTarget as Node | null;
 
     if (!container || !next || !container.contains(next)) {
@@ -231,7 +420,7 @@ const handleFocusOut = (event: FocusEvent) => {
 };
 
 /* ============================================================
-   SWIPE / DRAG (pointer events untuk sentuh + mouse)
+   SWIPE / DRAG
 ============================================================= */
 
 let pointerStartX: number | null = null;
@@ -242,12 +431,10 @@ const handlePointerDown = (event: PointerEvent) => {
         return;
     }
 
-    // Abaikan klik mouse selain tombol kiri
     if (event.pointerType === "mouse" && event.button !== 0) {
         return;
     }
 
-    // Jangan mulai swipe dari tombol / link
     if ((event.target as HTMLElement).closest("a, button")) {
         return;
     }
@@ -274,7 +461,6 @@ const finishPointer = (event: PointerEvent, cancelled = false) => {
         return;
     }
 
-    // Hanya geser horizontal yang jelas (bukan scroll vertikal)
     if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
         if (dx < 0) {
             nextSlide();
@@ -285,6 +471,7 @@ const finishPointer = (event: PointerEvent, cancelled = false) => {
 };
 
 const handlePointerUp = (event: PointerEvent) => finishPointer(event);
+
 const handlePointerCancel = (event: PointerEvent) => finishPointer(event, true);
 
 /* ============================================================
@@ -311,7 +498,10 @@ const getImageUrl = (gambar: string | null): string | null => {
     return `/storage/${gambar}`;
 };
 
-// Deskripsi longText bisa berisi HTML: ubah ke teks, jeda paragraf dijaga
+/*
+ * HTML → plain text.
+ * Jeda paragraf tetap dipertahankan.
+ */
 const htmlToText = (value: string | null | undefined): string => {
     if (!value) {
         return "";
@@ -340,7 +530,14 @@ const formatLuas = (
         return String(luas);
     }
 
-    return new Intl.NumberFormat("id-ID", {
+    const locale =
+        currentLanguage.value === "zh"
+            ? "zh-CN"
+            : currentLanguage.value === "en"
+              ? "en-US"
+              : "id-ID";
+
+    return new Intl.NumberFormat(locale, {
         maximumFractionDigits: 2,
     }).format(value);
 };
@@ -364,14 +561,11 @@ const currentLokasi = computed(
 );
 
 const currentDeskripsi = computed(() =>
-    htmlToText(currentKawasan.value?.deskripsi),
+    htmlToText(getLocalizedValue(currentKawasan.value, "deskripsi")),
 );
 
-// Tombol "Detail" hanya berguna jika deskripsi lebih panjang dari
-// ringkasan di dalam slide (sekitar 3 baris).
 const hasDetail = computed(() => currentDeskripsi.value.length > 220);
 
-// Slug dikirim agar halaman peta bisa langsung fokus ke kawasan ini.
 const petaUrl = computed(() => {
     const slug = currentKawasan.value?.slug;
 
@@ -381,14 +575,59 @@ const petaUrl = computed(() => {
 });
 
 /* ============================================================
-   DETAIL (scroll ke Informasi Lengkap)
+   SEO
+============================================================= */
+
+const seoTitle = computed(() => {
+    const language = currentLanguage.value as LanguageCode;
+
+    if (language === "en") {
+        return "Industrial Area Profile — Tanjung Buton Industrial Area";
+    }
+
+    if (language === "zh") {
+        return "工业园区概况 — 丹戎布顿工业园区";
+    }
+
+    return "Profil Kawasan — Kawasan Industri Tanjung Buton";
+});
+
+const seoDescription = computed(() => {
+    const language = currentLanguage.value as LanguageCode;
+
+    if (language === "en") {
+        return "Information about the Tanjung Buton Industrial Area, including area size, location, establishment year, and industrial area development.";
+    }
+
+    if (language === "zh") {
+        return "了解丹戎布顿工业园区，包括园区面积、位置、成立年份以及园区发展信息。";
+    }
+
+    return "Informasi Profil Kawasan Industri Tanjung Buton meliputi luas kawasan, lokasi, tahun berdiri, dan informasi pengembangan kawasan.";
+});
+
+const seoKeywords = computed(() => {
+    const language = currentLanguage.value as LanguageCode;
+
+    if (language === "en") {
+        return "Tanjung Buton Industrial Area, KITB, industrial area profile, industrial estate, Riau";
+    }
+
+    if (language === "zh") {
+        return "丹戎布顿工业园区, KITB, 工业园区概况, 工业园区, 廖内";
+    }
+
+    return "Kawasan Industri Tanjung Buton, KITB, profil kawasan industri, kawasan industri Buton, Riau";
+});
+
+/* ============================================================
+   DETAIL
 ============================================================= */
 
 const detailRef = ref<HTMLElement | null>(null);
 const detailId = "informasi-lengkap";
 
 const scrollToDetail = async () => {
-    // Pengguna mulai membaca: hentikan autoplay agar isi tidak berganti
     userPaused.value = true;
     scheduleAutoplay();
 
@@ -399,7 +638,9 @@ const scrollToDetail = async () => {
         block: "start",
     });
 
-    detailRef.value?.focus({ preventScroll: true });
+    detailRef.value?.focus({
+        preventScroll: true,
+    });
 };
 
 /* ============================================================
@@ -408,7 +649,9 @@ const scrollToDetail = async () => {
 
 onMounted(() => {
     mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
     prefersReducedMotion.value = mediaQuery.matches;
+
     mediaQuery.addEventListener("change", handleMotionChange);
 
     setupReveal();
@@ -421,9 +664,8 @@ onMounted(() => {
     skeletonTimer = setTimeout(async () => {
         isLoading.value = false;
 
-        // Konten carousel baru dirender setelah skeleton hilang,
-        // jadi observer reveal dipasang ulang dan autoplay baru dimulai.
         await nextTick();
+
         setupReveal();
         scheduleAutoplay();
     }, 450);
@@ -435,34 +677,24 @@ onBeforeUnmount(() => {
     }
 
     revealObserver?.disconnect();
+
     mediaQuery?.removeEventListener("change", handleMotionChange);
+
     clearAutoplay();
 });
 </script>
 
 <template>
     <Head>
-        <title>Profil Kawasan — Kawasan Industri Tanjung Buton</title>
+        <title>{{ seoTitle }}</title>
 
-        <meta
-            name="description"
-            content="Informasi Profil Kawasan Industri Tanjung Buton meliputi luas kawasan, lokasi, tahun berdiri, dan informasi pengembangan kawasan."
-        />
+        <meta name="description" :content="seoDescription" />
 
-        <meta
-            name="keywords"
-            content="Kawasan Industri Tanjung Buton, KITB, profil kawasan industri, kawasan industri Buton, Riau"
-        />
+        <meta name="keywords" :content="seoKeywords" />
 
-        <meta
-            property="og:title"
-            content="Profil Kawasan — Kawasan Industri Tanjung Buton"
-        />
+        <meta property="og:title" :content="seoTitle" />
 
-        <meta
-            property="og:description"
-            content="Informasi Profil Kawasan Industri Tanjung Buton."
-        />
+        <meta property="og:description" :content="seoDescription" />
 
         <meta property="og:type" content="website" />
 
@@ -481,7 +713,6 @@ onBeforeUnmount(() => {
         class="relative min-h-screen overflow-hidden bg-slate-50/50 dark:bg-slate-950"
     >
         <!-- Decorative blobs -->
-
         <div
             aria-hidden="true"
             class="pointer-events-none absolute -left-32 top-24 h-80 w-80 rounded-full bg-blue-200/30 blur-3xl dark:bg-blue-900/20"
@@ -498,13 +729,10 @@ onBeforeUnmount(() => {
         />
 
         <div class="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <!-- =================================================
-                 BREADCRUMB
-            ================================================== -->
-
+            <!-- Breadcrumb -->
             <div data-reveal class="mb-6" style="--d: 0ms">
                 <nav
-                    aria-label="Breadcrumb"
+                    :aria-label="translations.profile"
                     class="flex flex-wrap items-center gap-2 text-sm"
                 >
                     <Link
@@ -512,8 +740,9 @@ onBeforeUnmount(() => {
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
                         <Home class="size-4 shrink-0" aria-hidden="true" />
-
-                        <span>Beranda</span>
+                        <span>
+                            {{ translations.home }}
+                        </span>
                     </Link>
 
                     <ChevronRight
@@ -521,13 +750,13 @@ onBeforeUnmount(() => {
                         aria-hidden="true"
                     />
 
-                    <!-- Bukan link: sebelumnya menaut ke halaman ini sendiri -->
                     <span
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400"
                     >
                         <Landmark class="size-4 shrink-0" aria-hidden="true" />
-
-                        <span>Kawasan Industri</span>
+                        <span>
+                            {{ translations.industrialArea }}
+                        </span>
                     </span>
 
                     <ChevronRight
@@ -544,15 +773,14 @@ onBeforeUnmount(() => {
                             aria-hidden="true"
                         />
 
-                        <span>Profil Kawasan</span>
+                        <span>
+                            {{ translations.profile }}
+                        </span>
                     </span>
                 </nav>
             </div>
 
-            <!-- =================================================
-                 EMPTY STATE
-            ================================================== -->
-
+            <!-- Empty -->
             <section
                 v-if="!kawasans.length"
                 data-reveal
@@ -569,14 +797,13 @@ onBeforeUnmount(() => {
                     <h1
                         class="mt-6 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
                     >
-                        Profil kawasan belum tersedia
+                        {{ translations.emptyTitle }}
                     </h1>
 
                     <p
                         class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Informasi profil kawasan industri belum tersedia atau
-                        sedang diperbarui. Silakan kembali lagi nanti.
+                        {{ translations.emptyDescription }}
                     </p>
 
                     <Link
@@ -585,18 +812,15 @@ onBeforeUnmount(() => {
                     >
                         <Home class="size-4" aria-hidden="true" />
 
-                        Kembali ke Beranda
+                        {{ translations.backHome }}
                     </Link>
                 </div>
             </section>
 
-            <!-- =================================================
-                 SKELETON
-            ================================================== -->
-
+            <!-- Skeleton -->
             <section
                 v-else-if="isLoading"
-                aria-label="Memuat profil kawasan"
+                :aria-label="translations.loading"
                 aria-busy="true"
             >
                 <div class="mb-6 space-y-3">
@@ -666,13 +890,9 @@ onBeforeUnmount(() => {
                 </div>
             </section>
 
-            <!-- =================================================
-                 CONTENT
-            ================================================== -->
-
+            <!-- Content -->
             <template v-else>
                 <!-- Heading -->
-
                 <section data-reveal class="mb-6" style="--d: 80ms">
                     <div
                         class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
@@ -683,21 +903,19 @@ onBeforeUnmount(() => {
                             >
                                 <Globe2 class="size-4" aria-hidden="true" />
 
-                                Kawasan Industri
+                                {{ translations.industrialArea }}
                             </div>
 
                             <h1
                                 class="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white"
                             >
-                                Profil Kawasan
+                                {{ translations.profile }}
                             </h1>
 
                             <p
                                 class="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400"
                             >
-                                Jelajahi informasi kawasan industri melalui
-                                profil dan karakteristik setiap kawasan yang
-                                tersedia.
+                                {{ translations.exploreDescription }}
                             </p>
                         </div>
 
@@ -705,11 +923,12 @@ onBeforeUnmount(() => {
                             <div
                                 class="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
                             >
-                                {{ currentIndex + 1 }} / {{ totalSlides }}
-                                Kawasan
+                                {{ currentIndex + 1 }}
+                                /
+                                {{ totalSlides }}
+                                {{ translations.areas }}
                             </div>
 
-                            <!-- Kontrol jeda autoplay -->
                             <button
                                 v-if="
                                     hasMultipleSlides && !prefersReducedMotion
@@ -717,8 +936,8 @@ onBeforeUnmount(() => {
                                 type="button"
                                 :aria-label="
                                     userPaused
-                                        ? 'Putar otomatis slide'
-                                        : 'Jeda putar otomatis slide'
+                                        ? translations.playAutoplay
+                                        : translations.pauseAutoplay
                                 "
                                 class="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-blue-300"
                                 @click="toggleAutoplay"
@@ -728,6 +947,7 @@ onBeforeUnmount(() => {
                                     class="size-4"
                                     aria-hidden="true"
                                 />
+
                                 <Pause
                                     v-else
                                     class="size-4"
@@ -738,17 +958,14 @@ onBeforeUnmount(() => {
                     </div>
                 </section>
 
-                <!-- =================================================
-                     CAROUSEL
-                ================================================== -->
-
+                <!-- Carousel -->
                 <section
                     data-reveal
                     class="relative touch-pan-y outline-none"
                     style="--d: 120ms"
                     role="region"
                     aria-roledescription="carousel"
-                    aria-label="Profil kawasan"
+                    :aria-label="translations.profile"
                     tabindex="0"
                     @mouseenter="isHovering = true"
                     @mouseleave="isHovering = false"
@@ -768,18 +985,17 @@ onBeforeUnmount(() => {
                                 class="grid lg:grid-cols-2"
                                 role="group"
                                 aria-roledescription="slide"
-                                :aria-label="`${currentIndex + 1} dari ${totalSlides}`"
+                                :aria-label="`${currentIndex + 1} ${translations.slideOf} ${totalSlides}`"
                                 :aria-live="autoplayEnabled ? 'off' : 'polite'"
                             >
                                 <!-- Image -->
-
                                 <div
                                     class="relative min-h-[300px] overflow-hidden bg-slate-100 sm:min-h-[420px] lg:min-h-[520px] dark:bg-slate-800"
                                 >
                                     <img
                                         v-if="currentImageUrl"
                                         :src="currentImageUrl"
-                                        :alt="`Foto ${currentKawasan?.judul}`"
+                                        :alt="`${translations.photo} ${currentKawasan?.judul}`"
                                         class="absolute inset-0 size-full select-none object-cover"
                                         loading="eager"
                                         decoding="async"
@@ -808,13 +1024,12 @@ onBeforeUnmount(() => {
                                         <div
                                             class="rounded-xl border border-white/20 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-white backdrop-blur-md"
                                         >
-                                            Kawasan Industri
+                                            {{ translations.industrialArea }}
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Content -->
-
                                 <div
                                     class="flex flex-col justify-center p-7 sm:p-10 lg:p-12"
                                 >
@@ -826,7 +1041,7 @@ onBeforeUnmount(() => {
                                             aria-hidden="true"
                                         />
 
-                                        Profil Kawasan
+                                        {{ translations.areaProfile }}
                                     </div>
 
                                     <h2
@@ -835,7 +1050,6 @@ onBeforeUnmount(() => {
                                         {{ currentKawasan?.judul }}
                                     </h2>
 
-                                    <!-- Ringkasan (versi lengkap ada di "Informasi Lengkap") -->
                                     <p
                                         v-if="currentDeskripsi"
                                         class="mt-5 line-clamp-3 text-sm leading-7 text-slate-600 dark:text-slate-300"
@@ -844,7 +1058,6 @@ onBeforeUnmount(() => {
                                     </p>
 
                                     <!-- Info -->
-
                                     <dl
                                         class="mt-7 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3"
                                     >
@@ -859,7 +1072,7 @@ onBeforeUnmount(() => {
                                                     aria-hidden="true"
                                                 />
 
-                                                Luas Kawasan
+                                                {{ translations.areaSize }}
                                             </dt>
 
                                             <dd
@@ -871,7 +1084,7 @@ onBeforeUnmount(() => {
                                                     v-if="currentLuas"
                                                     class="text-xs font-semibold text-slate-500 dark:text-slate-400"
                                                 >
-                                                    Ha
+                                                    {{ translations.hectare }}
                                                 </span>
                                             </dd>
                                         </div>
@@ -887,7 +1100,7 @@ onBeforeUnmount(() => {
                                                     aria-hidden="true"
                                                 />
 
-                                                Lokasi
+                                                {{ translations.location }}
                                             </dt>
 
                                             <dd
@@ -908,7 +1121,7 @@ onBeforeUnmount(() => {
                                                     aria-hidden="true"
                                                 />
 
-                                                Tahun Berdiri
+                                                {{ translations.established }}
                                             </dt>
 
                                             <dd
@@ -920,7 +1133,6 @@ onBeforeUnmount(() => {
                                     </dl>
 
                                     <!-- Actions -->
-
                                     <div class="mt-8 flex flex-wrap gap-3">
                                         <Link
                                             :href="petaUrl"
@@ -931,7 +1143,7 @@ onBeforeUnmount(() => {
                                                 aria-hidden="true"
                                             />
 
-                                            Lihat Peta Kawasan
+                                            {{ translations.viewMap }}
                                         </Link>
 
                                         <button
@@ -941,7 +1153,7 @@ onBeforeUnmount(() => {
                                             class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-800 dark:hover:bg-blue-950/30 dark:hover:text-blue-300 dark:focus:ring-offset-slate-900"
                                             @click="scrollToDetail"
                                         >
-                                            Baca Detail
+                                            {{ translations.readDetail }}
 
                                             <ChevronRight
                                                 class="size-4"
@@ -954,11 +1166,10 @@ onBeforeUnmount(() => {
                         </Transition>
 
                         <!-- Previous -->
-
                         <button
                             v-if="hasMultipleSlides"
                             type="button"
-                            aria-label="Profil kawasan sebelumnya"
+                            :aria-label="translations.previous"
                             class="absolute left-3 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/90 text-slate-700 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:left-5 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-900"
                             @click="previousSlide"
                         >
@@ -966,11 +1177,10 @@ onBeforeUnmount(() => {
                         </button>
 
                         <!-- Next -->
-
                         <button
                             v-if="hasMultipleSlides"
                             type="button"
-                            aria-label="Profil kawasan berikutnya"
+                            :aria-label="translations.next"
                             class="absolute right-3 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-white/90 text-slate-700 shadow-lg backdrop-blur transition hover:scale-105 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:right-5 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-900"
                             @click="nextSlide"
                         >
@@ -979,7 +1189,6 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- Dots -->
-
                     <div
                         v-if="hasMultipleSlides"
                         class="mt-5 flex items-center justify-center gap-2"
@@ -988,7 +1197,7 @@ onBeforeUnmount(() => {
                             v-for="(kawasan, index) in kawasans"
                             :key="kawasan.id"
                             type="button"
-                            :aria-label="`Lihat ${kawasan.judul}`"
+                            :aria-label="`${translations.view} ${kawasan.judul}`"
                             :aria-current="
                                 index === currentIndex ? 'true' : undefined
                             "
@@ -1007,10 +1216,7 @@ onBeforeUnmount(() => {
                     </div>
                 </section>
 
-                <!-- =================================================
-                     INFORMASI LENGKAP
-                ================================================== -->
-
+                <!-- Informasi Lengkap -->
                 <section
                     v-if="hasDetail"
                     :id="detailId"
@@ -1041,7 +1247,7 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400"
                                     >
-                                        Informasi Lengkap
+                                        {{ translations.fullInformation }}
                                     </p>
 
                                     <h2
@@ -1069,17 +1275,14 @@ onBeforeUnmount(() => {
                                 >
                                     <MapPin class="size-4" aria-hidden="true" />
 
-                                    Lihat Peta Kawasan
+                                    {{ translations.viewMap }}
                                 </Link>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- =================================================
-                     CTA
-                ================================================== -->
-
+                <!-- CTA -->
                 <section
                     data-reveal
                     class="mt-10 overflow-hidden rounded-3xl border border-blue-100 bg-blue-50/70 dark:border-blue-900/50 dark:bg-blue-950/20"
@@ -1092,20 +1295,25 @@ onBeforeUnmount(() => {
                             <p
                                 class="text-sm font-semibold text-blue-600 dark:text-blue-400"
                             >
-                                Jelajahi KITB
+                                {{ translations.exploreKitb }}
                             </p>
 
                             <h2
                                 class="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
                             >
-                                Kenali lebih jauh kawasan kami
+                                {{ translations.knowMore }}
                             </h2>
 
                             <p
                                 class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300"
                             >
-                                Lihat infrastruktur, fasilitas, dan peta kawasan
-                                untuk mendapatkan gambaran yang lebih lengkap.
+                                {{
+                                    currentLanguage === "en"
+                                        ? "Explore infrastructure, facilities, and the area map to get a more complete overview."
+                                        : currentLanguage === "zh"
+                                          ? "查看基础设施、园区设施和园区地图，以获得更完整的园区信息。"
+                                          : "Lihat infrastruktur, fasilitas, dan peta kawasan untuk mendapatkan gambaran yang lebih lengkap."
+                                }}
                             </p>
                         </div>
 
@@ -1114,7 +1322,7 @@ onBeforeUnmount(() => {
                                 href="/kawasan/infrastruktur"
                                 class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-600 dark:bg-white dark:text-slate-900 dark:hover:bg-blue-400"
                             >
-                                Infrastruktur
+                                {{ translations.infrastructure }}
 
                                 <ChevronRight
                                     class="size-4"
@@ -1126,7 +1334,7 @@ onBeforeUnmount(() => {
                                 href="/kawasan/fasilitas"
                                 class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-800 dark:hover:text-blue-300"
                             >
-                                Fasilitas
+                                {{ translations.facilities }}
 
                                 <ChevronRight
                                     class="size-4"

@@ -18,6 +18,7 @@ import {
     ChevronsRight,
     Eye,
     FileText,
+    Globe,
     Image as ImageIcon,
     LoaderCircle,
     MapPin,
@@ -31,6 +32,11 @@ import {
     X,
 } from "lucide-vue-next";
 import AppLayout from "@/layouts/AppLayout.vue";
+import {
+    currentLanguage,
+    localizedValue,
+    type LanguageCode,
+} from "@/composables/useLocale";
 
 defineOptions({
     layout: AppLayout,
@@ -42,11 +48,23 @@ defineOptions({
 
 interface Kawasan {
     id: number;
+
     judul: string;
+    judul_en: string | null;
+    judul_zh: string | null;
+
     slug: string;
+
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
     luas_kawasan: number | string | null;
+
     lokasi: string | null;
+    lokasi_en: string | null;
+    lokasi_zh: string | null;
+
     latitude: number | string | null;
     longitude: number | string | null;
     batas_kawasan: GeoJsonObject | null;
@@ -99,10 +117,16 @@ interface Props {
  */
 interface FormState {
     judul: string;
+    judul_en: string;
+    judul_zh: string;
     slug: string;
     deskripsi: string;
+    deskripsi_en: string;
+    deskripsi_zh: string;
     luas_kawasan: string | number;
     lokasi: string;
+    lokasi_en: string;
+    lokasi_zh: string;
     latitude: string | number;
     longitude: string | number;
     batas_kawasan: string;
@@ -114,7 +138,78 @@ interface FormErrors {
     [key: string]: string;
 }
 
+type TranslatableField = "judul" | "deskripsi" | "lokasi";
+
 const props = defineProps<Props>();
+
+/* =========================================================
+   LANGUAGE
+   ========================================================= */
+
+/*
+ * currentLanguage (useLocale) = bahasa tampilan tabel.
+ * activeLanguage / detailLanguage = tab bahasa lokal di modal,
+ * supaya mengedit tidak mengubah bahasa tampilan global.
+ */
+
+const languageTabs: { code: LanguageCode; flag: string; label: string }[] = [
+    { code: "id", flag: "🇮🇩", label: "Indonesia" },
+    { code: "en", flag: "🇬🇧", label: "English" },
+    { code: "zh", flag: "🇨🇳", label: "中文" },
+];
+
+const activeLanguage = ref<LanguageCode>("id");
+const detailLanguage = ref<LanguageCode>("id");
+
+const languageLabel = computed(
+    () =>
+        languageTabs.find((tab) => tab.code === activeLanguage.value)?.label ??
+        "Indonesia",
+);
+
+function fieldKey(field: TranslatableField, lang: LanguageCode): string {
+    return lang === "id" ? field : `${field}_${lang}`;
+}
+
+function hasTranslation(kawasan: Kawasan, lang: LanguageCode): boolean {
+    const record = kawasan as unknown as Record<string, unknown>;
+
+    return (
+        normalizeString(record[fieldKey("judul", lang)]).trim() !== "" ||
+        normalizeString(record[fieldKey("deskripsi", lang)]).trim() !== "" ||
+        normalizeString(record[fieldKey("lokasi", lang)]).trim() !== ""
+    );
+}
+
+function displayValue(kawasan: Kawasan, field: TranslatableField): string {
+    return localizedValue(kawasan as unknown as Record<string, unknown>, field);
+}
+
+function getDetailValue(kawasan: Kawasan, field: TranslatableField): string {
+    const record = kawasan as unknown as Record<string, unknown>;
+
+    return normalizeString(
+        record[fieldKey(field, detailLanguage.value)],
+    ).trim();
+}
+
+function hasLanguageError(lang: LanguageCode): boolean {
+    return (
+        !!errors.value[fieldKey("judul", lang)] ||
+        !!errors.value[fieldKey("deskripsi", lang)] ||
+        !!errors.value[fieldKey("lokasi", lang)]
+    );
+}
+
+function focusFirstErrorLanguage() {
+    const firstWithError = languageTabs.find((tab) =>
+        hasLanguageError(tab.code),
+    );
+
+    if (firstWithError) {
+        activeLanguage.value = firstWithError.code;
+    }
+}
 
 /* =========================================================
    PAGE LOADING
@@ -205,18 +300,26 @@ const lastFocusedElement = ref<HTMLElement | null>(null);
    FORM
    ========================================================= */
 
-const form = ref<FormState>({
+const emptyForm = (): FormState => ({
     judul: "",
+    judul_en: "",
+    judul_zh: "",
     slug: "",
     deskripsi: "",
+    deskripsi_en: "",
+    deskripsi_zh: "",
     luas_kawasan: "",
     lokasi: "",
+    lokasi_en: "",
+    lokasi_zh: "",
     latitude: "",
     longitude: "",
     batas_kawasan: "",
     tahun_berdiri: "",
     status: true,
 });
+
+const form = ref<FormState>(emptyForm());
 
 const errors = ref<FormErrors>({});
 const isSubmitting = ref(false);
@@ -240,10 +343,6 @@ const isProcessingImage = ref(false);
 const MAX_IMAGE_SIZE = 1024 * 1024; // 1 MB
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
 
-const hasImage = computed(
-    () => !!gambarPreview.value || !!existingGambar.value,
-);
-
 const imageUrl = computed(() => {
     if (gambarPreview.value) {
         return gambarPreview.value;
@@ -265,12 +364,6 @@ const isEditing = computed(() => editingId.value !== null);
 const modalTitle = computed(() =>
     isEditing.value ? "Edit Profil Kawasan" : "Tambah Profil Kawasan",
 );
-
-const pagination = computed(() => props.profilKawasans);
-
-const currentPage = computed(() => props.profilKawasans.current_page);
-
-const totalPages = computed(() => props.profilKawasans.last_page);
 
 const hasPreviousPage = computed(() => !!props.profilKawasans.prev_page_url);
 
@@ -295,16 +388,6 @@ function slugify(value: string): string {
         .replace(/\s+/g, "-")
         .replace(/-+/g, "-")
         .replace(/^-|-$/g, "");
-}
-
-function truncate(value: unknown, length = 100): string {
-    const text = normalizeString(value);
-
-    if (text.length <= length) {
-        return text;
-    }
-
-    return `${text.slice(0, length).trim()}...`;
 }
 
 function formatNumber(value: unknown): string {
@@ -444,20 +527,10 @@ function isValidLongitude(value: string): boolean {
 function resetForm() {
     revokePreview();
 
-    form.value = {
-        judul: "",
-        slug: "",
-        deskripsi: "",
-        luas_kawasan: "",
-        lokasi: "",
-        latitude: "",
-        longitude: "",
-        batas_kawasan: "",
-        tahun_berdiri: "",
-        status: true,
-    };
+    form.value = emptyForm();
 
     errors.value = {};
+    activeLanguage.value = "id";
 
     existingGambar.value = null;
     gambarFile.value = null;
@@ -630,11 +703,15 @@ function openEdit(kawasan: Kawasan) {
 
     form.value = {
         judul: normalizeString(kawasan.judul),
+        judul_en: normalizeString(kawasan.judul_en),
+        judul_zh: normalizeString(kawasan.judul_zh),
 
-        // Slug selalu dibuat otomatis dari judul.
+        // Slug selalu dibuat otomatis dari judul (Bahasa Indonesia).
         slug: slugify(normalizeString(kawasan.judul)),
 
         deskripsi: normalizeString(kawasan.deskripsi),
+        deskripsi_en: normalizeString(kawasan.deskripsi_en),
+        deskripsi_zh: normalizeString(kawasan.deskripsi_zh),
 
         luas_kawasan:
             kawasan.luas_kawasan !== null && kawasan.luas_kawasan !== undefined
@@ -642,6 +719,8 @@ function openEdit(kawasan: Kawasan) {
                 : "",
 
         lokasi: normalizeString(kawasan.lokasi),
+        lokasi_en: normalizeString(kawasan.lokasi_en),
+        lokasi_zh: normalizeString(kawasan.lokasi_zh),
 
         latitude:
             kawasan.latitude !== null && kawasan.latitude !== undefined
@@ -671,6 +750,7 @@ function openEdit(kawasan: Kawasan) {
     imageError.value = "";
     isProcessingImage.value = false;
     errors.value = {};
+    activeLanguage.value = "id";
 
     if (gambarInputRef.value) {
         gambarInputRef.value.value = "";
@@ -705,7 +785,7 @@ function closeForm() {
 }
 
 /* =========================================================
-   AUTOMATIC SLUG
+   AUTOMATIC SLUG (dari judul Bahasa Indonesia)
    ========================================================= */
 
 watch(
@@ -899,13 +979,22 @@ function validateForm(): boolean {
     const tahun = normalizeString(form.value.tahun_berdiri).trim();
 
     if (!judul) {
-        errors.value.judul = "Judul kawasan wajib diisi.";
+        errors.value.judul = "Judul kawasan (Indonesia) wajib diisi.";
     } else if (judul.length > 255) {
         errors.value.judul = "Judul maksimal 255 karakter.";
     }
 
-    if (!slug) {
-        errors.value.slug = "Slug tidak dapat dibuat dari judul.";
+    if (normalizeString(form.value.judul_en).trim().length > 255) {
+        errors.value.judul_en = "Judul (English) maksimal 255 karakter.";
+    }
+
+    if (normalizeString(form.value.judul_zh).trim().length > 255) {
+        errors.value.judul_zh = "Judul (中文) maksimal 255 karakter.";
+    }
+
+    if (!slug && judul) {
+        errors.value.judul =
+            "Judul harus mengandung huruf atau angka agar slug dapat dibuat.";
     }
 
     if (luas !== "") {
@@ -966,6 +1055,8 @@ function submitForm() {
     }
 
     if (!validateForm()) {
+        focusFirstErrorLanguage();
+
         nextTick(() => {
             formModalRef.value
                 ?.querySelector<HTMLElement>('[aria-invalid="true"]')
@@ -984,20 +1075,31 @@ function submitForm() {
     const latitude = normalizeString(form.value.latitude).trim();
     const longitude = normalizeString(form.value.longitude).trim();
     const tahun = normalizeString(form.value.tahun_berdiri).trim();
-    const lokasi = normalizeString(form.value.lokasi).trim();
     const batasKawasan = normalizeString(form.value.batas_kawasan).trim();
 
+    // Teks per bahasa (Indonesia, English, 中文)
     data.append("judul", normalizeString(form.value.judul).trim());
-    data.append("slug", normalizeString(form.value.slug).trim());
+    data.append("judul_en", normalizeString(form.value.judul_en).trim());
+    data.append("judul_zh", normalizeString(form.value.judul_zh).trim());
 
     data.append("deskripsi", normalizeString(form.value.deskripsi).trim());
+    data.append(
+        "deskripsi_en",
+        normalizeString(form.value.deskripsi_en).trim(),
+    );
+    data.append(
+        "deskripsi_zh",
+        normalizeString(form.value.deskripsi_zh).trim(),
+    );
+
+    data.append("lokasi", normalizeString(form.value.lokasi).trim());
+    data.append("lokasi_en", normalizeString(form.value.lokasi_en).trim());
+    data.append("lokasi_zh", normalizeString(form.value.lokasi_zh).trim());
+
+    data.append("slug", normalizeString(form.value.slug).trim());
 
     if (luas !== "") {
         data.append("luas_kawasan", String(Number(luas)));
-    }
-
-    if (lokasi !== "") {
-        data.append("lokasi", lokasi);
     }
 
     if (latitude !== "") {
@@ -1051,6 +1153,8 @@ function submitForm() {
                     Array.isArray(value) ? String(value[0]) : String(value),
                 ]),
             );
+
+            focusFirstErrorLanguage();
         },
 
         onSuccess: () => {
@@ -1072,6 +1176,8 @@ function openDetail(kawasan: Kawasan) {
     rememberFocus();
 
     selectedKawasan.value = kawasan;
+    detailLanguage.value = "id";
+
     showFormModal.value = false;
     showDeleteModal.value = false;
     showDetailModal.value = true;
@@ -1301,7 +1407,8 @@ onBeforeUnmount(() => {
                         class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
                         Kelola informasi utama kawasan industri, koordinat
-                        lokasi, batas kawasan, dan status publikasi.
+                        lokasi, batas kawasan, dan status publikasi dalam tiga
+                        bahasa.
                     </p>
                 </div>
 
@@ -1315,22 +1422,54 @@ onBeforeUnmount(() => {
                 </button>
             </div>
 
-            <!-- Search -->
+            <!-- Search + language view -->
             <div
                 class="mb-6 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90"
             >
-                <div class="relative max-w-xl">
-                    <Search
-                        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                    />
+                <div
+                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div class="relative w-full max-w-xl">
+                        <Search
+                            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                        />
 
-                    <input
-                        v-model="search"
-                        type="search"
-                        placeholder="Cari profil kawasan..."
-                        aria-label="Cari profil kawasan"
-                        class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:bg-slate-950"
-                    />
+                        <input
+                            v-model="search"
+                            type="search"
+                            placeholder="Cari profil kawasan (ID / EN / 中文)..."
+                            aria-label="Cari profil kawasan"
+                            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:bg-slate-950"
+                        />
+                    </div>
+
+                    <!-- LANGUAGE VIEW (useLocale) -->
+                    <div
+                        class="inline-flex items-center gap-1 self-start rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800 sm:self-auto"
+                        role="group"
+                        aria-label="Bahasa tampilan tabel"
+                    >
+                        <Globe
+                            class="ml-1.5 h-3.5 w-3.5 text-slate-400"
+                            aria-hidden="true"
+                        />
+
+                        <button
+                            v-for="tab in languageTabs"
+                            :key="tab.code"
+                            type="button"
+                            :aria-pressed="currentLanguage === tab.code"
+                            class="rounded-lg px-2.5 py-1 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            :class="
+                                currentLanguage === tab.code
+                                    ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                            "
+                            @click="currentLanguage = tab.code"
+                        >
+                            {{ tab.code.toUpperCase() }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1452,7 +1591,12 @@ onBeforeUnmount(() => {
                                                 :src="
                                                     getImageUrl(kawasan.gambar)
                                                 "
-                                                :alt="kawasan.judul"
+                                                :alt="
+                                                    displayValue(
+                                                        kawasan,
+                                                        'judul',
+                                                    )
+                                                "
                                                 class="h-full w-full object-cover"
                                                 loading="lazy"
                                             />
@@ -1467,13 +1611,46 @@ onBeforeUnmount(() => {
                                             <div
                                                 class="truncate font-semibold text-slate-900 dark:text-white"
                                             >
-                                                {{ kawasan.judul }}
+                                                {{
+                                                    displayValue(
+                                                        kawasan,
+                                                        "judul",
+                                                    )
+                                                }}
                                             </div>
 
                                             <div
                                                 class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400"
                                             >
                                                 /{{ kawasan.slug }}
+                                            </div>
+
+                                            <div
+                                                class="mt-1.5 flex items-center gap-1.5"
+                                            >
+                                                <span
+                                                    v-for="tab in languageTabs"
+                                                    :key="tab.code"
+                                                    :title="
+                                                        hasTranslation(
+                                                            kawasan,
+                                                            tab.code,
+                                                        )
+                                                            ? `${tab.label}: terisi`
+                                                            : `${tab.label}: belum diisi`
+                                                    "
+                                                    class="rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                                                    :class="
+                                                        hasTranslation(
+                                                            kawasan,
+                                                            tab.code,
+                                                        )
+                                                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                            : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                                                    "
+                                                >
+                                                    {{ tab.code.toUpperCase() }}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -1510,7 +1687,12 @@ onBeforeUnmount(() => {
                                         />
 
                                         <span class="line-clamp-2">
-                                            {{ kawasan.lokasi || "-" }}
+                                            {{
+                                                displayValue(
+                                                    kawasan,
+                                                    "lokasi",
+                                                ) || "-"
+                                            }}
                                         </span>
                                     </div>
                                 </td>
@@ -1826,6 +2008,7 @@ onBeforeUnmount(() => {
                     <!-- Body -->
                     <form
                         class="flex min-h-0 flex-1 flex-col overflow-hidden"
+                        novalidate
                         @submit.prevent="submitForm"
                     >
                         <div
@@ -1850,50 +2033,391 @@ onBeforeUnmount(() => {
                                         <p
                                             class="text-xs text-slate-500 dark:text-slate-400"
                                         >
-                                            Data dasar profil kawasan.
+                                            Judul, lokasi, dan deskripsi dalam
+                                            tiga bahasa.
                                         </p>
                                     </div>
                                 </div>
 
-                                <div class="grid gap-5 md:grid-cols-2">
-                                    <!-- Judul -->
-                                    <div class="md:col-span-2">
-                                        <label
-                                            for="judul"
-                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                        >
-                                            Judul Kawasan
-                                            <span class="text-red-500">
-                                                *
-                                            </span>
-                                        </label>
-
-                                        <input
-                                            id="judul"
-                                            v-model="form.judul"
-                                            type="text"
-                                            maxlength="255"
-                                            autocomplete="off"
-                                            :aria-invalid="!!errors.judul"
-                                            class="h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
-                                            :class="
-                                                errors.judul
-                                                    ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
-                                                    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                <!-- LANGUAGE TABS -->
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 dark:border-slate-700 dark:bg-slate-800/50"
+                                >
+                                    <div
+                                        class="grid grid-cols-3 gap-1"
+                                        role="tablist"
+                                    >
+                                        <button
+                                            v-for="tab in languageTabs"
+                                            :key="tab.code"
+                                            type="button"
+                                            role="tab"
+                                            :aria-selected="
+                                                activeLanguage === tab.code
                                             "
-                                            placeholder="Contoh: Kawasan Industri Tanjung Buton"
-                                        />
-
-                                        <p
-                                            v-if="errors.judul"
-                                            class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            class="relative rounded-xl px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            :class="
+                                                activeLanguage === tab.code
+                                                    ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                                                    : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200'
+                                            "
+                                            @click="activeLanguage = tab.code"
                                         >
-                                            {{ errors.judul }}
-                                        </p>
+                                            {{ tab.flag }} {{ tab.label }}
+
+                                            <span
+                                                v-if="
+                                                    hasLanguageError(tab.code)
+                                                "
+                                                class="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500"
+                                                aria-label="Ada kesalahan pada bahasa ini"
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- LANGUAGE NOTICE -->
+                                <div
+                                    class="mt-3 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/20"
+                                >
+                                    <div
+                                        class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+                                    >
+                                        <Check class="h-4 w-4" />
                                     </div>
 
-                                    <!-- Slug -->
                                     <div>
+                                        <p
+                                            class="text-sm font-semibold text-blue-800 dark:text-blue-300"
+                                        >
+                                            {{ languageLabel }}
+                                        </p>
+
+                                        <p
+                                            class="mt-0.5 text-xs leading-5 text-blue-600/80 dark:text-blue-400/80"
+                                        >
+                                            Isi judul, lokasi, dan deskripsi
+                                            untuk bahasa yang sedang dipilih.
+                                            Jika bahasa lain dikosongkan,
+                                            tampilan akan memakai Bahasa
+                                            Indonesia.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-5 grid gap-5 md:grid-cols-2">
+                                    <!-- ============ INDONESIA ============ -->
+                                    <template v-if="activeLanguage === 'id'">
+                                        <!-- Judul -->
+                                        <div class="md:col-span-2">
+                                            <label
+                                                for="judul"
+                                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                            >
+                                                Judul Kawasan
+                                                <span class="text-red-500">
+                                                    *
+                                                </span>
+                                            </label>
+
+                                            <input
+                                                id="judul"
+                                                v-model="form.judul"
+                                                type="text"
+                                                maxlength="255"
+                                                autocomplete="off"
+                                                :aria-invalid="!!errors.judul"
+                                                class="h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
+                                                :class="
+                                                    errors.judul
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
+                                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                                "
+                                                placeholder="Contoh: Kawasan Industri Tanjung Buton"
+                                            />
+
+                                            <p
+                                                v-if="errors.judul"
+                                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            >
+                                                {{ errors.judul }}
+                                            </p>
+                                        </div>
+
+                                        <!-- Lokasi -->
+                                        <div class="md:col-span-2">
+                                            <label
+                                                for="lokasi"
+                                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                            >
+                                                Lokasi
+                                            </label>
+
+                                            <input
+                                                id="lokasi"
+                                                v-model="form.lokasi"
+                                                type="text"
+                                                maxlength="255"
+                                                :aria-invalid="!!errors.lokasi"
+                                                class="h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
+                                                :class="
+                                                    errors.lokasi
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
+                                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                                "
+                                                placeholder="Contoh: Kabupaten Siak, Riau"
+                                            />
+
+                                            <p
+                                                v-if="errors.lokasi"
+                                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            >
+                                                {{ errors.lokasi }}
+                                            </p>
+                                        </div>
+
+                                        <!-- Deskripsi -->
+                                        <div class="md:col-span-2">
+                                            <label
+                                                for="deskripsi"
+                                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                            >
+                                                Deskripsi
+                                            </label>
+
+                                            <textarea
+                                                id="deskripsi"
+                                                v-model="form.deskripsi"
+                                                rows="5"
+                                                :aria-invalid="
+                                                    !!errors.deskripsi
+                                                "
+                                                class="w-full resize-y rounded-xl border bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
+                                                :class="
+                                                    errors.deskripsi
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
+                                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                                "
+                                                placeholder="Masukkan deskripsi kawasan..."
+                                            />
+
+                                            <p
+                                                v-if="errors.deskripsi"
+                                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            >
+                                                {{ errors.deskripsi }}
+                                            </p>
+                                        </div>
+                                    </template>
+
+                                    <!-- ============ ENGLISH ============ -->
+                                    <template
+                                        v-else-if="activeLanguage === 'en'"
+                                    >
+                                        <div class="md:col-span-2">
+                                            <label
+                                                for="judul_en"
+                                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                            >
+                                                Estate Title
+                                            </label>
+
+                                            <input
+                                                id="judul_en"
+                                                v-model="form.judul_en"
+                                                type="text"
+                                                maxlength="255"
+                                                autocomplete="off"
+                                                :aria-invalid="
+                                                    !!errors.judul_en
+                                                "
+                                                class="h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
+                                                :class="
+                                                    errors.judul_en
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
+                                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                                "
+                                                placeholder="Example: Tanjung Buton Industrial Estate"
+                                            />
+
+                                            <p
+                                                v-if="errors.judul_en"
+                                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            >
+                                                {{ errors.judul_en }}
+                                            </p>
+                                        </div>
+
+                                        <div class="md:col-span-2">
+                                            <label
+                                                for="lokasi_en"
+                                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                            >
+                                                Location
+                                            </label>
+
+                                            <input
+                                                id="lokasi_en"
+                                                v-model="form.lokasi_en"
+                                                type="text"
+                                                maxlength="255"
+                                                :aria-invalid="
+                                                    !!errors.lokasi_en
+                                                "
+                                                class="h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
+                                                :class="
+                                                    errors.lokasi_en
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
+                                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                                "
+                                                placeholder="Example: Siak Regency, Riau"
+                                            />
+
+                                            <p
+                                                v-if="errors.lokasi_en"
+                                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            >
+                                                {{ errors.lokasi_en }}
+                                            </p>
+                                        </div>
+
+                                        <div class="md:col-span-2">
+                                            <label
+                                                for="deskripsi_en"
+                                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                            >
+                                                Description
+                                            </label>
+
+                                            <textarea
+                                                id="deskripsi_en"
+                                                v-model="form.deskripsi_en"
+                                                rows="5"
+                                                :aria-invalid="
+                                                    !!errors.deskripsi_en
+                                                "
+                                                class="w-full resize-y rounded-xl border bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
+                                                :class="
+                                                    errors.deskripsi_en
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
+                                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                                "
+                                                placeholder="Enter the estate description..."
+                                            />
+
+                                            <p
+                                                v-if="errors.deskripsi_en"
+                                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            >
+                                                {{ errors.deskripsi_en }}
+                                            </p>
+                                        </div>
+                                    </template>
+
+                                    <!-- ============ CHINESE ============ -->
+                                    <template v-else>
+                                        <div class="md:col-span-2">
+                                            <label
+                                                for="judul_zh"
+                                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                            >
+                                                园区名称
+                                            </label>
+
+                                            <input
+                                                id="judul_zh"
+                                                v-model="form.judul_zh"
+                                                type="text"
+                                                maxlength="255"
+                                                autocomplete="off"
+                                                :aria-invalid="
+                                                    !!errors.judul_zh
+                                                "
+                                                class="h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
+                                                :class="
+                                                    errors.judul_zh
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
+                                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                                "
+                                                placeholder="例如：丹戎布顿工业园区"
+                                            />
+
+                                            <p
+                                                v-if="errors.judul_zh"
+                                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            >
+                                                {{ errors.judul_zh }}
+                                            </p>
+                                        </div>
+
+                                        <div class="md:col-span-2">
+                                            <label
+                                                for="lokasi_zh"
+                                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                            >
+                                                位置
+                                            </label>
+
+                                            <input
+                                                id="lokasi_zh"
+                                                v-model="form.lokasi_zh"
+                                                type="text"
+                                                maxlength="255"
+                                                :aria-invalid="
+                                                    !!errors.lokasi_zh
+                                                "
+                                                class="h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
+                                                :class="
+                                                    errors.lokasi_zh
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
+                                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                                "
+                                                placeholder="例如：廖内省锡亚克县"
+                                            />
+
+                                            <p
+                                                v-if="errors.lokasi_zh"
+                                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            >
+                                                {{ errors.lokasi_zh }}
+                                            </p>
+                                        </div>
+
+                                        <div class="md:col-span-2">
+                                            <label
+                                                for="deskripsi_zh"
+                                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                            >
+                                                描述
+                                            </label>
+
+                                            <textarea
+                                                id="deskripsi_zh"
+                                                v-model="form.deskripsi_zh"
+                                                rows="5"
+                                                :aria-invalid="
+                                                    !!errors.deskripsi_zh
+                                                "
+                                                class="w-full resize-y rounded-xl border bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 dark:bg-slate-950 dark:text-white"
+                                                :class="
+                                                    errors.deskripsi_zh
+                                                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500'
+                                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 dark:border-slate-700'
+                                                "
+                                                placeholder="请输入园区描述..."
+                                            />
+
+                                            <p
+                                                v-if="errors.deskripsi_zh"
+                                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                                            >
+                                                {{ errors.deskripsi_zh }}
+                                            </p>
+                                        </div>
+                                    </template>
+
+                                    <!-- Slug (selalu terlihat) -->
+                                    <div class="md:col-span-2">
                                         <label
                                             for="slug"
                                             class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1915,60 +2439,16 @@ onBeforeUnmount(() => {
                                             id="slug-help"
                                             class="mt-1.5 text-xs text-slate-400"
                                         >
-                                            Slug dibuat otomatis dari judul.
+                                            Slug dibuat otomatis dari judul
+                                            Bahasa Indonesia dan tidak dapat
+                                            diubah secara manual.
                                         </p>
-                                    </div>
-
-                                    <!-- Lokasi -->
-                                    <div>
-                                        <label
-                                            for="lokasi"
-                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                        >
-                                            Lokasi
-                                        </label>
-
-                                        <input
-                                            id="lokasi"
-                                            v-model="form.lokasi"
-                                            type="text"
-                                            maxlength="255"
-                                            :aria-invalid="!!errors.lokasi"
-                                            class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                                            placeholder="Contoh: Kabupaten Siak, Riau"
-                                        />
 
                                         <p
-                                            v-if="errors.lokasi"
+                                            v-if="errors.slug"
                                             class="mt-1.5 text-xs text-red-600 dark:text-red-400"
                                         >
-                                            {{ errors.lokasi }}
-                                        </p>
-                                    </div>
-
-                                    <!-- Deskripsi -->
-                                    <div class="md:col-span-2">
-                                        <label
-                                            for="deskripsi"
-                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                        >
-                                            Deskripsi
-                                        </label>
-
-                                        <textarea
-                                            id="deskripsi"
-                                            v-model="form.deskripsi"
-                                            rows="5"
-                                            :aria-invalid="!!errors.deskripsi"
-                                            class="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                                            placeholder="Masukkan deskripsi kawasan..."
-                                        />
-
-                                        <p
-                                            v-if="errors.deskripsi"
-                                            class="mt-1.5 text-xs text-red-600 dark:text-red-400"
-                                        >
-                                            {{ errors.deskripsi }}
+                                            {{ errors.slug }}
                                         </p>
                                     </div>
                                 </div>
@@ -2518,9 +2998,34 @@ onBeforeUnmount(() => {
                             >
                                 <img
                                     :src="getImageUrl(selectedKawasan.gambar)"
-                                    :alt="selectedKawasan.judul"
+                                    :alt="
+                                        displayValue(selectedKawasan, 'judul')
+                                    "
                                     class="max-h-[380px] w-full object-cover"
                                 />
+                            </div>
+
+                            <!-- LANGUAGE TABS -->
+                            <div
+                                class="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800"
+                                role="tablist"
+                            >
+                                <button
+                                    v-for="tab in languageTabs"
+                                    :key="tab.code"
+                                    type="button"
+                                    role="tab"
+                                    :aria-selected="detailLanguage === tab.code"
+                                    class="rounded-lg px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    :class="
+                                        detailLanguage === tab.code
+                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                    "
+                                    @click="detailLanguage = tab.code"
+                                >
+                                    {{ tab.flag }} {{ tab.label }}
+                                </button>
                             </div>
 
                             <!-- Title -->
@@ -2547,7 +3052,12 @@ onBeforeUnmount(() => {
                                 <h3
                                     class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
                                 >
-                                    {{ selectedKawasan.judul }}
+                                    {{
+                                        getDetailValue(
+                                            selectedKawasan,
+                                            "judul",
+                                        ) || "-"
+                                    }}
                                 </h3>
 
                                 <p
@@ -2619,7 +3129,12 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-sm font-semibold text-slate-800 dark:text-slate-200"
                                     >
-                                        {{ selectedKawasan.lokasi || "-" }}
+                                        {{
+                                            getDetailValue(
+                                                selectedKawasan,
+                                                "lokasi",
+                                            ) || "-"
+                                        }}
                                     </p>
                                 </div>
 
@@ -2703,8 +3218,10 @@ onBeforeUnmount(() => {
                                         class="whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300"
                                     >
                                         {{
-                                            selectedKawasan.deskripsi ||
-                                            "Belum ada deskripsi."
+                                            getDetailValue(
+                                                selectedKawasan,
+                                                "deskripsi",
+                                            ) || "Belum ada deskripsi."
                                         }}
                                     </p>
                                 </div>
@@ -2798,7 +3315,8 @@ onBeforeUnmount(() => {
                                 >
                                     "{{ deleteTarget.judul }}"
                                 </span>
-                                secara permanen. Tindakan ini tidak dapat
+                                secara permanen beserta seluruh terjemahannya
+                                (ID, EN, 中文). Tindakan ini tidak dapat
                                 dibatalkan.
                             </p>
                         </div>

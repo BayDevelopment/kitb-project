@@ -3,6 +3,7 @@ import {
     ArrowDown,
     ArrowUp,
     Building2,
+    Check,
     Eye,
     ExternalLink,
     ImagePlus,
@@ -29,12 +30,22 @@ defineOptions({
 
 interface AnakUsaha {
     id: number;
+
     nama: string;
+    nama_en: string | null;
+    nama_zh: string | null;
+
     logo: string | null;
+
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
     website: string | null;
+
     urutan: number;
     aktif: boolean;
+
     created_at?: string;
     updated_at?: string;
 }
@@ -99,9 +110,7 @@ onBeforeUnmount(() => {
         clearTimeout(initialLoadingTimer);
     }
 
-    if (previewUrl.value?.startsWith("blob:")) {
-        URL.revokeObjectURL(previewUrl.value);
-    }
+    revokePreview();
 });
 
 /*
@@ -118,10 +127,18 @@ const filteredAnakUsaha = computed(() => {
     const keyword = search.value.trim().toLowerCase();
 
     return [...props.anakUsaha.data].filter((item) => {
-        const matchesSearch =
-            !keyword ||
-            item.nama.toLowerCase().includes(keyword) ||
-            (item.deskripsi ?? "").toLowerCase().includes(keyword);
+        const searchableText = [
+            item.nama,
+            item.nama_en ?? "",
+            item.nama_zh ?? "",
+            item.deskripsi ?? "",
+            item.deskripsi_en ?? "",
+            item.deskripsi_zh ?? "",
+        ]
+            .join(" ")
+            .toLowerCase();
+
+        const matchesSearch = !keyword || searchableText.includes(keyword);
 
         const matchesStatus =
             statusFilter.value === "all" ||
@@ -175,10 +192,31 @@ const modalMode = ref<"create" | "edit">("create");
 
 const selectedItem = ref<AnakUsaha | null>(null);
 
+/*
+|--------------------------------------------------------------------------
+| Language Tab
+|--------------------------------------------------------------------------
+*/
+
+const activeLanguage = ref<"id" | "en" | "zh">("id");
+
+/*
+|--------------------------------------------------------------------------
+| Form
+|--------------------------------------------------------------------------
+*/
+
 const form = ref({
     nama: "",
+    nama_en: "",
+    nama_zh: "",
+
     logo: null as File | null,
+
     deskripsi: "",
+    deskripsi_en: "",
+    deskripsi_zh: "",
+
     website: "",
     aktif: true,
 });
@@ -192,13 +230,32 @@ const movingId = ref<number | null>(null);
 
 /*
 |--------------------------------------------------------------------------
-| Form
+| Form Computed
 |--------------------------------------------------------------------------
 */
 
 const formTitle = computed(() =>
     modalMode.value === "create" ? "Tambah Anak Usaha" : "Edit Anak Usaha",
 );
+
+const languageLabel = computed(() => {
+    switch (activeLanguage.value) {
+        case "en":
+            return "English";
+
+        case "zh":
+            return "中文";
+
+        default:
+            return "Indonesia";
+    }
+});
+
+/*
+|--------------------------------------------------------------------------
+| Form Reset
+|--------------------------------------------------------------------------
+*/
 
 const revokePreview = () => {
     if (previewUrl.value?.startsWith("blob:")) {
@@ -211,13 +268,21 @@ const resetForm = () => {
 
     form.value = {
         nama: "",
+        nama_en: "",
+        nama_zh: "",
+
         logo: null,
+
         deskripsi: "",
+        deskripsi_en: "",
+        deskripsi_zh: "",
+
         website: "",
         aktif: true,
     };
 
     previewUrl.value = null;
+    activeLanguage.value = "id";
 };
 
 const openCreate = () => {
@@ -225,6 +290,7 @@ const openCreate = () => {
 
     modalMode.value = "create";
     selectedItem.value = null;
+
     showFormModal.value = true;
 };
 
@@ -237,13 +303,22 @@ const openEdit = (item: AnakUsaha) => {
 
     form.value = {
         nama: item.nama,
+        nama_en: item.nama_en ?? "",
+        nama_zh: item.nama_zh ?? "",
+
         logo: null,
+
         deskripsi: item.deskripsi ?? "",
+        deskripsi_en: item.deskripsi_en ?? "",
+        deskripsi_zh: item.deskripsi_zh ?? "",
+
         website: item.website ?? "",
         aktif: item.aktif,
     };
 
     previewUrl.value = item.logo ? `/storage/${item.logo}` : null;
+
+    activeLanguage.value = "id";
 
     showFormModal.value = true;
 };
@@ -324,6 +399,7 @@ const handleFile = (event: Event) => {
     revokePreview();
 
     form.value.logo = file;
+
     previewUrl.value = URL.createObjectURL(file);
 };
 
@@ -333,29 +409,52 @@ const getImageUrl = (logo: string | null) => {
 
 /*
 |--------------------------------------------------------------------------
+| Validation
+|--------------------------------------------------------------------------
+*/
+
+const isFormValid = computed(() => {
+    return form.value.nama.trim().length > 0;
+});
+
+/*
+|--------------------------------------------------------------------------
 | Store / Update
 |--------------------------------------------------------------------------
 */
 
 const submitForm = () => {
-    if (processingForm.value) {
-        return;
-    }
-
-    if (!form.value.nama.trim()) {
+    if (processingForm.value || !isFormValid.value) {
         return;
     }
 
     const formData = new FormData();
 
     formData.append("nama", form.value.nama.trim());
+
+    formData.append("nama_en", form.value.nama_en.trim());
+
+    formData.append("nama_zh", form.value.nama_zh.trim());
+
     formData.append("deskripsi", form.value.deskripsi.trim());
+
+    formData.append("deskripsi_en", form.value.deskripsi_en.trim());
+
+    formData.append("deskripsi_zh", form.value.deskripsi_zh.trim());
+
     formData.append("website", form.value.website.trim());
+
     formData.append("aktif", form.value.aktif ? "1" : "0");
 
     if (form.value.logo) {
         formData.append("logo", form.value.logo);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Update
+    |--------------------------------------------------------------------------
+    */
 
     if (modalMode.value === "edit" && selectedItem.value) {
         formData.append("_method", "PUT");
@@ -373,7 +472,9 @@ const submitForm = () => {
 
                 onSuccess: () => {
                     showFormModal.value = false;
+
                     resetForm();
+
                     selectedItem.value = null;
                 },
 
@@ -390,6 +491,12 @@ const submitForm = () => {
         return;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Create
+    |--------------------------------------------------------------------------
+    */
+
     router.post("/admin/profil-perusahaan/anak-usaha", formData, {
         forceFormData: true,
         preserveScroll: true,
@@ -400,7 +507,9 @@ const submitForm = () => {
 
         onSuccess: () => {
             showFormModal.value = false;
+
             resetForm();
+
             selectedItem.value = null;
         },
 
@@ -525,15 +634,13 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
         :aria-busy="isPageLoading"
     >
         <!-- ========================================================= -->
-        <!-- BACKGROUND DECORATION -->
+        <!-- BACKGROUND -->
         <!-- ========================================================= -->
 
         <div
             class="pointer-events-none absolute inset-0 overflow-hidden"
             aria-hidden="true"
         >
-            <!-- LIGHT BLOBS -->
-
             <div
                 class="blob-shape absolute -left-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-blue-500/[0.055] blur-3xl transition-opacity duration-500 dark:opacity-0"
             />
@@ -547,41 +654,31 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
             />
 
             <div
-                class="blob-shape absolute -left-12 top-[42%] h-40 w-40 rounded-full bg-blue-500/[0.035] blur-3xl transition-opacity duration-500 dark:opacity-0"
+                class="blob-shape absolute -left-12 top-[42%] h-40 w-40 rounded-full bg-blue-500/[0.035] blur-3xl dark:opacity-0"
             />
 
             <div
-                class="blob-shape-delayed absolute -right-16 top-[58%] h-48 w-48 rounded-full bg-slate-400/[0.04] blur-3xl transition-opacity duration-500 dark:opacity-0"
-            />
-
-            <!-- DARK BLOBS -->
-
-            <div
-                class="blob-shape absolute -left-44 -top-44 h-[34rem] w-[34rem] rounded-full bg-blue-600/[0.10] opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
+                class="blob-shape-delayed absolute -right-16 top-[58%] h-48 w-48 rounded-full bg-slate-400/[0.04] blur-3xl dark:opacity-0"
             />
 
             <div
-                class="blob-shape-delayed absolute -right-48 -top-12 h-[36rem] w-[36rem] rounded-full bg-indigo-500/[0.075] opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
+                class="blob-shape absolute -left-44 -top-44 h-[34rem] w-[34rem] rounded-full bg-blue-600/[0.10] opacity-0 blur-3xl dark:opacity-100"
             />
 
             <div
-                class="blob-shape-slow absolute -bottom-56 left-1/3 h-[36rem] w-[36rem] rounded-full bg-sky-500/[0.06] opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
+                class="blob-shape-delayed absolute -right-48 -top-12 h-[36rem] w-[36rem] rounded-full bg-indigo-500/[0.075] opacity-0 blur-3xl dark:opacity-100"
             />
 
             <div
-                class="blob-shape absolute -left-16 top-[44%] h-44 w-44 rounded-full bg-blue-500/[0.045] opacity-0 blur-3xl transition-opacity duration-500 dark:opacity-100"
+                class="blob-shape-slow absolute -bottom-56 left-1/3 h-[36rem] w-[36rem] rounded-full bg-sky-500/[0.06] opacity-0 blur-3xl dark:opacity-100"
             />
-
-            <!-- GRID -->
 
             <div
                 class="absolute inset-0 bg-[linear-gradient(to_right,#64748b12_1px,transparent_1px),linear-gradient(to_bottom,#64748b12_1px,transparent_1px)] bg-[size:32px_32px] opacity-40 dark:opacity-20"
             />
 
-            <!-- DECORATIVE CIRCLES -->
-
             <div
-                class="absolute left-[7%] top-[45%] h-20 w-20 rounded-full border border-blue-500/[0.07] bg-blue-500/[0.045] shadow-xl shadow-blue-500/[0.05] dark:border-blue-400/[0.08] dark:bg-blue-400/[0.06] dark:shadow-blue-500/[0.06]"
+                class="absolute left-[7%] top-[45%] h-20 w-20 rounded-full border border-blue-500/[0.07] bg-blue-500/[0.045] shadow-xl shadow-blue-500/[0.05] dark:border-blue-400/[0.08] dark:bg-blue-400/[0.06]"
             />
 
             <div
@@ -595,8 +692,6 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
             <div
                 class="absolute bottom-[18%] right-[13%] h-6 w-6 rounded-full border border-indigo-500/[0.07] bg-indigo-500/[0.035] dark:border-blue-400/[0.08] dark:bg-blue-400/[0.06]"
             />
-
-            <!-- BOTTOM FADE -->
 
             <div
                 class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-slate-50/90 dark:to-slate-950/90"
@@ -618,12 +713,10 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                 <div
                     v-if="isPageLoading"
                     key="skeleton"
-                    class="relative space-y-5"
+                    class="space-y-5"
                     role="status"
                     aria-label="Memuat data anak usaha"
                 >
-                    <!-- Header -->
-
                     <div
                         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                     >
@@ -648,129 +741,41 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         />
                     </div>
 
-                    <!-- Card -->
-
                     <div
-                        class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                        class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
                     >
                         <div
-                            class="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 dark:border-slate-800 sm:px-6 lg:flex-row lg:items-center lg:justify-between"
-                        >
-                            <div class="space-y-2">
-                                <div
-                                    class="h-5 w-44 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
-                                />
-
-                                <div
-                                    class="h-4 w-32 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
-                                />
-                            </div>
-
-                            <div class="flex flex-col gap-2 sm:flex-row">
-                                <div
-                                    class="h-10 w-full animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800 sm:w-56"
-                                />
-
-                                <div
-                                    class="h-10 w-full animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800 sm:w-32"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="overflow-x-auto">
-                            <div class="min-w-[850px]">
-                                <div
-                                    class="grid grid-cols-[100px_minmax(280px,1fr)_220px_120px_120px] gap-4 border-b border-slate-200 bg-slate-50/70 px-6 py-3 dark:border-slate-800 dark:bg-slate-950/30"
-                                >
-                                    <div
-                                        class="h-3 w-14 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
-                                    />
-
-                                    <div
-                                        class="h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
-                                    />
-
-                                    <div
-                                        class="h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
-                                    />
-
-                                    <div
-                                        class="h-3 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
-                                    />
-
-                                    <div
-                                        class="ml-auto h-3 w-12 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
-                                    />
-                                </div>
-
-                                <div
-                                    v-for="i in 6"
-                                    :key="i"
-                                    class="grid grid-cols-[100px_minmax(280px,1fr)_220px_120px_120px] items-center gap-4 border-b border-slate-100 px-6 py-5 last:border-b-0 dark:border-slate-800"
-                                >
-                                    <div
-                                        class="size-8 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
-                                    />
-
-                                    <div class="flex items-center gap-3">
-                                        <div
-                                            class="size-12 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800"
-                                        />
-
-                                        <div class="space-y-2">
-                                            <div
-                                                class="h-4 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
-                                            />
-
-                                            <div
-                                                class="h-3 w-28 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div
-                                        class="h-4 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
-                                    />
-
-                                    <div
-                                        class="h-7 w-16 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800"
-                                    />
-
-                                    <div
-                                        class="ml-auto h-9 w-24 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                            class="h-16 animate-pulse border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950"
+                        />
 
                         <div
-                            class="flex flex-col gap-4 border-t border-slate-200 px-5 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                            v-for="i in 6"
+                            :key="i"
+                            class="flex items-center gap-4 border-b border-slate-100 px-6 py-5 dark:border-slate-800"
                         >
                             <div
-                                class="h-4 w-44 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
+                                class="size-12 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800"
                             />
 
-                            <div class="flex gap-2">
+                            <div class="flex-1 space-y-2">
                                 <div
-                                    class="h-9 w-20 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
+                                    class="h-4 w-48 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
                                 />
 
                                 <div
-                                    class="h-9 w-9 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
-                                />
-
-                                <div
-                                    class="h-9 w-9 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
-                                />
-
-                                <div
-                                    class="h-9 w-20 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
+                                    class="h-3 w-72 animate-pulse rounded bg-slate-200 dark:bg-slate-800"
                                 />
                             </div>
+
+                            <div
+                                class="h-8 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800"
+                            />
+
+                            <div
+                                class="h-9 w-24 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800"
+                            />
                         </div>
                     </div>
-
-                    <span class="sr-only"> Memuat data anak usaha... </span>
                 </div>
 
                 <!-- ===================================================== -->
@@ -813,7 +818,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 
                         <button
                             type="button"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/15 transition duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-auto"
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 sm:w-auto"
                             @click="openCreate"
                         >
                             <Plus class="size-4" />
@@ -824,7 +829,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                     <!-- MAIN CARD -->
 
                     <div
-                        class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.04] backdrop-blur-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
+                        class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.04] backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/90"
                     >
                         <!-- CARD HEADER -->
 
@@ -857,8 +862,6 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             <div
                                 class="flex w-full flex-col gap-2 sm:flex-row lg:w-auto"
                             >
-                                <!-- SEARCH -->
-
                                 <div class="relative w-full sm:w-64">
                                     <Search
                                         class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
@@ -869,16 +872,14 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                         type="text"
                                         placeholder="Cari anak usaha..."
                                         aria-label="Cari anak usaha"
-                                        class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-800"
+                                        class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:bg-slate-800"
                                     />
                                 </div>
-
-                                <!-- FILTER -->
 
                                 <select
                                     v-model="statusFilter"
                                     aria-label="Filter status"
-                                    class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:focus:border-blue-500 dark:focus:bg-slate-800 sm:w-36"
+                                    class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 sm:w-36"
                                 >
                                     <option value="all">Semua Status</option>
 
@@ -920,7 +921,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             <button
                                 v-if="!search && statusFilter === 'all'"
                                 type="button"
-                                class="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                                class="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
                                 @click="openCreate"
                             >
                                 <Plus class="size-4" />
@@ -974,9 +975,9 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                     <tr
                                         v-for="item in filteredAnakUsaha"
                                         :key="item.id"
-                                        class="group transition-colors duration-150 hover:bg-blue-50/40 dark:hover:bg-blue-950/10"
+                                        class="group transition-colors hover:bg-blue-50/40 dark:hover:bg-blue-950/10"
                                     >
-                                        <!-- URUTAN -->
+                                        <!-- ORDER -->
 
                                         <td class="px-6 py-4">
                                             <div
@@ -1031,14 +1032,14 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                             </div>
                                         </td>
 
-                                        <!-- ANAK USAHA -->
+                                        <!-- COMPANY -->
 
                                         <td class="px-6 py-4">
                                             <div
                                                 class="flex items-center gap-3"
                                             >
                                                 <div
-                                                    class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-slate-400 transition-colors group-hover:border-blue-100 group-hover:bg-white dark:border-slate-700 dark:bg-slate-800 dark:group-hover:border-blue-900/50 dark:group-hover:bg-slate-800"
+                                                    class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-slate-400 group-hover:border-blue-100 group-hover:bg-white dark:border-slate-700 dark:bg-slate-800"
                                                 >
                                                     <img
                                                         v-if="
@@ -1069,6 +1070,13 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                                     </p>
 
                                                     <p
+                                                        v-if="item.nama_en"
+                                                        class="mt-0.5 text-xs text-slate-400"
+                                                    >
+                                                        {{ item.nama_en }}
+                                                    </p>
+
+                                                    <p
                                                         v-if="item.deskripsi"
                                                         class="mt-1 max-w-md truncate text-xs text-slate-400"
                                                     >
@@ -1086,7 +1094,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                                 :href="item.website"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                class="inline-flex max-w-[220px] items-center gap-1.5 text-sm font-medium text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                                                class="inline-flex max-w-[220px] items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
                                             >
                                                 <span class="truncate">
                                                     {{ item.website }}
@@ -1114,12 +1122,11 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                                     processingToggleId ===
                                                     item.id
                                                 "
-                                                :aria-label="`Ubah status ${item.nama}`"
                                                 class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold transition"
                                                 :class="
                                                     item.aktif
-                                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-400 dark:hover:bg-emerald-950/60'
-                                                        : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+                                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                        : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
                                                 "
                                                 @click="toggleAktif(item)"
                                             >
@@ -1131,14 +1138,14 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                             </button>
                                         </td>
 
-                                        <!-- AKSI -->
+                                        <!-- ACTION -->
 
                                         <td class="px-6 py-4">
                                             <div class="flex justify-end gap-1">
                                                 <button
                                                     type="button"
                                                     title="Lihat detail"
-                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                                                     @click="openDetail(item)"
                                                 >
                                                     <Eye class="size-4" />
@@ -1147,7 +1154,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                                 <button
                                                     type="button"
                                                     title="Edit"
-                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-amber-50 hover:text-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
+                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
                                                     @click="openEdit(item)"
                                                 >
                                                     <Pencil class="size-4" />
@@ -1156,7 +1163,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                                 <button
                                                     type="button"
                                                     title="Hapus"
-                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                                                    class="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                                                     @click="openDelete(item)"
                                                 >
                                                     <Trash2 class="size-4" />
@@ -1199,12 +1206,12 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             </p>
 
                             <div
-                                class="flex max-w-full items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0"
+                                class="flex max-w-full items-center gap-1.5 overflow-x-auto pb-1"
                             >
                                 <button
                                     type="button"
                                     :disabled="!previousPageUrl"
-                                    class="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                    class="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                                     @click="goToPage(previousPageUrl)"
                                 >
                                     Previous
@@ -1222,7 +1229,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                         class="min-w-9 shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition"
                                         :class="
                                             link.active
-                                                ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-700'
+                                                ? 'bg-blue-600 text-white'
                                                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
                                         "
                                         @click="goToPage(link.url)"
@@ -1239,7 +1246,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                 <button
                                     type="button"
                                     :disabled="!nextPageUrl"
-                                    class="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                    class="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                                     @click="goToPage(nextPageUrl)"
                                 >
                                     Next
@@ -1252,7 +1259,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
         </div>
 
         <!-- ========================================================= -->
-        <!-- MODAL FORM -->
+        <!-- FORM MODAL -->
         <!-- ========================================================= -->
 
         <Transition name="modal-fade">
@@ -1262,12 +1269,12 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                 @click.self="closeForm"
             >
                 <div
-                    class="modal-panel max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+                    class="modal-panel max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
                     <!-- HEADER -->
 
                     <div
-                        class="flex items-center justify-between border-b border-slate-200 bg-slate-50/70 px-6 py-4 dark:border-slate-800 dark:bg-slate-950/30"
+                        class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-slate-50/95 px-6 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95"
                     >
                         <div>
                             <h2
@@ -1287,35 +1294,210 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             type="button"
                             title="Tutup"
                             :disabled="processingForm"
-                            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                             @click="closeForm"
                         >
                             <X class="size-5" />
                         </button>
                     </div>
 
-                    <!-- FORM -->
+                    <form class="space-y-6 p-6" @submit.prevent="submitForm">
+                        <!-- ================================================= -->
+                        <!-- LANGUAGE TABS -->
+                        <!-- ================================================= -->
 
-                    <form class="space-y-5 p-6" @submit.prevent="submitForm">
-                        <!-- NAMA -->
+                        <div
+                            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 dark:border-slate-700 dark:bg-slate-800/50"
+                        >
+                            <div class="grid grid-cols-3 gap-1">
+                                <button
+                                    type="button"
+                                    class="rounded-xl px-3 py-2.5 text-sm font-semibold transition"
+                                    :class="
+                                        activeLanguage === 'id'
+                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                                            : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200'
+                                    "
+                                    @click="activeLanguage = 'id'"
+                                >
+                                    🇮🇩 Indonesia
+                                </button>
 
-                        <div>
-                            <label
-                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Nama Anak Usaha
-                            </label>
+                                <button
+                                    type="button"
+                                    class="rounded-xl px-3 py-2.5 text-sm font-semibold transition"
+                                    :class="
+                                        activeLanguage === 'en'
+                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                                            : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200'
+                                    "
+                                    @click="activeLanguage = 'en'"
+                                >
+                                    🇬🇧 English
+                                </button>
 
-                            <input
-                                v-model="form.nama"
-                                type="text"
-                                required
-                                placeholder="Contoh: PT KITB Properti"
-                                class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-800"
-                            />
+                                <button
+                                    type="button"
+                                    class="rounded-xl px-3 py-2.5 text-sm font-semibold transition"
+                                    :class="
+                                        activeLanguage === 'zh'
+                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                                            : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200'
+                                    "
+                                    @click="activeLanguage = 'zh'"
+                                >
+                                    🇨🇳 中文
+                                </button>
+                            </div>
                         </div>
 
+                        <!-- LANGUAGE NOTICE -->
+
+                        <div
+                            class="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/20"
+                        >
+                            <div
+                                class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+                            >
+                                <Check class="size-4" />
+                            </div>
+
+                            <div>
+                                <p
+                                    class="text-sm font-semibold text-blue-800 dark:text-blue-300"
+                                >
+                                    {{ languageLabel }}
+                                </p>
+
+                                <p
+                                    class="mt-0.5 text-xs leading-5 text-blue-600/80 dark:text-blue-400/80"
+                                >
+                                    Isi konten anak usaha untuk bahasa yang
+                                    sedang dipilih.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- ================================================= -->
+                        <!-- INDONESIA -->
+                        <!-- ================================================= -->
+
+                        <template v-if="activeLanguage === 'id'">
+                            <!-- NAMA -->
+
+                            <div>
+                                <label
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Nama Anak Usaha
+                                    <span class="text-red-500"> * </span>
+                                </label>
+
+                                <input
+                                    v-model="form.nama"
+                                    type="text"
+                                    required
+                                    maxlength="255"
+                                    placeholder="Contoh: PT KITB Properti"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-800"
+                                />
+                            </div>
+
+                            <!-- DESKRIPSI -->
+
+                            <div>
+                                <label
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Deskripsi
+                                </label>
+
+                                <textarea
+                                    v-model="form.deskripsi"
+                                    rows="5"
+                                    placeholder="Masukkan deskripsi anak usaha..."
+                                    class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:bg-slate-800"
+                                />
+                            </div>
+                        </template>
+
+                        <!-- ================================================= -->
+                        <!-- ENGLISH -->
+                        <!-- ================================================= -->
+
+                        <template v-else-if="activeLanguage === 'en'">
+                            <div>
+                                <label
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Subsidiary Name
+                                </label>
+
+                                <input
+                                    v-model="form.nama_en"
+                                    type="text"
+                                    maxlength="255"
+                                    placeholder="Example: KITB Property Ltd."
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:bg-slate-800"
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Description
+                                </label>
+
+                                <textarea
+                                    v-model="form.deskripsi_en"
+                                    rows="5"
+                                    placeholder="Enter the subsidiary description..."
+                                    class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:bg-slate-800"
+                                />
+                            </div>
+                        </template>
+
+                        <!-- ================================================= -->
+                        <!-- CHINESE -->
+                        <!-- ================================================= -->
+
+                        <template v-else>
+                            <div>
+                                <label
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    子公司名称
+                                </label>
+
+                                <input
+                                    v-model="form.nama_zh"
+                                    type="text"
+                                    maxlength="255"
+                                    placeholder="例如：KITB 房地产有限公司"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:bg-slate-800"
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    描述
+                                </label>
+
+                                <textarea
+                                    v-model="form.deskripsi_zh"
+                                    rows="5"
+                                    placeholder="请输入子公司的描述..."
+                                    class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:bg-slate-800"
+                                />
+                            </div>
+                        </template>
+
+                        <!-- ================================================= -->
                         <!-- LOGO -->
+                        <!-- ================================================= -->
 
                         <div>
                             <label
@@ -1375,24 +1557,9 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             </div>
                         </div>
 
-                        <!-- DESKRIPSI -->
-
-                        <div>
-                            <label
-                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Deskripsi
-                            </label>
-
-                            <textarea
-                                v-model="form.deskripsi"
-                                rows="4"
-                                placeholder="Masukkan deskripsi anak usaha..."
-                                class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-800"
-                            />
-                        </div>
-
+                        <!-- ================================================= -->
                         <!-- WEBSITE -->
+                        <!-- ================================================= -->
 
                         <div>
                             <label
@@ -1404,8 +1571,9 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             <input
                                 v-model="form.website"
                                 type="url"
+                                maxlength="255"
                                 placeholder="https://www.example.com"
-                                class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-800"
+                                class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:focus:bg-slate-800"
                             />
 
                             <p class="mt-1.5 text-xs text-slate-400">
@@ -1414,7 +1582,9 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             </p>
                         </div>
 
+                        <!-- ================================================= -->
                         <!-- STATUS -->
+                        <!-- ================================================= -->
 
                         <label
                             class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800/40 dark:hover:bg-slate-800"
@@ -1438,7 +1608,9 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             </div>
                         </label>
 
+                        <!-- ================================================= -->
                         <!-- BUTTON -->
+                        <!-- ================================================= -->
 
                         <div
                             class="flex flex-col-reverse gap-2 border-t border-slate-200 pt-5 dark:border-slate-800 sm:flex-row sm:justify-end"
@@ -1454,7 +1626,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 
                             <button
                                 type="submit"
-                                :disabled="processingForm || !form.nama.trim()"
+                                :disabled="processingForm || !isFormValid"
                                 class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <span
@@ -1477,7 +1649,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
         </Transition>
 
         <!-- ========================================================= -->
-        <!-- MODAL DETAIL -->
+        <!-- DETAIL MODAL -->
         <!-- ========================================================= -->
 
         <Transition name="modal-fade">
@@ -1534,7 +1706,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             </div>
                         </div>
 
-                        <!-- NAMA -->
+                        <!-- NAME -->
 
                         <div class="text-center">
                             <h3
@@ -1542,6 +1714,20 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             >
                                 {{ selectedItem.nama }}
                             </h3>
+
+                            <p
+                                v-if="selectedItem.nama_en"
+                                class="mt-1 text-sm text-slate-400"
+                            >
+                                {{ selectedItem.nama_en }}
+                            </p>
+
+                            <p
+                                v-if="selectedItem.nama_zh"
+                                class="mt-1 text-sm text-slate-400"
+                            >
+                                {{ selectedItem.nama_zh }}
+                            </p>
                         </div>
 
                         <!-- WEBSITE -->
@@ -1568,7 +1754,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                             </a>
                         </div>
 
-                        <!-- DESKRIPSI -->
+                        <!-- DESCRIPTION ID -->
 
                         <div
                             v-if="selectedItem.deskripsi"
@@ -1584,6 +1770,44 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                                 class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
                             >
                                 {{ selectedItem.deskripsi }}
+                            </p>
+                        </div>
+
+                        <!-- DESCRIPTION EN -->
+
+                        <div
+                            v-if="selectedItem.deskripsi_en"
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400"
+                            >
+                                Description
+                            </p>
+
+                            <p
+                                class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                            >
+                                {{ selectedItem.deskripsi_en }}
+                            </p>
+                        </div>
+
+                        <!-- DESCRIPTION ZH -->
+
+                        <div
+                            v-if="selectedItem.deskripsi_zh"
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400"
+                            >
+                                描述
+                            </p>
+
+                            <p
+                                class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300"
+                            >
+                                {{ selectedItem.deskripsi_zh }}
                             </p>
                         </div>
 
@@ -1637,7 +1861,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
         </Transition>
 
         <!-- ========================================================= -->
-        <!-- MODAL DELETE -->
+        <!-- DELETE MODAL -->
         <!-- ========================================================= -->
 
         <Transition name="modal-fade">
@@ -1691,7 +1915,7 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
                         <button
                             type="button"
                             :disabled="processingDelete"
-                            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                             @click="closeDelete"
                         >
                             Batal
@@ -1720,10 +1944,6 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 </template>
 
 <style scoped>
-/* =========================================================
-   PAGE TRANSITION
-   ========================================================= */
-
 .page-fade-enter-active,
 .page-fade-leave-active {
     transition:
@@ -1736,10 +1956,6 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
     opacity: 0;
     transform: translateY(6px);
 }
-
-/* =========================================================
-   MODAL TRANSITION
-   ========================================================= */
 
 .modal-fade-enter-active,
 .modal-fade-leave-active {
@@ -1761,10 +1977,6 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
 .modal-panel {
     transition: transform 0.2s ease;
 }
-
-/* =========================================================
-   BLOB ANIMATION
-   ========================================================= */
 
 .blob-shape {
     animation: blob-float 12s ease-in-out infinite;
@@ -1825,10 +2037,6 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
     }
 }
 
-/* =========================================================
-   ACCESSIBILITY
-   ========================================================= */
-
 @media (prefers-reduced-motion: reduce) {
     .blob-shape,
     .blob-shape-delayed,
@@ -1842,10 +2050,6 @@ const moveItem = (item: AnakUsaha, direction: "up" | "down") => {
         transition: none;
     }
 }
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
 
 @media (max-width: 640px) {
     .blob-shape {

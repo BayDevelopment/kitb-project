@@ -28,7 +28,9 @@ class ProfilKawasanController extends Controller
                         $query
                             ->where('judul', 'like', "%{$search}%")
                             ->orWhere('lokasi', 'like', "%{$search}%")
-                            ->orWhere('deskripsi', 'like', "%{$search}%");
+                            ->orWhere('deskripsi', 'like', "%{$search}%")
+                            ->orWhere('deskripsi_en', 'like', "%{$search}%")
+                            ->orWhere('deskripsi_zh', 'like', "%{$search}%");
                     });
                 }
             )
@@ -40,6 +42,7 @@ class ProfilKawasanController extends Controller
             'admin/Kawasan/ProfilKawasan',
             [
                 'profilKawasans' => $profilKawasans,
+
                 'filters' => [
                     'search' => $request->input('search', ''),
                 ],
@@ -55,15 +58,24 @@ class ProfilKawasanController extends Controller
         $validated = $this->validateProfilKawasan($request);
 
         DB::transaction(function () use ($request, &$validated): void {
+            /*
+             * Generate slug otomatis dari judul.
+             */
             $validated['slug'] = ProfilKawasan::generateUniqueSlug(
                 $validated['judul']
             );
 
+            /*
+             * Status default aktif.
+             */
             $validated['status'] = $request->boolean(
                 'status',
                 true
             );
 
+            /*
+             * Upload gambar.
+             */
             if ($request->hasFile('gambar')) {
                 $validated['gambar'] = $request
                     ->file('gambar')
@@ -93,7 +105,7 @@ class ProfilKawasanController extends Controller
             $profilKawasan,
             &$validated
         ): void {
-            /**
+            /*
              * Slug hanya dibuat ulang jika judul berubah.
              */
             if ($profilKawasan->judul !== $validated['judul']) {
@@ -103,9 +115,12 @@ class ProfilKawasanController extends Controller
                 );
             }
 
+            /*
+             * Status dari checkbox frontend.
+             */
             $validated['status'] = $request->boolean('status');
 
-            /**
+            /*
              * Upload gambar baru.
              */
             if ($request->hasFile('gambar')) {
@@ -115,7 +130,7 @@ class ProfilKawasanController extends Controller
                     ->file('gambar')
                     ->store('profil-kawasan', 'public');
 
-                /**
+                /*
                  * Hapus gambar lama setelah gambar baru
                  * berhasil disimpan.
                  */
@@ -127,7 +142,7 @@ class ProfilKawasanController extends Controller
                 }
             }
 
-            /**
+            /*
              * Hapus gambar lama jika diminta frontend
              * tanpa upload gambar baru.
              */
@@ -165,7 +180,7 @@ class ProfilKawasanController extends Controller
         ProfilKawasan $profilKawasan
     ): RedirectResponse {
         DB::transaction(function () use ($profilKawasan): void {
-            /**
+            /*
              * Hapus gambar dari storage sebelum record
              * database dihapus.
              */
@@ -228,11 +243,35 @@ class ProfilKawasanController extends Controller
                 'max:255',
             ],
 
+            /*
+             * =========================================================
+             * DESKRIPSI MULTILINGUAL
+             * =========================================================
+             */
+
             'deskripsi' => [
                 'nullable',
                 'string',
                 'max:10000',
             ],
+
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            /*
+             * =========================================================
+             * INFORMASI KAWASAN
+             * =========================================================
+             */
 
             'luas_kawasan' => [
                 'nullable',
@@ -270,7 +309,7 @@ class ProfilKawasanController extends Controller
              * BATAS KAWASAN
              *
              * Disimpan dalam kolom JSON.
-             * Frontend dapat mengirim object/array GeoJSON.
+             * Frontend mengirim GeoJSON dalam bentuk JSON string.
              * =========================================================
              */
 
@@ -278,6 +317,12 @@ class ProfilKawasanController extends Controller
                 'nullable',
                 'json',
             ],
+
+            /*
+             * =========================================================
+             * TAHUN & STATUS
+             * =========================================================
+             */
 
             'tahun_berdiri' => [
                 'nullable',
@@ -303,6 +348,12 @@ class ProfilKawasanController extends Controller
                 'mimes:jpg,jpeg,png,webp',
                 'max:1024',
             ],
+
+            /*
+             * =========================================================
+             * HAPUS GAMBAR
+             * =========================================================
+             */
 
             'remove_gambar' => [
                 'nullable',

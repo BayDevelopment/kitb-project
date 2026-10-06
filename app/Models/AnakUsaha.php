@@ -10,8 +10,12 @@ class AnakUsaha extends Model
 
     protected $fillable = [
         'nama',
+        'nama_en',
+        'nama_zh',
         'logo',
         'deskripsi',
+        'deskripsi_en',
+        'deskripsi_zh',
         'website',
         'urutan',
         'aktif',

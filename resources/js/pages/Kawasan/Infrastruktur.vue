@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+
 import { Head, Link } from "@inertiajs/vue3";
+import { trans } from "laravel-vue-i18n";
+
 import {
     Building2,
     ChevronLeft,
@@ -13,7 +16,9 @@ import {
     ShieldCheck,
     X,
 } from "lucide-vue-next";
+
 import PublicLayout from "@/layouts/PublicLayout.vue";
+import { localizedValue } from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
@@ -25,9 +30,17 @@ defineOptions({
 
 interface Infrastruktur {
     id: number;
+
     nama: string;
+    nama_en: string | null;
+    nama_zh: string | null;
+
     slug: string;
+
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
     gambar: string | null;
     urutan: number;
 }
@@ -37,16 +50,9 @@ const props = defineProps<{
     infrastrukturs: Infrastruktur[];
 }>();
 
-/*
-|--------------------------------------------------------------------------
-| Normalisasi props
-|--------------------------------------------------------------------------
-| Controller mengirim:
-| 'infrastrukturs' => $infrastrukturs
-|
-| Fallback infrastrukturnya hanya untuk menjaga halaman tetap aman
-| apabila sebelumnya pernah menggunakan nama prop berbeda.
-*/
+/* =========================================================
+   Normalisasi props
+   ========================================================= */
 
 const infrastrukturs = computed<Infrastruktur[]>(() => {
     return Array.isArray(props.infrastrukturs)
@@ -300,9 +306,37 @@ const getImageUrl = (gambar: string | null): string | null => {
     return `/storage/${gambar}`;
 };
 
+/**
+ * Nama & deskripsi mengikuti bahasa aktif (useLocale),
+ * fallback otomatis ke Bahasa Indonesia jika terjemahan kosong.
+ */
+const getLocalizedName = (item: Infrastruktur | null): string => {
+    if (!item) {
+        return trans("infrastruktur.public.image_alt_fallback");
+    }
+
+    return (
+        localizedValue(item as unknown as Record<string, unknown>, "nama") ||
+        trans("infrastruktur.public.image_alt_fallback")
+    );
+};
+
+const getLocalizedDescription = (item: Infrastruktur | null): string => {
+    if (!item) {
+        return trans("infrastruktur.public.description_fallback");
+    }
+
+    return (
+        localizedValue(
+            item as unknown as Record<string, unknown>,
+            "deskripsi",
+        ).trim() || trans("infrastruktur.public.description_fallback")
+    );
+};
+
 const truncateText = (text: string | null, maxLength = 220): string => {
     if (!text) {
-        return "Informasi infrastruktur kawasan industri.";
+        return trans("infrastruktur.public.description_fallback");
     }
 
     const clean = text.replace(/\s+/g, " ").trim();
@@ -320,8 +354,12 @@ const currentImage = computed(() =>
         : null,
 );
 
+const currentName = computed(() =>
+    getLocalizedName(currentInfrastruktur.value),
+);
+
 const currentDescription = computed(() =>
-    truncateText(currentInfrastruktur.value?.deskripsi ?? null),
+    truncateText(getLocalizedDescription(currentInfrastruktur.value)),
 );
 
 const currentNumber = computed(() => {
@@ -361,11 +399,11 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
 
 <template>
     <Head>
-        <title>Infrastruktur | KITB</title>
+        <title>{{ trans("infrastruktur.title") }} | KITB</title>
 
         <meta
             name="description"
-            content="Informasi infrastruktur Kawasan Industri Tanjung Buton (KITB)."
+            :content="trans('infrastruktur.public.hero_description')"
         />
 
         <meta name="robots" content="index, follow" />
@@ -375,11 +413,14 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
             href="https://tanjungbuton-industrial.co.id/kawasan/infrastruktur"
         />
 
-        <meta property="og:title" content="Infrastruktur | KITB" />
+        <meta
+            property="og:title"
+            :content="`${trans('infrastruktur.title')} | KITB`"
+        />
 
         <meta
             property="og:description"
-            content="Informasi infrastruktur Kawasan Industri Tanjung Buton (KITB)."
+            :content="trans('infrastruktur.public.hero_description')"
         />
 
         <meta
@@ -427,7 +468,9 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
 
             <div data-reveal class="mb-6" style="--d: 0ms">
                 <nav
-                    aria-label="Breadcrumb"
+                    :aria-label="
+                        trans('infrastruktur.public.breadcrumb_current')
+                    "
                     class="flex flex-wrap items-center gap-2 text-sm"
                 >
                     <Link
@@ -435,7 +478,10 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
                         <Home class="size-4 shrink-0" />
-                        <span>Beranda</span>
+
+                        <span>
+                            {{ trans("infrastruktur.public.breadcrumb_home") }}
+                        </span>
                     </Link>
 
                     <ChevronRight class="size-4 shrink-0 text-slate-400" />
@@ -445,7 +491,10 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
                         <Building2 class="size-4 shrink-0" />
-                        <span>Kawasan Industri</span>
+
+                        <span>
+                            {{ trans("infrastruktur.public.breadcrumb_area") }}
+                        </span>
                     </Link>
 
                     <ChevronRight class="size-4 shrink-0 text-slate-400" />
@@ -457,7 +506,12 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                         <Construction
                             class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
                         />
-                        <span>Infrastruktur</span>
+
+                        <span>
+                            {{
+                                trans("infrastruktur.public.breadcrumb_current")
+                            }}
+                        </span>
                     </span>
                 </nav>
             </div>
@@ -473,24 +527,24 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                     <span
                         class="size-1.5 rounded-full bg-blue-600 dark:bg-blue-400"
                     />
-                    Infrastruktur Kawasan
+
+                    {{ trans("infrastruktur.public.hero_badge") }}
                 </div>
 
                 <h1
                     class="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl dark:text-white"
                 >
-                    Infrastruktur
+                    {{ trans("infrastruktur.public.hero_title") }}
+
                     <span class="block text-blue-600 dark:text-blue-400">
-                        Kawasan Industri Tanjung Buton
+                        {{ trans("infrastruktur.public.hero_title_highlight") }}
                     </span>
                 </h1>
 
                 <p
                     class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base dark:text-slate-400"
                 >
-                    Jelajahi berbagai infrastruktur pendukung yang dikembangkan
-                    untuk menunjang aktivitas industri, konektivitas, dan
-                    kebutuhan operasional di kawasan industri.
+                    {{ trans("infrastruktur.public.hero_description") }}
                 </p>
             </section>
 
@@ -514,14 +568,13 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                     <h2
                         class="mt-5 text-xl font-bold text-slate-900 dark:text-white"
                     >
-                        Informasi Infrastruktur Belum Tersedia
+                        {{ trans("infrastruktur.public.empty_title") }}
                     </h2>
 
                     <p
                         class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Data infrastruktur kawasan yang aktif belum tersedia
-                        untuk ditampilkan saat ini.
+                        {{ trans("infrastruktur.public.empty_description") }}
                     </p>
 
                     <Link
@@ -529,7 +582,8 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                         class="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
                     >
                         <Building2 class="size-4" />
-                        Profil Kawasan
+
+                        {{ trans("infrastruktur.public.view_area_profile") }}
                     </Link>
                 </div>
             </section>
@@ -551,13 +605,15 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                             <span
                                 class="size-2 rounded-full bg-blue-600 dark:bg-blue-400"
                             />
-                            Infrastruktur
+
+                            {{ trans("infrastruktur.public.section_label") }}
                         </div>
 
                         <p
                             class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                         >
-                            {{ totalSlides }} infrastruktur tersedia
+                            {{ totalSlides }}
+                            {{ trans("infrastruktur.public.available") }}
                         </p>
                     </div>
 
@@ -571,7 +627,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                             {{ currentNumber }}
                         </span>
 
-                        <span class="text-slate-400">/</span>
+                        <span class="text-slate-400"> / </span>
 
                         <span
                             class="font-mono text-sm text-slate-500 dark:text-slate-500"
@@ -586,7 +642,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                 <div
                     class="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20"
                     tabindex="0"
-                    aria-label="Carousel infrastruktur"
+                    :aria-label="trans('infrastruktur.public.carousel_label')"
                     @keydown="handleKeydown"
                     @mouseenter="pauseAutoplay"
                     @mouseleave="resumeAutoplay"
@@ -623,10 +679,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                 <img
                                     v-if="currentImage"
                                     :src="currentImage"
-                                    :alt="
-                                        currentInfrastruktur?.nama ??
-                                        'Infrastruktur KITB'
-                                    "
+                                    :alt="currentName"
                                     class="absolute inset-0 size-full select-none object-cover"
                                     draggable="false"
                                 />
@@ -647,7 +700,11 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                         <span
                                             class="mt-4 text-sm font-medium text-slate-500 dark:text-slate-400"
                                         >
-                                            Infrastruktur KITB
+                                            {{
+                                                trans(
+                                                    "infrastruktur.public.image_alt_fallback",
+                                                )
+                                            }}
                                         </span>
                                     </div>
                                 </div>
@@ -668,7 +725,12 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                         class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-slate-950/45 px-3 py-1.5 text-xs font-semibold text-white shadow-lg backdrop-blur-md"
                                     >
                                         <Construction class="size-3.5" />
-                                        Infrastruktur
+
+                                        {{
+                                            trans(
+                                                "infrastruktur.public.image_label",
+                                            )
+                                        }}
                                     </span>
                                 </div>
 
@@ -681,13 +743,17 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                         <p
                                             class="text-xs font-medium uppercase tracking-[0.14em] text-white/65"
                                         >
-                                            Fasilitas pendukung kawasan
+                                            {{
+                                                trans(
+                                                    "infrastruktur.public.supporting_facility",
+                                                )
+                                            }}
                                         </p>
 
                                         <p
                                             class="mt-1 truncate text-lg font-bold text-white sm:text-xl"
                                         >
-                                            {{ currentInfrastruktur?.nama }}
+                                            {{ currentName }}
                                         </p>
                                     </div>
 
@@ -695,7 +761,11 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                         v-if="currentImage"
                                         type="button"
                                         class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-slate-950/40 text-white backdrop-blur-md transition hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-white/80"
-                                        aria-label="Lihat gambar lebih besar"
+                                        :aria-label="
+                                            trans(
+                                                'infrastruktur.public.view_larger_image',
+                                            )
+                                        "
                                         @click.stop="openImagePreview"
                                         @pointerdown.stop
                                     >
@@ -721,7 +791,11 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                             <p
                                                 class="text-xs font-semibold uppercase tracking-[0.15em] text-blue-600 dark:text-blue-400"
                                             >
-                                                Infrastruktur
+                                                {{
+                                                    trans(
+                                                        "infrastruktur.public.section_label",
+                                                    )
+                                                }}
                                             </p>
 
                                             <p
@@ -735,7 +809,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                     <h2
                                         class="mt-6 text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-3xl dark:text-white"
                                     >
-                                        {{ currentInfrastruktur?.nama }}
+                                        {{ currentName }}
                                     </h2>
 
                                     <div
@@ -766,14 +840,21 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                                 <p
                                                     class="text-xs font-semibold uppercase tracking-wider text-slate-400"
                                                 >
-                                                    Kawasan
+                                                    {{
+                                                        trans(
+                                                            "infrastruktur.public.area",
+                                                        )
+                                                    }}
                                                 </p>
 
                                                 <p
                                                     class="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200"
                                                 >
-                                                    Kawasan Industri Tanjung
-                                                    Buton
+                                                    {{
+                                                        trans(
+                                                            "infrastruktur.public.area_name",
+                                                        )
+                                                    }}
                                                 </p>
                                             </div>
                                         </div>
@@ -788,7 +869,12 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                             @pointerdown.stop
                                         >
                                             <Building2 class="size-4" />
-                                            Fasilitas
+
+                                            {{
+                                                trans(
+                                                    "infrastruktur.public.facility",
+                                                )
+                                            }}
                                         </Link>
 
                                         <Link
@@ -797,7 +883,12 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                             @pointerdown.stop
                                         >
                                             <Map class="size-4" />
-                                            Peta Kawasan
+
+                                            {{
+                                                trans(
+                                                    "infrastruktur.public.area_map",
+                                                )
+                                            }}
                                         </Link>
                                     </div>
                                 </div>
@@ -811,7 +902,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                         v-if="hasMultipleSlides"
                         type="button"
                         class="absolute left-3 top-1/2 z-30 flex size-11 -translate-y-1/2 items-center justify-center rounded-2xl border border-white/30 bg-slate-950/55 text-white shadow-xl backdrop-blur-md transition hover:scale-105 hover:bg-slate-950/75 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:left-5"
-                        aria-label="Infrastruktur sebelumnya"
+                        :aria-label="trans('infrastruktur.public.previous')"
                         @click.stop="previousSlide"
                         @pointerdown.stop
                     >
@@ -824,7 +915,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                         v-if="hasMultipleSlides"
                         type="button"
                         class="absolute right-3 top-1/2 z-30 flex size-11 -translate-y-1/2 items-center justify-center rounded-2xl border border-white/30 bg-slate-950/55 text-white shadow-xl backdrop-blur-md transition hover:scale-105 hover:bg-slate-950/75 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:right-5"
-                        aria-label="Infrastruktur berikutnya"
+                        :aria-label="trans('infrastruktur.public.next')"
                         @click.stop="nextSlide"
                         @pointerdown.stop
                     >
@@ -837,7 +928,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                         v-if="hasMultipleSlides"
                         class="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 shadow-lg backdrop-blur-md sm:bottom-5"
                         role="tablist"
-                        aria-label="Navigasi infrastruktur"
+                        :aria-label="trans('infrastruktur.public.navigation')"
                         @pointerdown.stop
                     >
                         <button
@@ -850,7 +941,11 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                                     ? 'w-7 bg-white'
                                     : 'w-1.5 bg-white/45 hover:bg-white/75'
                             "
-                            :aria-label="`Tampilkan ${infrastruktur.nama}`"
+                            :aria-label="
+                                trans('infrastruktur.public.show_slide', {
+                                    name: getLocalizedName(infrastruktur),
+                                })
+                            "
                             :aria-selected="index === currentIndex"
                             role="tab"
                             @click.stop="
@@ -882,14 +977,15 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                     </div>
 
                     <h3 class="mt-5 font-bold text-slate-900 dark:text-white">
-                        Infrastruktur Terintegrasi
+                        {{ trans("infrastruktur.public.integrated_title") }}
                     </h3>
 
                     <p
                         class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Infrastruktur kawasan dikembangkan untuk mendukung
-                        kebutuhan operasional dan aktivitas industri.
+                        {{
+                            trans("infrastruktur.public.integrated_description")
+                        }}
                     </p>
                 </div>
 
@@ -903,14 +999,13 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                     </div>
 
                     <h3 class="mt-5 font-bold text-slate-900 dark:text-white">
-                        Mendukung Aktivitas Industri
+                        {{ trans("infrastruktur.public.industry_title") }}
                     </h3>
 
                     <p
                         class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Kehadiran infrastruktur pendukung membantu menciptakan
-                        lingkungan kawasan yang siap untuk aktivitas usaha.
+                        {{ trans("infrastruktur.public.industry_description") }}
                     </p>
                 </div>
 
@@ -924,14 +1019,15 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                     </div>
 
                     <h3 class="mt-5 font-bold text-slate-900 dark:text-white">
-                        Terhubung dengan Kawasan
+                        {{ trans("infrastruktur.public.connected_title") }}
                     </h3>
 
                     <p
                         class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Informasi infrastruktur menjadi bagian dari ekosistem
-                        kawasan industri KITB yang terintegrasi.
+                        {{
+                            trans("infrastruktur.public.connected_description")
+                        }}
                     </p>
                 </div>
             </section>
@@ -964,21 +1060,24 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                             class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-blue-300"
                         >
                             <span class="size-1.5 rounded-full bg-blue-400" />
-                            Eksplorasi Kawasan
+
+                            {{ trans("infrastruktur.public.explore_label") }}
                         </div>
 
                         <h2
                             class="mt-3 text-2xl font-bold tracking-tight sm:text-3xl"
                         >
-                            Kenali lebih jauh kawasan industri KITB
+                            {{ trans("infrastruktur.public.explore_title") }}
                         </h2>
 
                         <p
                             class="mt-3 text-sm leading-6 text-slate-300 sm:text-base"
                         >
-                            Lihat profil kawasan, fasilitas pendukung, serta
-                            informasi lokasi dan peta kawasan secara lebih
-                            lengkap.
+                            {{
+                                trans(
+                                    "infrastruktur.public.explore_description",
+                                )
+                            }}
                         </p>
                     </div>
 
@@ -988,7 +1087,10 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                             class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:-translate-y-0.5 hover:bg-slate-100"
                         >
                             <Building2 class="size-4" />
-                            Profil Kawasan
+
+                            {{
+                                trans("infrastruktur.public.view_area_profile")
+                            }}
                         </Link>
 
                         <Link
@@ -996,7 +1098,8 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                             class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/15"
                         >
                             <Map class="size-4" />
-                            Peta Kawasan
+
+                            {{ trans("infrastruktur.public.area_map") }}
                         </Link>
                     </div>
                 </div>
@@ -1020,7 +1123,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                 class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-sm sm:p-8"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Pratinjau gambar infrastruktur"
+                :aria-label="trans('infrastruktur.public.image_preview')"
                 tabindex="0"
                 @keydown="handlePreviewKeydown"
                 @click="closeImagePreview"
@@ -1028,7 +1131,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                 <button
                     type="button"
                     class="absolute right-4 top-4 z-10 flex size-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70 sm:right-7 sm:top-7"
-                    aria-label="Tutup pratinjau"
+                    :aria-label="trans('infrastruktur.public.close_preview')"
                     @click.stop="closeImagePreview"
                 >
                     <X class="size-5" />
@@ -1040,9 +1143,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                 >
                     <img
                         :src="currentImage"
-                        :alt="
-                            currentInfrastruktur?.nama ?? 'Infrastruktur KITB'
-                        "
+                        :alt="currentName"
                         class="max-h-[90vh] max-w-full object-contain"
                     />
 
@@ -1052,7 +1153,7 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
                         <p
                             class="text-sm font-semibold text-white sm:text-base"
                         >
-                            {{ currentInfrastruktur?.nama }}
+                            {{ currentName }}
                         </p>
                     </div>
                 </div>
@@ -1065,9 +1166,11 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
 [data-reveal] {
     opacity: 0;
     transform: translateY(18px);
+
     transition:
         opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
         transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+
     transition-delay: var(--d, 0ms);
 }
 

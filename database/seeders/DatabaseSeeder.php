@@ -247,31 +247,55 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | 5. ANAK USAHA
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 5. ANAK USAHA
+|--------------------------------------------------------------------------
+*/
+
             $anakUsaha = [
                 [
                     'nama' => 'PT Tanjung Buton Logistik',
+                    'nama_en' => 'PT Tanjung Buton Logistics',
+                    'nama_zh' => '丹戎布顿物流有限公司',
+
                     'logo' => null,
+
                     'deskripsi' => 'Perusahaan yang bergerak dalam pengembangan layanan logistik dan mendukung kebutuhan rantai pasok kawasan industri.',
+                    'deskripsi_en' => 'A company engaged in the development of logistics services and supporting the supply chain needs of the industrial estate.',
+                    'deskripsi_zh' => '一家致力于物流服务发展并支持工业园区供应链需求的公司。',
+
                     'website' => null,
                     'urutan' => 1,
                     'aktif' => true,
                 ],
+
                 [
                     'nama' => 'PT Tanjung Buton Infrastruktur',
+                    'nama_en' => 'PT Tanjung Buton Infrastructure',
+                    'nama_zh' => '丹戎布顿基础设施有限公司',
+
                     'logo' => null,
+
                     'deskripsi' => 'Perusahaan yang mendukung pembangunan dan pengelolaan infrastruktur kawasan industri.',
+                    'deskripsi_en' => 'A company supporting the development and management of industrial estate infrastructure.',
+                    'deskripsi_zh' => '一家支持工业园区基础设施建设与管理的公司。',
+
                     'website' => null,
                     'urutan' => 2,
                     'aktif' => true,
                 ],
+
                 [
                     'nama' => 'PT Tanjung Buton Properti',
+                    'nama_en' => 'PT Tanjung Buton Property',
+                    'nama_zh' => '丹戎布顿地产有限公司',
+
                     'logo' => null,
+
                     'deskripsi' => 'Perusahaan yang bergerak dalam pengembangan aset dan properti pendukung kawasan industri.',
+                    'deskripsi_en' => 'A company engaged in the development of assets and supporting properties for the industrial estate.',
+                    'deskripsi_zh' => '一家致力于工业园区相关资产及配套物业开发的公司。',
+
                     'website' => null,
                     'urutan' => 3,
                     'aktif' => true,
@@ -280,13 +304,23 @@ class DatabaseSeeder extends Seeder
 
             foreach ($anakUsaha as $item) {
                 DB::table('anak_usahas')->updateOrInsert(
-                    ['nama' => $item['nama']],
                     [
+                        'nama' => $item['nama'],
+                    ],
+                    [
+                        'nama_en' => $item['nama_en'],
+                        'nama_zh' => $item['nama_zh'],
+
                         'logo' => $item['logo'],
+
                         'deskripsi' => $item['deskripsi'],
+                        'deskripsi_en' => $item['deskripsi_en'],
+                        'deskripsi_zh' => $item['deskripsi_zh'],
+
                         'website' => $item['website'],
                         'urutan' => $item['urutan'],
                         'aktif' => $item['aktif'],
+
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]
@@ -294,19 +328,36 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | 6. PROFIL KAWASAN
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 6. PROFIL KAWASAN
+|--------------------------------------------------------------------------
+*/
+
             DB::table('profil_kawasans')->updateOrInsert(
                 ['slug' => 'profil-kawasan-industri-tanjung-buton'],
                 [
                     'judul' => 'Kawasan Industri Tanjung Buton',
+
+                    // Bahasa Indonesia
                     'deskripsi' => 'Kawasan industri terpadu yang dirancang untuk mendukung kegiatan manufaktur, logistik, energi, dan industri strategis dengan dukungan konektivitas serta infrastruktur kawasan.',
+
+                    // English
+                    'deskripsi_en' => 'An integrated industrial estate designed to support manufacturing, logistics, energy, and strategic industries, supported by strong connectivity and comprehensive estate infrastructure.',
+
+                    // 中文
+                    'deskripsi_zh' => '丹绒布顿工业园区是一个综合性工业园区，旨在支持制造业、物流、能源及战略性产业发展，并配备完善的园区基础设施和互联互通体系。',
+
+                    // Luas kawasan dalam hektare
                     'luas_kawasan' => 5000.00,
+
+                    // Lokasi
                     'lokasi' => 'Kabupaten Siak, Provinsi Riau',
+
+                    // Koordinat pusat kawasan
                     'latitude' => 0.9321000,
                     'longitude' => 102.1425000,
+
+                    // Batas kawasan - GeoJSON
                     'batas_kawasan' => json_encode([
                         'type' => 'Feature',
                         'properties' => [],
@@ -323,9 +374,16 @@ class DatabaseSeeder extends Seeder
                             ],
                         ],
                     ]),
+
+                    // Tahun berdiri
                     'tahun_berdiri' => 2012,
+
+                    // Status aktif
                     'status' => true,
+
+                    // Gambar default
                     'gambar' => null,
+
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]
@@ -435,39 +493,55 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | 9. INFRASTRUKTUR
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 9. INFRASTRUKTUR
+|--------------------------------------------------------------------------
+*/
             $infrastruktur = [
                 [
                     'nama' => 'Jaringan Jalan Kawasan',
+                    'nama_en' => 'Estate Road Network',
+                    'nama_zh' => '园区道路网络',
                     'slug' => 'jaringan-jalan-kawasan',
                     'deskripsi' => 'Jaringan jalan kawasan yang mendukung mobilitas kendaraan industri dan distribusi logistik.',
+                    'deskripsi_en' => 'An estate road network that supports the mobility of industrial vehicles and logistics distribution.',
+                    'deskripsi_zh' => '园区道路网络,为工业车辆通行和物流配送提供有力支持。',
                     'gambar' => null,
                     'urutan' => 1,
                     'aktif' => true,
                 ],
                 [
                     'nama' => 'Pelabuhan dan Terminal Logistik',
+                    'nama_en' => 'Port and Logistics Terminal',
+                    'nama_zh' => '港口及物流码头',
                     'slug' => 'pelabuhan-terminal-logistik',
                     'deskripsi' => 'Infrastruktur pendukung kegiatan bongkar muat dan distribusi barang melalui jalur laut.',
+                    'deskripsi_en' => 'Supporting infrastructure for loading and unloading activities and the distribution of goods by sea.',
+                    'deskripsi_zh' => '支持装卸作业及海运货物配送的配套基础设施。',
                     'gambar' => null,
                     'urutan' => 2,
                     'aktif' => true,
                 ],
                 [
                     'nama' => 'Jaringan Listrik',
+                    'nama_en' => 'Electricity Network',
+                    'nama_zh' => '电力网络',
                     'slug' => 'jaringan-listrik',
                     'deskripsi' => 'Sistem kelistrikan untuk memenuhi kebutuhan operasional kawasan dan tenant.',
+                    'deskripsi_en' => 'An electrical system that meets the operational needs of the estate and its tenants.',
+                    'deskripsi_zh' => '满足园区及入驻企业运营需求的电力系统。',
                     'gambar' => null,
                     'urutan' => 3,
                     'aktif' => true,
                 ],
                 [
                     'nama' => 'Sistem Air Bersih',
+                    'nama_en' => 'Clean Water System',
+                    'nama_zh' => '清洁水供应系统',
                     'slug' => 'sistem-air-bersih',
                     'deskripsi' => 'Infrastruktur penyediaan air bersih untuk kebutuhan kawasan industri.',
+                    'deskripsi_en' => 'Clean water supply infrastructure for the needs of the industrial estate.',
+                    'deskripsi_zh' => '为工业园区用水需求提供的清洁水供应基础设施。',
                     'gambar' => null,
                     'urutan' => 4,
                     'aktif' => true,
@@ -479,7 +553,11 @@ class DatabaseSeeder extends Seeder
                     ['slug' => $item['slug']],
                     [
                         'nama' => $item['nama'],
+                        'nama_en' => $item['nama_en'],
+                        'nama_zh' => $item['nama_zh'],
                         'deskripsi' => $item['deskripsi'],
+                        'deskripsi_en' => $item['deskripsi_en'],
+                        'deskripsi_zh' => $item['deskripsi_zh'],
                         'gambar' => $item['gambar'],
                         'urutan' => $item['urutan'],
                         'aktif' => $item['aktif'],

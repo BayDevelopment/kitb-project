@@ -1,25 +1,41 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
+import { trans } from "laravel-vue-i18n";
 import {
     Building2,
     ChevronRight,
     ExternalLink,
     GitBranch,
     Globe2,
+    Home,
     Users,
 } from "lucide-vue-next";
+
 import PublicLayout from "@/layouts/PublicLayout.vue";
+import { currentLanguage } from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
 });
 
+/* ============================================================
+ * TYPES
+ * ============================================================= */
+
 interface AnakUsaha {
     id: number;
+
     nama: string;
+    nama_en: string | null;
+    nama_zh: string | null;
+
     logo: string | null;
+
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
     website: string | null;
     urutan: number;
 }
@@ -31,8 +47,78 @@ interface Props {
 const props = defineProps<Props>();
 
 /* ============================================================
-   FADE IN
-============================================================= */
+ * TRANSLATION HELPER
+ * ============================================================= */
+
+const t = (key: string, replacements?: Record<string, string>): string => {
+    return trans(key, replacements);
+};
+
+/* ============================================================
+ * LOCALIZED DATABASE VALUE
+ * ============================================================= */
+
+const getLocalizedValue = (
+    idValue: string | null | undefined,
+    enValue: string | null | undefined,
+    zhValue: string | null | undefined,
+): string => {
+    switch (currentLanguage.value) {
+        case "en":
+            return enValue?.trim() || idValue?.trim() || "";
+
+        case "zh":
+            return zhValue?.trim() || idValue?.trim() || "";
+
+        default:
+            return idValue?.trim() || "";
+    }
+};
+
+/* ============================================================
+ * SEO
+ * ============================================================= */
+
+const seo = computed(() => {
+    switch (currentLanguage.value) {
+        case "en":
+            return {
+                title: "Subsidiaries | PT Kawasan Industri Tanjung Buton",
+                description:
+                    "Information about the subsidiaries of PT Kawasan Industri Tanjung Buton and their role in supporting the company's business ecosystem.",
+                keywords:
+                    "KITB subsidiaries, KITB subsidiary companies, PT Kawasan Industri Tanjung Buton",
+                ogDescription:
+                    "Learn about the subsidiaries and business ecosystem of PT Kawasan Industri Tanjung Buton.",
+            };
+
+        case "zh":
+            return {
+                title: "子公司 | PT Kawasan Industri Tanjung Buton",
+                description:
+                    "了解 PT Kawasan Industri Tanjung Buton 的子公司及其在支持公司业务生态系统发展中的作用。",
+                keywords:
+                    "KITB 子公司, KITB 企业, PT Kawasan Industri Tanjung Buton",
+                ogDescription:
+                    "了解 PT Kawasan Industri Tanjung Buton 的子公司及其业务生态系统。",
+            };
+
+        default:
+            return {
+                title: "Anak Usaha | PT Kawasan Industri Tanjung Buton",
+                description:
+                    "Informasi anak usaha PT Kawasan Industri Tanjung Buton dan bagian dari ekosistem usaha perusahaan.",
+                keywords:
+                    "anak usaha KITB, anak perusahaan KITB, PT Kawasan Industri Tanjung Buton",
+                ogDescription:
+                    "Mengenal anak usaha dan ekosistem usaha PT Kawasan Industri Tanjung Buton.",
+            };
+    }
+});
+
+/* ============================================================
+ * FADE IN
+ * ============================================================= */
 
 const prefersReducedMotion =
     typeof window !== "undefined" &&
@@ -87,16 +173,16 @@ onBeforeUnmount(() => {
 });
 
 /* ============================================================
-   DATA
-============================================================= */
+ * DATA
+ * ============================================================= */
 
 const anakUsahaList = computed(() =>
     [...props.anakUsahas].sort((a, b) => a.urutan - b.urutan || a.id - b.id),
 );
 
 /* ============================================================
-   HELPERS
-============================================================= */
+ * HELPERS
+ * ============================================================= */
 
 const getLogoUrl = (logo: string | null) => {
     if (!logo) return null;
@@ -112,52 +198,56 @@ const getLogoUrl = (logo: string | null) => {
     return `/storage/${logo}`;
 };
 
+const getName = (item: AnakUsaha) => {
+    return getLocalizedValue(item.nama, item.nama_en, item.nama_zh);
+};
+
+const getDescription = (item: AnakUsaha) => {
+    return getLocalizedValue(
+        item.deskripsi,
+        item.deskripsi_en,
+        item.deskripsi_zh,
+    );
+};
+
 const truncateDescription = (description: string | null, length = 150) => {
-    if (!description) {
-        return "Informasi mengenai anak usaha sedang dalam proses pembaruan.";
+    if (!description?.trim()) {
+        return t("anak-usaha.fallback");
     }
 
-    if (description.length <= length) {
-        return description;
+    const cleanDescription = description.trim();
+
+    if (cleanDescription.length <= length) {
+        return cleanDescription;
     }
 
-    return `${description.slice(0, length).trim()}...`;
+    return `${cleanDescription.slice(0, length).trim()}...`;
 };
 
 const normalizeWebsite = (website: string | null) => {
-    if (!website) return null;
+    if (!website?.trim()) return null;
 
-    if (website.startsWith("http://") || website.startsWith("https://")) {
-        return website;
+    const value = website.trim();
+
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+        return value;
     }
 
-    return `https://${website}`;
+    return `https://${value}`;
 };
 </script>
 
 <template>
     <Head>
-        <title>Anak Usaha | PT Kawasan Industri Tanjung Buton</title>
+        <title>{{ seo.title }}</title>
 
-        <meta
-            name="description"
-            content="Informasi anak usaha PT Kawasan Industri Tanjung Buton dan bagian dari ekosistem usaha perusahaan."
-        />
+        <meta name="description" :content="seo.description" />
 
-        <meta
-            name="keywords"
-            content="anak usaha KITB, anak perusahaan KITB, PT Kawasan Industri Tanjung Buton"
-        />
+        <meta name="keywords" :content="seo.keywords" />
 
-        <meta
-            property="og:title"
-            content="Anak Usaha | PT Kawasan Industri Tanjung Buton"
-        />
+        <meta property="og:title" :content="seo.title" />
 
-        <meta
-            property="og:description"
-            content="Mengenal anak usaha dan ekosistem usaha PT Kawasan Industri Tanjung Buton."
-        />
+        <meta property="og:description" :content="seo.ogDescription" />
 
         <meta property="og:type" content="website" />
 
@@ -183,6 +273,7 @@ const normalizeWebsite = (website: string | null) => {
         <!-- ============================================================
              DECORATIVE BACKGROUND
         ============================================================= -->
+
         <div
             aria-hidden="true"
             class="pointer-events-none absolute inset-0 overflow-hidden"
@@ -204,38 +295,38 @@ const normalizeWebsite = (website: string | null) => {
             <!-- ========================================================
                  BREADCRUMB
             ========================================================= -->
+
             <div data-reveal class="mb-6" style="--d: 0ms">
                 <nav
                     aria-label="Breadcrumb"
-                    class="flex items-center gap-2 text-sm"
+                    class="flex flex-wrap items-center gap-2 text-sm"
                 >
-                    <!-- Beranda -->
                     <Link
                         href="/"
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
                         <Home class="size-4 shrink-0" />
 
-                        <span>Beranda</span>
+                        <span>
+                            {{ t("home.home") }}
+                        </span>
                     </Link>
 
-                    <!-- Separator -->
                     <ChevronRight class="size-4 shrink-0 text-slate-400" />
 
-                    <!-- Perusahaan -->
                     <Link
                         href="/profil-perusahaan/tentang-kami"
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
                         <Building2 class="size-4 shrink-0" />
 
-                        <span>Perusahaan</span>
+                        <span>
+                            {{ t("struktur.title") }}
+                        </span>
                     </Link>
 
-                    <!-- Separator -->
                     <ChevronRight class="size-4 shrink-0 text-slate-400" />
 
-                    <!-- Current Page -->
                     <span
                         class="inline-flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200"
                         aria-current="page"
@@ -244,7 +335,9 @@ const normalizeWebsite = (website: string | null) => {
                             class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
                         />
 
-                        <span>Anak Usaha</span>
+                        <span>
+                            {{ t("anak-usaha.title") }}
+                        </span>
                     </span>
                 </nav>
             </div>
@@ -252,6 +345,7 @@ const normalizeWebsite = (website: string | null) => {
             <!-- ========================================================
                  HERO
             ========================================================= -->
+
             <section
                 data-reveal
                 class="relative mx-auto mb-14 max-w-4xl text-center"
@@ -262,30 +356,28 @@ const normalizeWebsite = (website: string | null) => {
                 >
                     <GitBranch class="size-4" />
 
-                    <span>Ekosistem Usaha</span>
+                    <span>
+                        {{ t("anak-usaha.company") }}
+                    </span>
                 </div>
 
                 <h1
                     class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl dark:text-white"
                 >
-                    Anak
-                    <span class="text-blue-600 dark:text-blue-400">
-                        Usaha
-                    </span>
+                    {{ t("anak-usaha.title") }}
                 </h1>
 
                 <p
                     class="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg dark:text-slate-400"
                 >
-                    Mengenal anak usaha yang menjadi bagian dari ekosistem PT
-                    Kawasan Industri Tanjung Buton dalam mendukung pengembangan
-                    dan pengelolaan kawasan industri.
+                    {{ t("anak-usaha.subtitle") }}
                 </p>
             </section>
 
             <!-- ========================================================
                  CONTENT HEADER
             ========================================================= -->
+
             <section id="anak-usaha" aria-labelledby="anak-usaha-title">
                 <div
                     data-reveal
@@ -298,14 +390,16 @@ const normalizeWebsite = (website: string | null) => {
                         >
                             <Users class="size-4" />
 
-                            <span> Mitra dan Ekosistem Perusahaan </span>
+                            <span>
+                                {{ t("anak-usaha.subsidiary") }}
+                            </span>
                         </div>
 
                         <h2
                             id="anak-usaha-title"
                             class="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white"
                         >
-                            Daftar Anak Usaha
+                            {{ t("anak-usaha.title") }}
                         </h2>
                     </div>
 
@@ -316,11 +410,7 @@ const normalizeWebsite = (website: string | null) => {
 
                         <span>
                             {{ anakUsahaList.length }}
-                            {{
-                                anakUsahaList.length === 1
-                                    ? "Perusahaan"
-                                    : "Perusahaan"
-                            }}
+                            {{ t("anak-usaha.company") }}
                         </span>
                     </div>
                 </div>
@@ -328,6 +418,7 @@ const normalizeWebsite = (website: string | null) => {
                 <!-- ====================================================
                      EMPTY STATE
                 ===================================================== -->
+
                 <div
                     v-if="anakUsahaList.length === 0"
                     data-reveal
@@ -343,19 +434,20 @@ const normalizeWebsite = (website: string | null) => {
                     <h3
                         class="text-lg font-bold text-slate-900 dark:text-white"
                     >
-                        Anak usaha belum tersedia
+                        {{ t("anak-usaha.empty") }}
                     </h3>
 
                     <p
                         class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Informasi anak usaha sedang dalam proses pembaruan.
+                        {{ t("anak-usaha.subtitle") }}
                     </p>
                 </div>
 
                 <!-- ====================================================
                      COMPANY CARDS
                 ===================================================== -->
+
                 <div v-else class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <article
                         v-for="(item, index) in anakUsahaList"
@@ -365,11 +457,13 @@ const normalizeWebsite = (website: string | null) => {
                         :style="`--d: ${220 + index * 70}ms`"
                     >
                         <!-- Hover Accent -->
+
                         <div
                             class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-blue-600 to-slate-500 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                         />
 
                         <!-- Number -->
+
                         <div
                             class="absolute right-5 top-5 flex size-8 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                         >
@@ -377,13 +471,14 @@ const normalizeWebsite = (website: string | null) => {
                         </div>
 
                         <!-- Logo -->
+
                         <div
                             class="mb-6 flex h-40 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50/80 p-6 dark:border-slate-800 dark:bg-slate-950/50"
                         >
                             <img
                                 v-if="getLogoUrl(item.logo)"
                                 :src="getLogoUrl(item.logo)!"
-                                :alt="`Logo ${item.nama}`"
+                                :alt="`Logo ${getName(item)}`"
                                 class="max-h-28 max-w-[220px] object-contain transition duration-500 group-hover:scale-105"
                                 loading="lazy"
                             />
@@ -397,20 +492,22 @@ const normalizeWebsite = (website: string | null) => {
                         </div>
 
                         <!-- Content -->
+
                         <div class="flex flex-1 flex-col">
                             <h3
                                 class="text-xl font-bold text-slate-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400"
                             >
-                                {{ item.nama }}
+                                {{ getName(item) }}
                             </h3>
 
                             <p
                                 class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400"
                             >
-                                {{ truncateDescription(item.deskripsi) }}
+                                {{ truncateDescription(getDescription(item)) }}
                             </p>
 
                             <!-- Website -->
+
                             <div class="mt-auto pt-6">
                                 <a
                                     v-if="normalizeWebsite(item.website)"
@@ -421,7 +518,9 @@ const normalizeWebsite = (website: string | null) => {
                                 >
                                     <Globe2 class="size-4" />
 
-                                    <span> Kunjungi Website </span>
+                                    <span>
+                                        {{ t("anak-usaha.visit_website") }}
+                                    </span>
 
                                     <ExternalLink class="size-3.5" />
                                 </a>
@@ -432,7 +531,9 @@ const normalizeWebsite = (website: string | null) => {
                                 >
                                     <Globe2 class="size-4" />
 
-                                    Website belum tersedia
+                                    <span>
+                                        {{ t("anak-usaha.website") }}
+                                    </span>
                                 </span>
                             </div>
                         </div>
@@ -443,6 +544,7 @@ const normalizeWebsite = (website: string | null) => {
             <!-- ========================================================
                  BOTTOM CTA
             ========================================================= -->
+
             <section data-reveal class="mt-16" style="--d: 500ms">
                 <div
                     class="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-7 shadow-sm dark:border-blue-950/60 dark:from-blue-950/30 dark:via-slate-900 dark:to-slate-950 sm:p-10"
@@ -467,15 +569,13 @@ const normalizeWebsite = (website: string | null) => {
                             <h2
                                 class="text-xl font-bold text-slate-900 sm:text-2xl dark:text-white"
                             >
-                                Membangun ekosistem industri yang terintegrasi.
+                                {{ t("anak-usaha.subtitle") }}
                             </h2>
 
                             <p
                                 class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400"
                             >
-                                Anak usaha menjadi bagian dari ekosistem
-                                perusahaan dalam mendukung pengembangan kawasan
-                                industri secara berkelanjutan.
+                                {{ t("anak-usaha.description") }}
                             </p>
                         </div>
 
@@ -485,7 +585,9 @@ const normalizeWebsite = (website: string | null) => {
                         >
                             <Building2 class="size-4" />
 
-                            <span>Tentang Kami</span>
+                            <span>
+                                {{ t("anak-usaha.company") }}
+                            </span>
 
                             <ChevronRight class="size-4" />
                         </Link>

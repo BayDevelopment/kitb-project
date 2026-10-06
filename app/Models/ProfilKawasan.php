@@ -15,12 +15,19 @@ class ProfilKawasan extends Model
     protected $fillable = [
         'judul',
         'slug',
+
         'deskripsi',
+        'deskripsi_en',
+        'deskripsi_zh',
+
         'luas_kawasan',
         'lokasi',
+
         'latitude',
         'longitude',
+
         'batas_kawasan',
+
         'tahun_berdiri',
         'status',
         'gambar',
