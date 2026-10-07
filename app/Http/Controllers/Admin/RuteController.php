@@ -63,17 +63,14 @@ class RuteController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render(
-            'admin/HubunganInvestor/Rute',
-            [
-                'rutes' => $rutes,
+        return Inertia::render('admin/HubunganInvestor/Rute', [
+            'rutes' => $rutes,
 
-                'filters' => [
-                    'search' => $search,
-                    'aktif' => $aktif,
-                ],
-            ]
-        );
+            'filters' => [
+                'search' => $search,
+                'aktif' => $aktif,
+            ],
+        ]);
     }
 
     /**
@@ -87,9 +84,7 @@ class RuteController extends Controller
             $validated['geometry'] ?? null
         );
 
-        /**
-         * Jika urutan kosong, gunakan urutan berikutnya.
-         */
+        // Jika urutan kosong, gunakan urutan berikutnya.
         if (
             !isset($validated['urutan']) ||
             $validated['urutan'] === null ||
@@ -98,17 +93,12 @@ class RuteController extends Controller
             $validated['urutan'] = $this->nextOrder();
         }
 
-        /**
-         * Default aktif.
-         */
+        // Default aktif.
         $validated['aktif'] = $validated['aktif'] ?? true;
 
         $imagePath = null;
 
         try {
-            /**
-             * Upload gambar.
-             */
             if ($request->hasFile('gambar')) {
                 $imagePath = $request
                     ->file('gambar')
@@ -117,27 +107,18 @@ class RuteController extends Controller
                 $validated['gambar'] = $imagePath;
             }
 
-            /**
-             * Simpan database.
-             */
             Rute::create($validated);
 
-            return back()->with(
-                'success',
-                'Rute berhasil ditambahkan.'
-            );
+            return $this->toast('success', 'Rute berhasil ditambahkan.');
         } catch (\Throwable $e) {
-            /**
-             * Jika database gagal setelah upload,
-             * hapus gambar yang sudah terlanjur disimpan.
-             */
+            // Jika database gagal setelah upload, hapus gambar yang sudah tersimpan.
             if ($imagePath) {
                 $this->deleteImage($imagePath);
             }
 
             report($e);
 
-            return back()->with(
+            return $this->toast(
                 'error',
                 'Rute gagal ditambahkan. Silakan coba lagi.'
             );
@@ -147,19 +128,15 @@ class RuteController extends Controller
     /**
      * Memperbarui rute.
      */
-    public function update(
-        Request $request,
-        Rute $rute
-    ): RedirectResponse {
+    public function update(Request $request, Rute $rute): RedirectResponse
+    {
         $validated = $this->validateData($request);
 
         $validated['geometry'] = $this->normalizeGeometry(
             $validated['geometry'] ?? null
         );
 
-        /**
-         * Pertahankan urutan lama jika tidak dikirim.
-         */
+        // Pertahankan urutan lama jika tidak dikirim.
         if (
             !array_key_exists('urutan', $validated) ||
             $validated['urutan'] === null ||
@@ -168,9 +145,7 @@ class RuteController extends Controller
             $validated['urutan'] = $rute->urutan;
         }
 
-        /**
-         * Pertahankan status aktif lama jika tidak dikirim.
-         */
+        // Pertahankan status aktif lama jika tidak dikirim.
         if (!array_key_exists('aktif', $validated)) {
             $validated['aktif'] = $rute->aktif;
         }
@@ -179,9 +154,6 @@ class RuteController extends Controller
         $newImage = null;
 
         try {
-            /**
-             * Upload gambar baru jika ada.
-             */
             if ($request->hasFile('gambar')) {
                 $newImage = $request
                     ->file('gambar')
@@ -190,33 +162,23 @@ class RuteController extends Controller
                 $validated['gambar'] = $newImage;
             }
 
-            /**
-             * Update database.
-             */
             $rute->update($validated);
 
-            /**
-             * Hapus gambar lama setelah update berhasil.
-             */
+            // Hapus gambar lama setelah update berhasil.
             if ($newImage && $oldImage) {
                 $this->deleteImage($oldImage);
             }
 
-            return back()->with(
-                'success',
-                'Rute berhasil diperbarui.'
-            );
+            return $this->toast('success', 'Rute berhasil diperbarui.');
         } catch (\Throwable $e) {
-            /**
-             * Jika update gagal, hapus file baru.
-             */
+            // Jika update gagal, hapus file baru.
             if ($newImage) {
                 $this->deleteImage($newImage);
             }
 
             report($e);
 
-            return back()->with(
+            return $this->toast(
                 'error',
                 'Rute gagal diperbarui. Silakan coba lagi.'
             );
@@ -236,27 +198,20 @@ class RuteController extends Controller
 
                 $rute->delete();
 
-                /**
-                 * Rapikan urutan setelah data dihapus.
-                 */
+                // Rapikan urutan setelah data dihapus.
                 Rute::query()
                     ->where('urutan', '>', $deletedOrder)
                     ->decrement('urutan');
             });
 
-            /**
-             * Hapus gambar setelah transaksi database berhasil.
-             */
+            // Hapus gambar setelah transaksi database berhasil.
             $this->deleteImage($image);
 
-            return back()->with(
-                'success',
-                'Rute berhasil dihapus.'
-            );
+            return $this->toast('success', 'Rute berhasil dihapus.');
         } catch (\Throwable $e) {
             report($e);
 
-            return back()->with(
+            return $this->toast(
                 'error',
                 'Rute gagal dihapus. Silakan coba lagi.'
             );
@@ -272,7 +227,7 @@ class RuteController extends Controller
             'aktif' => !$rute->aktif,
         ]);
 
-        return back()->with(
+        return $this->toast(
             'success',
             $rute->aktif
                 ? 'Rute berhasil diaktifkan.'
@@ -283,22 +238,15 @@ class RuteController extends Controller
     /**
      * Memindahkan urutan rute.
      */
-    public function move(
-        Request $request,
-        Rute $rute
-    ): RedirectResponse {
+    public function move(Request $request, Rute $rute): RedirectResponse
+    {
         $validated = $request->validate([
-            'direction' => [
-                'required',
-                'in:up,down',
-            ],
+            'direction' => ['required', 'in:up,down'],
         ]);
 
         $direction = $validated['direction'];
 
-        /**
-         * Cari tetangga berdasarkan urutan.
-         */
+        // Cari tetangga berdasarkan urutan.
         if ($direction === 'up') {
             $neighbor = Rute::query()
                 ->where('urutan', '<', $rute->urutan)
@@ -314,7 +262,7 @@ class RuteController extends Controller
         }
 
         if (!$neighbor) {
-            return back()->with(
+            return $this->toast(
                 'error',
                 $direction === 'up'
                     ? 'Rute sudah berada di urutan paling atas.'
@@ -326,29 +274,28 @@ class RuteController extends Controller
             $currentOrder = $rute->urutan;
             $neighborOrder = $neighbor->urutan;
 
-            /**
-             * Pakai angka sementara supaya tidak bentrok.
-             */
-            $temporaryOrder =
-                ((int) Rute::query()->max('urutan')) + 1;
+            // Pakai angka sementara supaya tidak bentrok.
+            $temporaryOrder = ((int) Rute::query()->max('urutan')) + 1;
 
-            $rute->update([
-                'urutan' => $temporaryOrder,
-            ]);
-
-            $neighbor->update([
-                'urutan' => $currentOrder,
-            ]);
-
-            $rute->update([
-                'urutan' => $neighborOrder,
-            ]);
+            $rute->update(['urutan' => $temporaryOrder]);
+            $neighbor->update(['urutan' => $currentOrder]);
+            $rute->update(['urutan' => $neighborOrder]);
         });
 
-        return back()->with(
-            'success',
-            'Urutan rute berhasil diperbarui.'
-        );
+        return $this->toast('success', 'Urutan rute berhasil diperbarui.');
+    }
+
+    /**
+     * Redirect kembali dengan flash toast.
+     *
+     * @param  'success'|'error'|'info'|'warning'  $type
+     */
+    private function toast(string $type, string $message): RedirectResponse
+    {
+        return back()->with('toast', [
+            'type' => $type,
+            'message' => $message,
+        ]);
     }
 
     /**
@@ -357,202 +304,62 @@ class RuteController extends Controller
     private function validateData(Request $request): array
     {
         return $request->validate([
-            /*
-            |--------------------------------------------------------------------------
-            | Bahasa Indonesia
-            |--------------------------------------------------------------------------
-            */
-            'nama_rute' => [
-                'required',
-                'string',
-                'max:200',
-            ],
+            // Bahasa Indonesia
+            'nama_rute' => ['required', 'string', 'max:200'],
+            'jalur' => ['required', 'string', 'max:255'],
+            'deskripsi' => ['nullable', 'string', 'max:10000'],
 
-            'jalur' => [
-                'required',
-                'string',
-                'max:255',
-            ],
+            // Bahasa Inggris
+            'nama_rute_en' => ['nullable', 'string', 'max:200'],
+            'jalur_en' => ['nullable', 'string', 'max:255'],
+            'deskripsi_en' => ['nullable', 'string', 'max:10000'],
 
-            'deskripsi' => [
-                'nullable',
-                'string',
-                'max:10000',
-            ],
+            // Bahasa Mandarin
+            'nama_rute_zh' => ['nullable', 'string', 'max:200'],
+            'jalur_zh' => ['nullable', 'string', 'max:255'],
+            'deskripsi_zh' => ['nullable', 'string', 'max:10000'],
 
-            /*
-            |--------------------------------------------------------------------------
-            | Bahasa Inggris
-            |--------------------------------------------------------------------------
-            */
-            'nama_rute_en' => [
-                'nullable',
-                'string',
-                'max:200',
-            ],
+            // Data teknis
+            'jarak' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'satuan_jarak' => ['required', 'string', 'max:20'],
+            'waktu_tempuh' => ['required', 'string', 'max:100'],
 
-            'jalur_en' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
+            // Asal & tujuan
+            'asal' => ['nullable', 'string', 'max:200'],
+            'tujuan' => ['nullable', 'string', 'max:200'],
 
-            'deskripsi_en' => [
-                'nullable',
-                'string',
-                'max:10000',
-            ],
+            // Koordinat
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
 
-            /*
-            |--------------------------------------------------------------------------
-            | Bahasa Mandarin
-            |--------------------------------------------------------------------------
-            */
-            'nama_rute_zh' => [
-                'nullable',
-                'string',
-                'max:200',
-            ],
+            // Geometry (divalidasi manual di normalizeGeometry)
+            'geometry' => ['nullable'],
 
-            'jalur_zh' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
+            // Gambar
+            'gambar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
 
-            'deskripsi_zh' => [
-                'nullable',
-                'string',
-                'max:10000',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Data Teknis
-            |--------------------------------------------------------------------------
-            */
-            'jarak' => [
-                'required',
-                'numeric',
-                'min:0',
-                'max:99999999.99',
-            ],
-
-            'satuan_jarak' => [
-                'required',
-                'string',
-                'max:20',
-            ],
-
-            'waktu_tempuh' => [
-                'required',
-                'string',
-                'max:100',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Asal & Tujuan
-            |--------------------------------------------------------------------------
-            */
-            'asal' => [
-                'nullable',
-                'string',
-                'max:200',
-            ],
-
-            'tujuan' => [
-                'nullable',
-                'string',
-                'max:200',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Koordinat
-            |--------------------------------------------------------------------------
-            */
-            'latitude' => [
-                'nullable',
-                'numeric',
-                'between:-90,90',
-            ],
-
-            'longitude' => [
-                'nullable',
-                'numeric',
-                'between:-180,180',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Geometry
-            |--------------------------------------------------------------------------
-            */
-            'geometry' => [
-                'nullable',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Gambar
-            |--------------------------------------------------------------------------
-            */
-            'gambar' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:2048',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Pengaturan
-            |--------------------------------------------------------------------------
-            */
-            'urutan' => [
-                'nullable',
-                'integer',
-                'min:0',
-            ],
-
-            'aktif' => [
-                'nullable',
-                'boolean',
-            ],
+            // Pengaturan
+            'urutan' => ['nullable', 'integer', 'min:0'],
+            'aktif' => ['nullable', 'boolean'],
         ]);
     }
 
     /**
      * Normalize dan validasi GeoJSON.
      */
-    private function normalizeGeometry(
-        mixed $geometry
-    ): ?array {
-        if (
-            $geometry === null ||
-            $geometry === ''
-        ) {
+    private function normalizeGeometry(mixed $geometry): ?array
+    {
+        if ($geometry === null || $geometry === '') {
             return null;
         }
 
-        /**
-         * Jika geometry dikirim sebagai JSON string,
-         * decode terlebih dahulu.
-         */
+        // Jika dikirim sebagai JSON string, decode terlebih dahulu.
         if (is_string($geometry)) {
-            $decoded = json_decode(
-                $geometry,
-                true
-            );
+            $decoded = json_decode($geometry, true);
 
-            if (
-                json_last_error() !== JSON_ERROR_NONE ||
-                !is_array($decoded)
-            ) {
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
                 throw ValidationException::withMessages([
-                    'geometry' =>
-                    'Format geometry GeoJSON tidak valid.',
+                    'geometry' => 'Format geometry GeoJSON tidak valid.',
                 ]);
             }
 
@@ -561,182 +368,116 @@ class RuteController extends Controller
 
         if (!is_array($geometry)) {
             throw ValidationException::withMessages([
-                'geometry' =>
-                'Format geometry GeoJSON tidak valid.',
+                'geometry' => 'Format geometry GeoJSON tidak valid.',
             ]);
         }
 
         if (
             !isset($geometry['type']) ||
-            !array_key_exists(
-                'coordinates',
-                $geometry
-            )
+            !array_key_exists('coordinates', $geometry)
         ) {
             throw ValidationException::withMessages([
-                'geometry' =>
-                'Geometry harus memiliki type dan coordinates.',
+                'geometry' => 'Geometry harus memiliki type dan coordinates.',
             ]);
         }
 
-        $allowedTypes = [
-            'Point',
-            'LineString',
-            'MultiLineString',
-        ];
+        $allowedTypes = ['Point', 'LineString', 'MultiLineString'];
 
-        if (
-            !in_array(
-                $geometry['type'],
-                $allowedTypes,
-                true
-            )
-        ) {
+        if (!in_array($geometry['type'], $allowedTypes, true)) {
             throw ValidationException::withMessages([
                 'geometry' =>
                 'Tipe geometry hanya Point, LineString, atau MultiLineString.',
             ]);
         }
 
-        $this->validateCoordinates(
-            $geometry['coordinates'],
-            $geometry['type']
-        );
+        $this->validateCoordinates($geometry['coordinates'], $geometry['type']);
 
         return $geometry;
     }
 
     /**
-     * Validasi koordinat GeoJSON.
-     *
-     * GeoJSON:
-     * [longitude, latitude]
+     * Validasi koordinat GeoJSON ([longitude, latitude]).
      */
-    private function validateCoordinates(
-        mixed $coordinates,
-        string $type
-    ): void {
+    private function validateCoordinates(mixed $coordinates, string $type): void
+    {
         if (!is_array($coordinates)) {
             throw ValidationException::withMessages([
-                'geometry' =>
-                'Coordinates GeoJSON tidak valid.',
+                'geometry' => 'Coordinates GeoJSON tidak valid.',
             ]);
         }
 
-        /**
-         * Point
-         */
         if ($type === 'Point') {
-            $this->validateCoordinatePair(
-                $coordinates
-            );
+            $this->validateCoordinatePair($coordinates);
 
             return;
         }
 
-        /**
-         * LineString
-         */
         if ($type === 'LineString') {
             if (count($coordinates) < 2) {
                 throw ValidationException::withMessages([
-                    'geometry' =>
-                    'LineString minimal harus memiliki dua titik.',
+                    'geometry' => 'LineString minimal harus memiliki dua titik.',
                 ]);
             }
 
             foreach ($coordinates as $coordinate) {
-                $this->validateCoordinatePair(
-                    $coordinate
-                );
+                $this->validateCoordinatePair($coordinate);
             }
 
             return;
         }
 
-        /**
-         * MultiLineString
-         */
-        if ($type === 'MultiLineString') {
-            if (count($coordinates) === 0) {
+        // MultiLineString
+        if (count($coordinates) === 0) {
+            throw ValidationException::withMessages([
+                'geometry' => 'MultiLineString harus memiliki minimal satu garis.',
+            ]);
+        }
+
+        foreach ($coordinates as $line) {
+            if (!is_array($line) || count($line) < 2) {
                 throw ValidationException::withMessages([
                     'geometry' =>
-                    'MultiLineString harus memiliki minimal satu garis.',
+                    'Setiap garis harus memiliki minimal dua titik.',
                 ]);
             }
 
-            foreach ($coordinates as $line) {
-                if (
-                    !is_array($line) ||
-                    count($line) < 2
-                ) {
-                    throw ValidationException::withMessages([
-                        'geometry' =>
-                        'Setiap garis harus memiliki minimal dua titik.',
-                    ]);
-                }
-
-                foreach ($line as $coordinate) {
-                    $this->validateCoordinatePair(
-                        $coordinate
-                    );
-                }
+            foreach ($line as $coordinate) {
+                $this->validateCoordinatePair($coordinate);
             }
         }
     }
 
     /**
-     * Validasi satu pasangan koordinat.
-     *
-     * Format:
-     * [longitude, latitude]
+     * Validasi satu pasangan koordinat ([longitude, latitude]).
      */
-    private function validateCoordinatePair(
-        mixed $coordinate
-    ): void {
-        if (
-            !is_array($coordinate) ||
-            count($coordinate) < 2
-        ) {
+    private function validateCoordinatePair(mixed $coordinate): void
+    {
+        if (!is_array($coordinate) || count($coordinate) < 2) {
             throw ValidationException::withMessages([
-                'geometry' =>
-                'Pasangan koordinat GeoJSON tidak valid.',
+                'geometry' => 'Pasangan koordinat GeoJSON tidak valid.',
             ]);
         }
 
-        $longitude = $coordinate[0];
-        $latitude = $coordinate[1];
+        [$longitude, $latitude] = $coordinate;
 
-        if (
-            !is_numeric($longitude) ||
-            !is_numeric($latitude)
-        ) {
+        if (!is_numeric($longitude) || !is_numeric($latitude)) {
             throw ValidationException::withMessages([
-                'geometry' =>
-                'Longitude dan latitude harus berupa angka.',
+                'geometry' => 'Longitude dan latitude harus berupa angka.',
             ]);
         }
 
         $longitude = (float) $longitude;
         $latitude = (float) $latitude;
 
-        if (
-            $longitude < -180 ||
-            $longitude > 180
-        ) {
+        if ($longitude < -180 || $longitude > 180) {
             throw ValidationException::withMessages([
-                'geometry' =>
-                'Longitude harus berada antara -180 sampai 180.',
+                'geometry' => 'Longitude harus berada antara -180 sampai 180.',
             ]);
         }
 
-        if (
-            $latitude < -90 ||
-            $latitude > 90
-        ) {
+        if ($latitude < -90 || $latitude > 90) {
             throw ValidationException::withMessages([
-                'geometry' =>
-                'Latitude harus berada antara -90 sampai 90.',
+                'geometry' => 'Latitude harus berada antara -90 sampai 90.',
             ]);
         }
     }
@@ -754,10 +495,7 @@ class RuteController extends Controller
      */
     private function deleteImage(?string $path): void
     {
-        if (
-            $path &&
-            Storage::disk('public')->exists($path)
-        ) {
+        if ($path && Storage::disk('public')->exists($path)) {
             Storage::disk('public')->delete($path);
         }
     }
