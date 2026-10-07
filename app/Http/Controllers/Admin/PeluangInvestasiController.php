@@ -26,9 +26,20 @@ class PeluangInvestasiController extends Controller
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query
+                        // Bahasa Indonesia
                         ->where('judul', 'like', "%{$search}%")
                         ->orWhere('sektor_industri', 'like', "%{$search}%")
-                        ->orWhere('lokasi', 'like', "%{$search}%");
+                        ->orWhere('lokasi', 'like', "%{$search}%")
+
+                        // English
+                        ->orWhere('judul_en', 'like', "%{$search}%")
+                        ->orWhere('sektor_industri_en', 'like', "%{$search}%")
+                        ->orWhere('lokasi_en', 'like', "%{$search}%")
+
+                        // Chinese
+                        ->orWhere('judul_zh', 'like', "%{$search}%")
+                        ->orWhere('sektor_industri_zh', 'like', "%{$search}%")
+                        ->orWhere('lokasi_zh', 'like', "%{$search}%");
                 });
             })
             ->when(
@@ -42,10 +53,12 @@ class PeluangInvestasiController extends Controller
 
         return Inertia::render('admin/HubunganInvestor/PeluangInvestasi', [
             'peluangInvestasi' => $peluangInvestasi,
+
             'filters' => [
                 'search' => $search,
                 'status' => $status,
             ],
+
             'statuses' => [
                 [
                     'value' => 'tersedia',
@@ -73,70 +86,148 @@ class PeluangInvestasiController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            /*
+             * =========================================================
+             * Bahasa Indonesia
+             * =========================================================
+             */
             'judul' => [
                 'required',
                 'string',
                 'max:255',
             ],
+
+            'sektor_industri' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi' => [
+                'nullable',
+                'string',
+            ],
+
+            'lokasi' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /*
+             * =========================================================
+             * English
+             * =========================================================
+             */
+            'judul_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'sektor_industri_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+            ],
+
+            'lokasi_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /*
+             * =========================================================
+             * Chinese
+             * =========================================================
+             */
+            'judul_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'sektor_industri_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            'lokasi_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /*
+             * =========================================================
+             * General
+             * =========================================================
+             */
             'slug' => [
                 'nullable',
                 'string',
                 'max:255',
                 'unique:peluang_investasis,slug',
             ],
-            'sektor_industri' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-            'deskripsi' => [
-                'nullable',
-                'string',
-            ],
+
             'luas_lahan' => [
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:9999999999999.99',
             ],
+
             'satuan_luas' => [
                 'nullable',
                 'string',
                 'max:20',
             ],
-            'lokasi' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
+
             'status' => [
                 'required',
                 'string',
                 'in:tersedia,proses,terisi,ditutup',
             ],
+
             'nilai_investasi' => [
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:999999999999999999.99',
             ],
+
             'mata_uang' => [
                 'nullable',
                 'string',
                 'max:10',
             ],
+
             'gambar' => [
                 'nullable',
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:1024',
             ],
+
             'urutan' => [
                 'nullable',
                 'integer',
                 'min:0',
                 'max:4294967295',
             ],
+
             'aktif' => [
                 'nullable',
                 'boolean',
@@ -147,24 +238,57 @@ class PeluangInvestasiController extends Controller
 
         try {
             $data = [
+                /*
+                 * Bahasa Indonesia
+                 */
                 'judul' => $validated['judul'],
+                'sektor_industri' => $validated['sektor_industri'] ?? null,
+                'deskripsi' => $validated['deskripsi'] ?? null,
+                'lokasi' => $validated['lokasi'] ?? null,
+
+                /*
+                 * English
+                 */
+                'judul_en' => $validated['judul_en'] ?? null,
+                'sektor_industri_en' => $validated['sektor_industri_en'] ?? null,
+                'deskripsi_en' => $validated['deskripsi_en'] ?? null,
+                'lokasi_en' => $validated['lokasi_en'] ?? null,
+
+                /*
+                 * Chinese
+                 */
+                'judul_zh' => $validated['judul_zh'] ?? null,
+                'sektor_industri_zh' => $validated['sektor_industri_zh'] ?? null,
+                'deskripsi_zh' => $validated['deskripsi_zh'] ?? null,
+                'lokasi_zh' => $validated['lokasi_zh'] ?? null,
+
+                /*
+                 * General
+                 */
                 'slug' => $this->generateUniqueSlug(
                     $validated['slug'] ?? $validated['judul']
                 ),
-                'sektor_industri' => $validated['sektor_industri'] ?? null,
-                'deskripsi' => $validated['deskripsi'] ?? null,
+
                 'luas_lahan' => $validated['luas_lahan'] ?? null,
+
                 'satuan_luas' => $validated['satuan_luas'] ?? 'Ha',
-                'lokasi' => $validated['lokasi'] ?? null,
+
                 'status' => $validated['status'],
+
                 'nilai_investasi' => $validated['nilai_investasi'] ?? null,
+
                 'mata_uang' => strtoupper(
                     $validated['mata_uang'] ?? 'IDR'
                 ),
+
                 'urutan' => $validated['urutan'] ?? 0,
+
                 'aktif' => $validated['aktif'] ?? true,
             ];
 
+            /*
+             * Upload gambar
+             */
             if ($request->hasFile('gambar')) {
                 $gambarPath = $request->file('gambar')
                     ->store('peluang-investasi', 'public');
@@ -179,6 +303,9 @@ class PeluangInvestasiController extends Controller
                 'message' => 'Peluang investasi berhasil ditambahkan.',
             ]);
         } catch (\Throwable $e) {
+            /*
+             * Hapus file jika database gagal
+             */
             if ($gambarPath !== null) {
                 Storage::disk('public')->delete($gambarPath);
             }
@@ -200,70 +327,153 @@ class PeluangInvestasiController extends Controller
         PeluangInvestasi $peluangInvestasi
     ): RedirectResponse {
         $validated = $request->validate([
+            /*
+             * =========================================================
+             * Bahasa Indonesia
+             * =========================================================
+             */
             'judul' => [
                 'required',
                 'string',
                 'max:255',
             ],
+
+            'sektor_industri' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi' => [
+                'nullable',
+                'string',
+            ],
+
+            'lokasi' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /*
+             * =========================================================
+             * English
+             * =========================================================
+             */
+            'judul_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'sektor_industri_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+            ],
+
+            'lokasi_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /*
+             * =========================================================
+             * Chinese
+             * =========================================================
+             */
+            'judul_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'sektor_industri_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            'lokasi_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            /*
+             * =========================================================
+             * General
+             * =========================================================
+             */
             'slug' => [
                 'nullable',
                 'string',
                 'max:255',
                 'unique:peluang_investasis,slug,' . $peluangInvestasi->id,
             ],
-            'sektor_industri' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-            'deskripsi' => [
-                'nullable',
-                'string',
-            ],
+
             'luas_lahan' => [
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:9999999999999.99',
             ],
+
             'satuan_luas' => [
                 'nullable',
                 'string',
                 'max:20',
             ],
-            'lokasi' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
+
             'status' => [
                 'required',
                 'string',
                 'in:tersedia,proses,terisi,ditutup',
             ],
+
             'nilai_investasi' => [
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:999999999999999999.99',
             ],
+
             'mata_uang' => [
                 'nullable',
                 'string',
                 'max:10',
             ],
+
             'gambar' => [
                 'nullable',
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:1024',
             ],
+
+            'hapus_gambar' => [
+                'nullable',
+                'boolean',
+            ],
+
             'urutan' => [
                 'nullable',
                 'integer',
                 'min:0',
                 'max:4294967295',
             ],
+
             'aktif' => [
                 'nullable',
                 'boolean',
@@ -275,24 +485,56 @@ class PeluangInvestasiController extends Controller
 
         try {
             $data = [
+                /*
+                 * Bahasa Indonesia
+                 */
                 'judul' => $validated['judul'],
+                'sektor_industri' => $validated['sektor_industri'] ?? null,
+                'deskripsi' => $validated['deskripsi'] ?? null,
+                'lokasi' => $validated['lokasi'] ?? null,
+
+                /*
+                 * English
+                 */
+                'judul_en' => $validated['judul_en'] ?? null,
+                'sektor_industri_en' => $validated['sektor_industri_en'] ?? null,
+                'deskripsi_en' => $validated['deskripsi_en'] ?? null,
+                'lokasi_en' => $validated['lokasi_en'] ?? null,
+
+                /*
+                 * Chinese
+                 */
+                'judul_zh' => $validated['judul_zh'] ?? null,
+                'sektor_industri_zh' => $validated['sektor_industri_zh'] ?? null,
+                'deskripsi_zh' => $validated['deskripsi_zh'] ?? null,
+                'lokasi_zh' => $validated['lokasi_zh'] ?? null,
+
+                /*
+                 * General
+                 */
                 'slug' => $this->generateUniqueSlug(
                     $validated['slug'] ?? $validated['judul'],
                     $peluangInvestasi->id
                 ),
-                'sektor_industri' => $validated['sektor_industri'] ?? null,
-                'deskripsi' => $validated['deskripsi'] ?? null,
+
                 'luas_lahan' => $validated['luas_lahan'] ?? null,
+
                 'satuan_luas' => $validated['satuan_luas'] ?? 'Ha',
-                'lokasi' => $validated['lokasi'] ?? null,
+
                 'status' => $validated['status'],
+
                 'nilai_investasi' => $validated['nilai_investasi'] ?? null,
+
                 'mata_uang' => strtoupper(
                     $validated['mata_uang'] ?? 'IDR'
                 ),
+
                 'urutan' => $validated['urutan'] ?? 0,
             ];
 
+            /*
+             * Upload gambar baru
+             */
             if ($request->hasFile('gambar')) {
                 $newGambarPath = $request->file('gambar')
                     ->store('peluang-investasi', 'public');
@@ -300,16 +542,39 @@ class PeluangInvestasiController extends Controller
                 $data['gambar'] = $newGambarPath;
             }
 
+            /*
+             * Hapus gambar lama jika diminta
+             * dan tidak ada gambar baru.
+             */
+            if (
+                ! $request->hasFile('gambar') &&
+                $request->boolean('hapus_gambar') &&
+                $oldGambarPath !== null
+            ) {
+                $data['gambar'] = null;
+            }
+
+            /*
+             * Aktif hanya diperbarui jika field dikirim.
+             */
             if ($request->has('aktif')) {
                 $data['aktif'] = $validated['aktif'];
             }
 
             $peluangInvestasi->update($data);
 
+            /*
+             * Hapus file lama setelah database berhasil diperbarui.
+             */
             if (
-                $newGambarPath !== null &&
                 $oldGambarPath !== null &&
-                $oldGambarPath !== $newGambarPath
+                (
+                    $newGambarPath !== null ||
+                    (
+                        ! $request->hasFile('gambar') &&
+                        $request->boolean('hapus_gambar')
+                    )
+                )
             ) {
                 Storage::disk('public')->delete($oldGambarPath);
             }
@@ -319,6 +584,10 @@ class PeluangInvestasiController extends Controller
                 'message' => 'Peluang investasi berhasil diperbarui.',
             ]);
         } catch (\Throwable $e) {
+            /*
+             * Jika upload gambar baru sudah berhasil tetapi
+             * proses database gagal, hapus gambar baru.
+             */
             if ($newGambarPath !== null) {
                 Storage::disk('public')->delete($newGambarPath);
             }

@@ -18,9 +18,24 @@ return new class extends Migration
             // INFORMASI RUTE
             // =====================================================
 
+            // Bahasa Indonesia
             $table->string('nama_rute', 200);
-
             $table->string('jalur', 255);
+            $table->text('deskripsi')->nullable();
+
+            // Bahasa Inggris
+            $table->string('nama_rute_en', 200)->nullable();
+            $table->string('jalur_en', 255)->nullable();
+            $table->text('deskripsi_en')->nullable();
+
+            // Bahasa Mandarin
+            $table->string('nama_rute_zh', 200)->nullable();
+            $table->string('jalur_zh', 255)->nullable();
+            $table->text('deskripsi_zh')->nullable();
+
+            // =====================================================
+            // DATA TEKNIS
+            // =====================================================
 
             $table->decimal('jarak', 10, 2);
 
@@ -33,8 +48,6 @@ return new class extends Migration
                 'waktu_tempuh',
                 100
             );
-
-            $table->text('deskripsi')->nullable();
 
             // =====================================================
             // ASAL & TUJUAN

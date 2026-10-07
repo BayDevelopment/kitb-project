@@ -61,9 +61,15 @@ defineOptions({
 interface KemudahanBerusaha {
     id: number;
     judul: string;
-    slug: string;
+    judul_en: string | null;
+    judul_zh: string | null;
     ringkasan: string | null;
+    ringkasan_en: string | null;
+    ringkasan_zh: string | null;
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+    slug: string;
     ikon: string | null;
     urutan: number;
     aktif: boolean;
@@ -101,9 +107,15 @@ interface KemudahanBerusahaPagination {
 
 interface FormErrors {
     judul?: string;
+    judul_en?: string;
+    judul_zh?: string;
     slug?: string;
     ringkasan?: string;
+    ringkasan_en?: string;
+    ringkasan_zh?: string;
     deskripsi?: string;
+    deskripsi_en?: string;
+    deskripsi_zh?: string;
     ikon?: string;
     aktif?: string;
 }
@@ -116,12 +128,27 @@ interface IconOption {
 
 type FormState = {
     judul: string;
+    judul_en: string;
+    judul_zh: string;
     slug: string;
     ringkasan: string;
+    ringkasan_en: string;
+    ringkasan_zh: string;
     deskripsi: string;
+    deskripsi_en: string;
+    deskripsi_zh: string;
     ikon: string;
     aktif: boolean;
 };
+
+type LanguageCode = "id" | "en" | "zh";
+
+const languageTabs: Array<{ code: LanguageCode; flag: string; label: string }> =
+    [
+        { code: "id", flag: "🇮🇩", label: "Indonesia" },
+        { code: "en", flag: "🇬🇧", label: "English" },
+        { code: "zh", flag: "🇨🇳", label: "中文" },
+    ];
 
 /* -------------------------------------------------------------------------
  * Props & constants
@@ -333,6 +360,29 @@ const getIconLabel = (key: string | null | undefined): string =>
     iconOptions.find((option) => option.key === toStringValue(key))?.label ??
     "Belum dipilih";
 
+const getLocalizedValue = (
+    item: KemudahanBerusaha,
+    field: "judul" | "ringkasan" | "deskripsi",
+): string => {
+    if (activeLanguage.value === "en") {
+        const value = item[`${field}_en` as keyof KemudahanBerusaha];
+        return toStringValue(value) || toStringValue(item[field]);
+    }
+
+    if (activeLanguage.value === "zh") {
+        const value = item[`${field}_zh` as keyof KemudahanBerusaha];
+        return toStringValue(value) || toStringValue(item[field]);
+    }
+
+    return toStringValue(item[field]);
+};
+
+const languageLabel = computed(
+    () =>
+        languageTabs.find((tab) => tab.code === activeLanguage.value)?.label ??
+        "Indonesia",
+);
+
 /* -------------------------------------------------------------------------
  * Search
  * ---------------------------------------------------------------------- */
@@ -425,7 +475,7 @@ const goToPage = (url: string | null): void => {
 
     router.get(
         url,
-        {},
+        search.value.trim() ? { search: search.value.trim() } : {},
         {
             preserveState: true,
             preserveScroll: true,
@@ -472,14 +522,25 @@ const showDetailModal = ref(false);
 const showDeleteModal = ref(false);
 
 const modalMode = ref<"create" | "edit">("create");
+const activeLanguage = ref<LanguageCode>("id");
 
 const selectedItem = ref<KemudahanBerusaha | null>(null);
 
+const changeLanguage = (language: LanguageCode): void => {
+    activeLanguage.value = language;
+};
+
 const emptyForm = (): FormState => ({
     judul: "",
+    judul_en: "",
+    judul_zh: "",
     slug: "",
     ringkasan: "",
+    ringkasan_en: "",
+    ringkasan_zh: "",
     deskripsi: "",
+    deskripsi_en: "",
+    deskripsi_zh: "",
     ikon: "",
     aktif: true,
 });
@@ -543,6 +604,7 @@ const openCreate = (): void => {
 
     modalMode.value = "create";
     selectedItem.value = null;
+    activeLanguage.value = "id";
 
     resetForm();
     closeAllModals();
@@ -557,13 +619,20 @@ const openEdit = (item: KemudahanBerusaha): void => {
 
     modalMode.value = "edit";
     selectedItem.value = item;
+    activeLanguage.value = "id";
     errors.value = {};
 
     void hydrateForm({
         judul: toStringValue(item.judul),
+        judul_en: toStringValue(item.judul_en),
+        judul_zh: toStringValue(item.judul_zh),
         slug: toStringValue(item.slug),
         ringkasan: toStringValue(item.ringkasan),
+        ringkasan_en: toStringValue(item.ringkasan_en),
+        ringkasan_zh: toStringValue(item.ringkasan_zh),
         deskripsi: toStringValue(item.deskripsi),
+        deskripsi_en: toStringValue(item.deskripsi_en),
+        deskripsi_zh: toStringValue(item.deskripsi_zh),
         ikon: toStringValue(item.ikon),
         aktif: Boolean(item.aktif),
     });
@@ -635,8 +704,14 @@ const submit = (): void => {
 
     const payload = {
         judul,
+        judul_en: toStringValue(form.value.judul_en) || null,
+        judul_zh: toStringValue(form.value.judul_zh) || null,
         ringkasan: toStringValue(form.value.ringkasan) || null,
+        ringkasan_en: toStringValue(form.value.ringkasan_en) || null,
+        ringkasan_zh: toStringValue(form.value.ringkasan_zh) || null,
         deskripsi: toStringValue(form.value.deskripsi) || null,
+        deskripsi_en: toStringValue(form.value.deskripsi_en) || null,
+        deskripsi_zh: toStringValue(form.value.deskripsi_zh) || null,
         ikon: toStringValue(form.value.ikon) || null,
         aktif: form.value.aktif,
     };
@@ -674,6 +749,7 @@ const submit = (): void => {
 
 const openDetail = (item: KemudahanBerusaha): void => {
     selectedItem.value = item;
+    activeLanguage.value = "id";
 
     closeAllModals();
 
@@ -1173,6 +1249,31 @@ onBeforeUnmount(() => {
                                                         {{ item.judul }}
                                                     </p>
 
+                                                    <div
+                                                        class="mt-1 flex flex-wrap gap-1.5"
+                                                    >
+                                                        <span
+                                                            v-if="
+                                                                item.judul_en ||
+                                                                item.ringkasan_en ||
+                                                                item.deskripsi_en
+                                                            "
+                                                            class="rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                                        >
+                                                            EN
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                item.judul_zh ||
+                                                                item.ringkasan_zh ||
+                                                                item.deskripsi_zh
+                                                            "
+                                                            class="rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-400"
+                                                        >
+                                                            中文
+                                                        </span>
+                                                    </div>
+
                                                     <p
                                                         class="mt-0.5 truncate text-xs text-blue-600 dark:text-blue-400"
                                                     >
@@ -1558,15 +1659,82 @@ onBeforeUnmount(() => {
                         <div
                             class="grid min-h-0 flex-1 gap-5 overflow-y-auto overscroll-contain p-4 sm:p-6"
                         >
+                            <!-- BAHASA -->
+                            <div>
+                                <div
+                                    class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div>
+                                        <span :class="labelClass"
+                                            >Bahasa Konten</span
+                                        >
+                                        <p
+                                            class="text-xs text-slate-400 dark:text-slate-500"
+                                        >
+                                            Bahasa Indonesia wajib diisi.
+                                            English dan 中文 bersifat opsional
+                                            dan akan fallback ke Bahasa
+                                            Indonesia di halaman publik.
+                                        </p>
+                                    </div>
+                                    <span
+                                        class="w-fit rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                                    >
+                                        {{ languageLabel }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800"
+                                >
+                                    <button
+                                        v-for="tab in languageTabs"
+                                        :key="tab.code"
+                                        type="button"
+                                        class="flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                        :class="
+                                            activeLanguage === tab.code
+                                                ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                                                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                        "
+                                        @click="changeLanguage(tab.code)"
+                                    >
+                                        <span>{{ tab.flag }}</span>
+                                        <span class="hidden sm:inline">{{
+                                            tab.label
+                                        }}</span>
+                                        <span
+                                            v-if="tab.code === 'id'"
+                                            class="text-red-500"
+                                            >*</span
+                                        >
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- JUDUL -->
                             <div>
-                                <label for="f-judul" :class="labelClass">
+                                <label
+                                    :for="`f-judul-${activeLanguage}`"
+                                    :class="labelClass"
+                                >
                                     Judul
-                                    <span class="text-red-500"> * </span>
+                                    {{
+                                        activeLanguage === "id"
+                                            ? ""
+                                            : `(${languageLabel})`
+                                    }}
+                                    <span
+                                        v-if="activeLanguage === 'id'"
+                                        class="text-red-500"
+                                    >
+                                        *</span
+                                    >
                                 </label>
 
                                 <input
-                                    id="f-judul"
+                                    v-if="activeLanguage === 'id'"
+                                    id="f-judul-id"
                                     v-model="form.judul"
                                     type="text"
                                     maxlength="255"
@@ -1578,25 +1746,71 @@ onBeforeUnmount(() => {
                                         errors.judul && inputErrorClass,
                                     ]"
                                 />
+                                <input
+                                    v-else-if="activeLanguage === 'en'"
+                                    id="f-judul-en"
+                                    v-model="form.judul_en"
+                                    type="text"
+                                    maxlength="255"
+                                    autocomplete="off"
+                                    placeholder="Example: Integrated Licensing Service"
+                                    :class="[
+                                        inputClass,
+                                        errors.judul_en && inputErrorClass,
+                                    ]"
+                                />
+                                <input
+                                    v-else
+                                    id="f-judul-zh"
+                                    v-model="form.judul_zh"
+                                    type="text"
+                                    maxlength="255"
+                                    autocomplete="off"
+                                    placeholder="例如：一站式综合许可服务"
+                                    :class="[
+                                        inputClass,
+                                        errors.judul_zh && inputErrorClass,
+                                    ]"
+                                />
 
-                                <p v-if="errors.judul" :class="errorClass">
+                                <p
+                                    v-if="
+                                        activeLanguage === 'id' && errors.judul
+                                    "
+                                    :class="errorClass"
+                                >
                                     {{ errors.judul }}
+                                </p>
+                                <p
+                                    v-else-if="
+                                        activeLanguage === 'en' &&
+                                        errors.judul_en
+                                    "
+                                    :class="errorClass"
+                                >
+                                    {{ errors.judul_en }}
+                                </p>
+                                <p
+                                    v-else-if="
+                                        activeLanguage === 'zh' &&
+                                        errors.judul_zh
+                                    "
+                                    :class="errorClass"
+                                >
+                                    {{ errors.judul_zh }}
                                 </p>
                             </div>
 
                             <!-- SLUG -->
                             <div>
-                                <label for="f-slug" :class="labelClass">
-                                    Slug
-                                </label>
-
+                                <label for="f-slug" :class="labelClass"
+                                    >Slug</label
+                                >
                                 <div class="relative">
                                     <span
                                         class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"
+                                        >/</span
                                     >
-                                        /
-                                    </span>
-
                                     <input
                                         id="f-slug"
                                         v-model="form.slug"
@@ -1608,23 +1822,18 @@ onBeforeUnmount(() => {
                                         class="min-h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-2.5 pl-8 pr-4 text-sm text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400"
                                     />
                                 </div>
-
                                 <p
                                     class="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-slate-400 dark:text-slate-500"
                                 >
                                     <span
                                         class="mt-1.5 inline-flex size-1.5 shrink-0 rounded-full bg-blue-500"
                                     />
-
-                                    <span>
-                                        {{
-                                            modalMode === "edit"
-                                                ? "Slug tidak berubah saat edit agar tautan yang sudah dibagikan tetap berfungsi."
-                                                : "Slug dibuat otomatis oleh sistem berdasarkan judul. Slug final dapat berbeda jika sudah digunakan."
-                                        }}
-                                    </span>
+                                    <span>{{
+                                        modalMode === "edit"
+                                            ? "Slug tidak berubah saat edit agar tautan yang sudah dibagikan tetap berfungsi."
+                                            : "Slug dibuat otomatis berdasarkan judul Bahasa Indonesia."
+                                    }}</span>
                                 </p>
-
                                 <p v-if="errors.slug" :class="errorClass">
                                     {{ errors.slug }}
                                 </p>
@@ -1632,8 +1841,7 @@ onBeforeUnmount(() => {
 
                             <!-- IKON -->
                             <div>
-                                <span :class="labelClass"> Ikon </span>
-
+                                <span :class="labelClass">Ikon</span>
                                 <div
                                     role="radiogroup"
                                     aria-label="Pilih ikon"
@@ -1659,15 +1867,12 @@ onBeforeUnmount(() => {
                                             :is="option.component"
                                             class="size-5"
                                         />
-
                                         <span
                                             class="w-full truncate text-center"
+                                            >{{ option.label }}</span
                                         >
-                                            {{ option.label }}
-                                        </span>
                                     </button>
                                 </div>
-
                                 <p
                                     class="mt-2 text-xs text-slate-400 dark:text-slate-500"
                                 >
@@ -1677,7 +1882,6 @@ onBeforeUnmount(() => {
                                             : "Belum ada ikon dipilih. Ikon dokumen dipakai sebagai bawaan."
                                     }}
                                 </p>
-
                                 <p v-if="errors.ikon" :class="errorClass">
                                     {{ errors.ikon }}
                                 </p>
@@ -1685,12 +1889,19 @@ onBeforeUnmount(() => {
 
                             <!-- RINGKASAN -->
                             <div>
-                                <label for="f-ringkasan" :class="labelClass">
-                                    Ringkasan
-                                </label>
-
+                                <label
+                                    :for="`f-ringkasan-${activeLanguage}`"
+                                    :class="labelClass"
+                                    >Ringkasan
+                                    {{
+                                        activeLanguage === "id"
+                                            ? ""
+                                            : `(${languageLabel})`
+                                    }}</label
+                                >
                                 <textarea
-                                    id="f-ringkasan"
+                                    v-if="activeLanguage === 'id'"
+                                    id="f-ringkasan-id"
                                     v-model="form.ringkasan"
                                     rows="3"
                                     maxlength="1000"
@@ -1701,26 +1912,87 @@ onBeforeUnmount(() => {
                                         errors.ringkasan && inputErrorClass,
                                     ]"
                                 />
-
+                                <textarea
+                                    v-else-if="activeLanguage === 'en'"
+                                    id="f-ringkasan-en"
+                                    v-model="form.ringkasan_en"
+                                    rows="3"
+                                    maxlength="1000"
+                                    placeholder="Short description shown on the public card..."
+                                    :class="[
+                                        inputClass,
+                                        'resize-none leading-6',
+                                        errors.ringkasan_en && inputErrorClass,
+                                    ]"
+                                />
+                                <textarea
+                                    v-else
+                                    id="f-ringkasan-zh"
+                                    v-model="form.ringkasan_zh"
+                                    rows="3"
+                                    maxlength="1000"
+                                    placeholder="显示在公共页面卡片上的简短说明..."
+                                    :class="[
+                                        inputClass,
+                                        'resize-none leading-6',
+                                        errors.ringkasan_zh && inputErrorClass,
+                                    ]"
+                                />
                                 <p
                                     class="mt-1 text-right text-xs text-slate-400 dark:text-slate-500"
                                 >
-                                    {{ form.ringkasan.length }}/1000
+                                    {{
+                                        activeLanguage === "id"
+                                            ? form.ringkasan.length
+                                            : activeLanguage === "en"
+                                              ? form.ringkasan_en.length
+                                              : form.ringkasan_zh.length
+                                    }}/1000
                                 </p>
-
-                                <p v-if="errors.ringkasan" :class="errorClass">
+                                <p
+                                    v-if="
+                                        activeLanguage === 'id' &&
+                                        errors.ringkasan
+                                    "
+                                    :class="errorClass"
+                                >
                                     {{ errors.ringkasan }}
+                                </p>
+                                <p
+                                    v-else-if="
+                                        activeLanguage === 'en' &&
+                                        errors.ringkasan_en
+                                    "
+                                    :class="errorClass"
+                                >
+                                    {{ errors.ringkasan_en }}
+                                </p>
+                                <p
+                                    v-else-if="
+                                        activeLanguage === 'zh' &&
+                                        errors.ringkasan_zh
+                                    "
+                                    :class="errorClass"
+                                >
+                                    {{ errors.ringkasan_zh }}
                                 </p>
                             </div>
 
                             <!-- DESKRIPSI -->
                             <div>
-                                <label for="f-deskripsi" :class="labelClass">
-                                    Deskripsi
-                                </label>
-
+                                <label
+                                    :for="`f-deskripsi-${activeLanguage}`"
+                                    :class="labelClass"
+                                    >Deskripsi
+                                    {{
+                                        activeLanguage === "id"
+                                            ? ""
+                                            : `(${languageLabel})`
+                                    }}</label
+                                >
                                 <textarea
-                                    id="f-deskripsi"
+                                    v-if="activeLanguage === 'id'"
+                                    id="f-deskripsi-id"
                                     v-model="form.deskripsi"
                                     rows="8"
                                     maxlength="20000"
@@ -1731,9 +2003,58 @@ onBeforeUnmount(() => {
                                         errors.deskripsi && inputErrorClass,
                                     ]"
                                 />
-
-                                <p v-if="errors.deskripsi" :class="errorClass">
+                                <textarea
+                                    v-else-if="activeLanguage === 'en'"
+                                    id="f-deskripsi-en"
+                                    v-model="form.deskripsi_en"
+                                    rows="8"
+                                    maxlength="20000"
+                                    placeholder="Write the complete explanation of this ease of doing business item..."
+                                    :class="[
+                                        inputClass,
+                                        'resize-y leading-6',
+                                        errors.deskripsi_en && inputErrorClass,
+                                    ]"
+                                />
+                                <textarea
+                                    v-else
+                                    id="f-deskripsi-zh"
+                                    v-model="form.deskripsi_zh"
+                                    rows="8"
+                                    maxlength="20000"
+                                    placeholder="填写此营商便利项目的完整说明..."
+                                    :class="[
+                                        inputClass,
+                                        'resize-y leading-6',
+                                        errors.deskripsi_zh && inputErrorClass,
+                                    ]"
+                                />
+                                <p
+                                    v-if="
+                                        activeLanguage === 'id' &&
+                                        errors.deskripsi
+                                    "
+                                    :class="errorClass"
+                                >
                                     {{ errors.deskripsi }}
+                                </p>
+                                <p
+                                    v-else-if="
+                                        activeLanguage === 'en' &&
+                                        errors.deskripsi_en
+                                    "
+                                    :class="errorClass"
+                                >
+                                    {{ errors.deskripsi_en }}
+                                </p>
+                                <p
+                                    v-else-if="
+                                        activeLanguage === 'zh' &&
+                                        errors.deskripsi_zh
+                                    "
+                                    :class="errorClass"
+                                >
+                                    {{ errors.deskripsi_zh }}
                                 </p>
                             </div>
 
@@ -1876,7 +2197,7 @@ onBeforeUnmount(() => {
                             <h3
                                 class="min-w-0 break-words text-xl font-semibold tracking-tight text-slate-900 dark:text-white"
                             >
-                                {{ selectedItem.judul }}
+                                {{ getLocalizedValue(selectedItem, "judul") }}
                             </h3>
 
                             <span
@@ -1923,17 +2244,44 @@ onBeforeUnmount(() => {
                         </div>
 
                         <div class="mt-5">
+                            <div
+                                class="mb-3 grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800"
+                            >
+                                <button
+                                    v-for="tab in languageTabs"
+                                    :key="`detail-${tab.code}`"
+                                    type="button"
+                                    class="flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                    :class="
+                                        activeLanguage === tab.code
+                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                    "
+                                    @click="changeLanguage(tab.code)"
+                                >
+                                    <span>{{ tab.flag }}</span>
+                                    <span class="hidden sm:inline">{{
+                                        tab.label
+                                    }}</span>
+                                </button>
+                            </div>
+
                             <h4
                                 class="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200"
                             >
-                                Ringkasan
+                                Ringkasan · {{ languageLabel }}
                             </h4>
 
                             <div
                                 class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
                             >
                                 <p class="whitespace-pre-line break-words">
-                                    {{ selectedItem.ringkasan || "-" }}
+                                    {{
+                                        getLocalizedValue(
+                                            selectedItem,
+                                            "ringkasan",
+                                        ) || "-"
+                                    }}
                                 </p>
                             </div>
                         </div>
@@ -1942,14 +2290,19 @@ onBeforeUnmount(() => {
                             <h4
                                 class="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200"
                             >
-                                Deskripsi
+                                Deskripsi · {{ languageLabel }}
                             </h4>
 
                             <div
                                 class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
                             >
                                 <p class="whitespace-pre-line break-words">
-                                    {{ selectedItem.deskripsi || "-" }}
+                                    {{
+                                        getLocalizedValue(
+                                            selectedItem,
+                                            "deskripsi",
+                                        ) || "-"
+                                    }}
                                 </p>
                             </div>
                         </div>

@@ -50,12 +50,20 @@ interface StatusObject {
 interface PeluangInvestasi {
     id: number;
     judul: string;
+    judul_en: string | null;
+    judul_zh: string | null;
     slug: string;
     sektor_industri: string | null;
+    sektor_industri_en: string | null;
+    sektor_industri_zh: string | null;
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
     luas_lahan: string | number | null;
     satuan_luas: string;
     lokasi: string | null;
+    lokasi_en: string | null;
+    lokasi_zh: string | null;
 
     /**
      * Laravel bisa mengirim:
@@ -106,15 +114,24 @@ interface PeluangInvestasiPagination {
 
 interface FormErrors {
     judul?: string;
+    judul_en?: string;
+    judul_zh?: string;
     slug?: string;
     sektor_industri?: string;
+    sektor_industri_en?: string;
+    sektor_industri_zh?: string;
     deskripsi?: string;
+    deskripsi_en?: string;
+    deskripsi_zh?: string;
     luas_lahan?: string;
     satuan_luas?: string;
     lokasi?: string;
+    lokasi_en?: string;
+    lokasi_zh?: string;
     status?: string;
     nilai_investasi?: string;
     mata_uang?: string;
+    urutan?: string;
     gambar?: string;
     hapus_gambar?: string;
     aktif?: string;
@@ -183,13 +200,13 @@ const cardClass =
     "rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/20";
 
 const modalBackdropClass =
-    "fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-3 sm:p-4";
+    "fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 backdrop-blur-sm sm:p-4";
 
 const modalCardClass =
     "my-auto flex max-h-[calc(100dvh-1.5rem)] w-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40";
 
 const closeBtnClass =
-    "shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200";
+    "shrink-0 rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200";
 
 const secondaryBtnClass =
     "min-h-11 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800";
@@ -306,6 +323,102 @@ const isFirstItem = (index: number): boolean => getRowNumber(index) <= 1;
 
 const isLastItem = (index: number): boolean =>
     getRowNumber(index) >= total.value;
+
+/* -------------------------------------------------------------------------
+ * Multilingual helpers
+ * ---------------------------------------------------------------------- */
+type LanguageCode = "id" | "en" | "zh";
+
+const languageTabs: { code: LanguageCode; flag: string; label: string }[] = [
+    { code: "id", flag: "🇮🇩", label: "Indonesia" },
+    { code: "en", flag: "🇬🇧", label: "English" },
+    { code: "zh", flag: "🇨🇳", label: "中文" },
+];
+
+const activeLanguage = ref<LanguageCode>("id");
+const detailLanguage = ref<LanguageCode>("id");
+
+const fieldKey = (
+    field: "judul" | "sektor_industri" | "deskripsi" | "lokasi",
+    lang: LanguageCode,
+): string => (lang === "id" ? field : `${field}_${lang}`);
+
+const languageLabel = computed(
+    () =>
+        languageTabs.find((tab) => tab.code === activeLanguage.value)?.label ??
+        "Indonesia",
+);
+
+const hasLanguageError = (lang: LanguageCode): boolean => {
+    const record = errors.value as Record<string, string | undefined>;
+
+    return Boolean(
+        record[fieldKey("judul", lang)] ||
+        record[fieldKey("sektor_industri", lang)] ||
+        record[fieldKey("deskripsi", lang)] ||
+        record[fieldKey("lokasi", lang)],
+    );
+};
+
+const focusFirstErrorLanguage = (): void => {
+    const firstWithError = languageTabs.find((tab) =>
+        hasLanguageError(tab.code),
+    );
+
+    if (firstWithError) {
+        activeLanguage.value = firstWithError.code;
+    }
+};
+
+const getFormValue = (
+    field: "judul" | "sektor_industri" | "deskripsi" | "lokasi",
+    lang: LanguageCode,
+): string => {
+    const key = fieldKey(field, lang) as keyof FormState;
+    return toStringValue(form.value[key]);
+};
+
+const setFormValue = (
+    field: "judul" | "sektor_industri" | "deskripsi" | "lokasi",
+    lang: LanguageCode,
+    value: string,
+): void => {
+    const key = fieldKey(field, lang) as keyof FormState;
+    form.value[key] = value as never;
+};
+
+const getFormError = (
+    field: "judul" | "sektor_industri" | "deskripsi" | "lokasi",
+    lang: LanguageCode,
+): string | undefined => {
+    const key = fieldKey(field, lang) as keyof FormErrors;
+    return errors.value[key];
+};
+
+const getLanguageValue = (
+    item: PeluangInvestasi,
+    field: "judul" | "sektor_industri" | "deskripsi" | "lokasi",
+    lang: LanguageCode,
+): string => {
+    const record = item as unknown as Record<string, unknown>;
+    const value = record[fieldKey(field, lang)];
+
+    return toStringValue(value);
+};
+
+const getDisplayLanguageValue = (
+    item: PeluangInvestasi,
+    field: "judul" | "sektor_industri" | "deskripsi" | "lokasi",
+    lang: LanguageCode,
+): string => {
+    const translated = getLanguageValue(item, field, lang);
+
+    if (translated) {
+        return translated;
+    }
+
+    return lang === "id" ? "-" : getLanguageValue(item, field, "id") || "-";
+};
 
 /* -------------------------------------------------------------------------
  * Page loading
@@ -897,15 +1010,24 @@ const selectedPeluangInvestasi = ref<PeluangInvestasi | null>(null);
 
 const emptyForm = () => ({
     judul: "",
+    judul_en: "",
+    judul_zh: "",
     slug: "",
     sektor_industri: "",
+    sektor_industri_en: "",
+    sektor_industri_zh: "",
     deskripsi: "",
+    deskripsi_en: "",
+    deskripsi_zh: "",
     luas_lahan: "",
     satuan_luas: "Ha",
     lokasi: "",
+    lokasi_en: "",
+    lokasi_zh: "",
     status: "tersedia",
     nilai_investasi: "",
     mata_uang: "IDR",
+    urutan: "0",
     gambar: null as File | null,
     aktif: true,
 });
@@ -1013,6 +1135,7 @@ const hydrateForm = (data: FormState): void => {
 };
 
 const resetForm = (): void => {
+    activeLanguage.value = "id";
     revokePreview();
     resetImageState();
 
@@ -1080,30 +1203,29 @@ const openEdit = (item: PeluangInvestasi): void => {
 
     hydrateForm({
         judul: toStringValue(item.judul),
-
+        judul_en: toStringValue(item.judul_en),
+        judul_zh: toStringValue(item.judul_zh),
         slug: toStringValue(item.slug),
-
         sektor_industri: toStringValue(item.sektor_industri),
-
+        sektor_industri_en: toStringValue(item.sektor_industri_en),
+        sektor_industri_zh: toStringValue(item.sektor_industri_zh),
         deskripsi: toStringValue(item.deskripsi),
-
+        deskripsi_en: toStringValue(item.deskripsi_en),
+        deskripsi_zh: toStringValue(item.deskripsi_zh),
         luas_lahan: toStringValue(item.luas_lahan),
-
         satuan_luas: toStringValue(item.satuan_luas) || "Ha",
-
         lokasi: toStringValue(item.lokasi),
-
+        lokasi_en: toStringValue(item.lokasi_en),
+        lokasi_zh: toStringValue(item.lokasi_zh),
         status: normalizeStatusValue(item.status) || "tersedia",
-
         nilai_investasi: toStringValue(item.nilai_investasi),
-
         mata_uang: toStringValue(item.mata_uang).toUpperCase() || "IDR",
-
+        urutan: toStringValue(item.urutan) || "0",
         gambar: null,
-
         aktif: Boolean(item.aktif),
     });
 
+    activeLanguage.value = "id";
     existingImage.value = typeof item.gambar === "string" ? item.gambar : null;
 
     closeAllModals();
@@ -1257,35 +1379,28 @@ const submit = (): void => {
     }
 
     errors.value = {};
-
     uploadProgress.value = null;
 
     const judul = toStringValue(form.value.judul);
-
+    const judulEn = toStringValue(form.value.judul_en);
+    const judulZh = toStringValue(form.value.judul_zh);
     const luasLahan = toStringValue(form.value.luas_lahan);
-
     const nilaiInvestasi = toStringValue(form.value.nilai_investasi);
-
     const satuanLuas = toStringValue(form.value.satuan_luas) || "Ha";
-
     const mataUang = toStringValue(form.value.mata_uang).toUpperCase() || "IDR";
-
     const status = normalizeStatusValue(form.value.status) || "tersedia";
-
-    /* ---------------------------------
-     * Client-side validation
-     * -------------------------------- */
+    const urutan = toStringValue(form.value.urutan) || "0";
 
     if (!judul) {
         errors.value.judul = "Judul peluang investasi wajib diisi.";
-
+        activeLanguage.value = "id";
         return;
     }
 
     if (!slugify(judul)) {
         errors.value.judul =
             "Judul harus mengandung huruf atau angka agar slug dapat dibuat.";
-
+        activeLanguage.value = "id";
         return;
     }
 
@@ -1295,7 +1410,6 @@ const submit = (): void => {
     ) {
         errors.value.luas_lahan =
             "Luas lahan harus berupa angka tidak negatif.";
-
         return;
     }
 
@@ -1305,45 +1419,49 @@ const submit = (): void => {
     ) {
         errors.value.nilai_investasi =
             "Nilai investasi harus berupa angka tidak negatif.";
+        return;
+    }
 
+    if (!Number.isInteger(Number(urutan)) || Number(urutan) < 0) {
+        errors.value.urutan =
+            "Urutan harus berupa bilangan bulat tidak negatif.";
         return;
     }
 
     const isEdit =
         modalMode.value === "edit" && selectedPeluangInvestasi.value !== null;
 
-    /* ---------------------------------
-     * FormData
-     * -------------------------------- */
-
     const formData = new FormData();
 
     formData.append("judul", judul);
-
+    formData.append("slug", toStringValue(form.value.slug));
+    formData.append("judul_en", judulEn);
+    formData.append("judul_zh", judulZh);
     formData.append(
         "sektor_industri",
         toStringValue(form.value.sektor_industri),
     );
-
+    formData.append(
+        "sektor_industri_en",
+        toStringValue(form.value.sektor_industri_en),
+    );
+    formData.append(
+        "sektor_industri_zh",
+        toStringValue(form.value.sektor_industri_zh),
+    );
     formData.append("deskripsi", toStringValue(form.value.deskripsi));
-
-    formData.append("luas_lahan", luasLahan);
-
-    formData.append("satuan_luas", satuanLuas);
-
+    formData.append("deskripsi_en", toStringValue(form.value.deskripsi_en));
+    formData.append("deskripsi_zh", toStringValue(form.value.deskripsi_zh));
     formData.append("lokasi", toStringValue(form.value.lokasi));
-
+    formData.append("lokasi_en", toStringValue(form.value.lokasi_en));
+    formData.append("lokasi_zh", toStringValue(form.value.lokasi_zh));
+    formData.append("luas_lahan", luasLahan);
+    formData.append("satuan_luas", satuanLuas);
     formData.append("status", status);
-
     formData.append("nilai_investasi", nilaiInvestasi);
-
     formData.append("mata_uang", mataUang);
-
+    formData.append("urutan", urutan);
     formData.append("aktif", form.value.aktif ? "1" : "0");
-
-    /* ---------------------------------
-     * Image
-     * -------------------------------- */
 
     const hasNewImage = form.value.gambar instanceof File;
 
@@ -1351,35 +1469,21 @@ const submit = (): void => {
         formData.append("gambar", form.value.gambar as File);
     }
 
-    /* ---------------------------------
-     * Edit method spoofing
-     * -------------------------------- */
-
     if (isEdit) {
         formData.append("_method", "PUT");
 
-        /**
-         * Hanya hapus gambar lama jika user memang menandainya
-         * dan tidak menggantinya dengan gambar baru.
-         */
         if (removedExistingImage.value && !hasNewImage) {
             formData.append("hapus_gambar", "1");
         }
     }
 
     const id = selectedPeluangInvestasi.value?.id;
-
     const url = isEdit && id ? `${BASE_URL}/${id}` : BASE_URL;
-
-    /* ---------------------------------
-     * Submit Inertia
-     * -------------------------------- */
 
     processing.value = true;
 
     router.post(url, formData, {
         forceFormData: true,
-
         preserveScroll: true,
 
         onStart: () => {
@@ -1398,23 +1502,19 @@ const submit = (): void => {
         },
 
         onError: (serverErrors) => {
-            console.error("Gagal menyimpan peluang investasi:", serverErrors);
-
             errors.value = serverErrors as FormErrors;
-
-            // Modal tetap terbuka supaya user dapat memperbaiki.
+            focusFirstErrorLanguage();
             showFormModal.value = true;
+            console.error("Gagal menyimpan peluang investasi:", serverErrors);
         },
 
         onCancel: () => {
             processing.value = false;
-
             uploadProgress.value = null;
         },
 
         onFinish: () => {
             processing.value = false;
-
             uploadProgress.value = null;
         },
     });
@@ -1426,6 +1526,7 @@ const submit = (): void => {
 
 const openDetail = (item: PeluangInvestasi): void => {
     selectedPeluangInvestasi.value = item;
+    detailLanguage.value = "id";
 
     closeAllModals();
 
@@ -1459,33 +1560,30 @@ const detailFields = computed<DetailField[]>(() => {
             icon: FileText,
             mono: true,
         },
-
         {
             label: "Sektor Industri",
-            value: toStringValue(item.sektor_industri) || "-",
+            value: getDisplayLanguageValue(
+                item,
+                "sektor_industri",
+                detailLanguage.value,
+            ),
             icon: BriefcaseBusiness,
         },
-
         {
             label: "Lokasi",
-            value: toStringValue(item.lokasi) || "-",
+            value: getDisplayLanguageValue(
+                item,
+                "lokasi",
+                detailLanguage.value,
+            ),
             icon: MapPin,
         },
-
-        {
-            label: "Urutan",
-            value: String(item.urutan),
-            icon: Hash,
-        },
-
+        { label: "Urutan", value: String(item.urutan), icon: Hash },
         {
             label: "Luas Lahan",
-            value: `${formatNumber(item.luas_lahan)} ${
-                toStringValue(item.satuan_luas) || "Ha"
-            }`,
+            value: `${formatNumber(item.luas_lahan)} ${toStringValue(item.satuan_luas) || "Ha"}`,
             icon: Ruler,
         },
-
         {
             label: "Nilai Investasi",
             value: formatInvestment(
@@ -1495,6 +1593,27 @@ const detailFields = computed<DetailField[]>(() => {
             icon: BriefcaseBusiness,
         },
     ];
+});
+
+const detailTitle = computed(() => {
+    const item = selectedPeluangInvestasi.value;
+    return item
+        ? getDisplayLanguageValue(item, "judul", detailLanguage.value)
+        : "-";
+});
+
+const detailSector = computed(() => {
+    const item = selectedPeluangInvestasi.value;
+    return item
+        ? getDisplayLanguageValue(item, "sektor_industri", detailLanguage.value)
+        : "-";
+});
+
+const detailDescription = computed(() => {
+    const item = selectedPeluangInvestasi.value;
+    return item
+        ? getDisplayLanguageValue(item, "deskripsi", detailLanguage.value)
+        : "-";
 });
 
 /* -------------------------------------------------------------------------
@@ -2435,453 +2554,725 @@ onBeforeUnmount(() => {
                         @submit.prevent="submit"
                     >
                         <div
-                            class="grid min-h-0 flex-1 gap-5 overflow-y-auto overscroll-contain p-4 sm:p-6 md:grid-cols-2"
+                            class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6"
                         >
-                            <!-- JUDUL -->
-                            <div class="md:col-span-2">
-                                <label for="f-judul" :class="labelClass">
-                                    Judul Peluang Investasi
-                                    <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    id="f-judul"
-                                    v-model="form.judul"
-                                    type="text"
-                                    maxlength="255"
-                                    required
-                                    placeholder="Contoh: Lahan Industri Tahap 1"
-                                    :class="[
-                                        inputClass,
-                                        errors.judul && inputErrorClass,
-                                    ]"
-                                />
-                                <p v-if="errors.judul" :class="errorClass">
-                                    {{ errors.judul }}
-                                </p>
-                            </div>
-
-                            <!-- SLUG -->
-                            <div class="md:col-span-2">
-                                <label for="f-slug" :class="labelClass"
-                                    >Slug</label
-                                >
-                                <div class="relative">
-                                    <span
-                                        class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"
-                                    >
-                                        /
-                                    </span>
-                                    <input
-                                        id="f-slug"
-                                        v-model="form.slug"
-                                        type="text"
-                                        readonly
-                                        disabled
-                                        tabindex="-1"
-                                        placeholder="slug-otomatis"
-                                        class="min-h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-2.5 pl-8 pr-4 text-sm text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400"
-                                    />
-                                </div>
-                                <p
-                                    class="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-slate-400 dark:text-slate-500"
-                                >
-                                    <span
-                                        class="mt-1.5 inline-flex size-1.5 shrink-0 rounded-full bg-blue-500"
-                                    ></span>
-                                    <span>
-                                        {{
-                                            modalMode === "edit"
-                                                ? "Slug tidak berubah saat edit agar tautan yang sudah dibagikan tetap berfungsi."
-                                                : "Slug dibuat otomatis oleh sistem berdasarkan judul. Slug final dapat berbeda jika sudah digunakan."
-                                        }}
-                                    </span>
-                                </p>
-                            </div>
-
-                            <!-- SEKTOR -->
-                            <div>
-                                <label for="f-sektor" :class="labelClass"
-                                    >Sektor Industri</label
-                                >
-                                <input
-                                    id="f-sektor"
-                                    v-model="form.sektor_industri"
-                                    type="text"
-                                    maxlength="255"
-                                    placeholder="Contoh: Industri Hilirisasi"
-                                    :class="[
-                                        inputClass,
-                                        errors.sektor_industri &&
-                                            inputErrorClass,
-                                    ]"
-                                />
-                                <p
-                                    v-if="errors.sektor_industri"
-                                    :class="errorClass"
-                                >
-                                    {{ errors.sektor_industri }}
-                                </p>
-                            </div>
-
-                            <!-- STATUS -->
-                            <div>
-                                <label for="f-status" :class="labelClass"
-                                    >Status Investasi</label
-                                >
-                                <select
-                                    id="f-status"
-                                    v-model="form.status"
-                                    :class="[
-                                        inputClass,
-                                        errors.status && inputErrorClass,
-                                    ]"
-                                >
-                                    <option
-                                        v-for="status in statusOptions"
-                                        :key="status.value"
-                                        :value="status.value"
-                                    >
-                                        {{ status.label }}
-                                    </option>
-                                </select>
-                                <p v-if="errors.status" :class="errorClass">
-                                    {{ errors.status }}
-                                </p>
-                            </div>
-
-                            <!-- LUAS -->
-                            <div>
-                                <label for="f-luas" :class="labelClass"
-                                    >Luas Lahan</label
-                                >
-                                <div class="flex gap-2">
-                                    <input
-                                        id="f-luas"
-                                        v-model="form.luas_lahan"
-                                        type="number"
-                                        inputmode="decimal"
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="0"
-                                        :class="[
-                                            inputClass,
-                                            'min-w-0 flex-1',
-                                            errors.luas_lahan &&
-                                                inputErrorClass,
-                                        ]"
-                                    />
-                                    <input
-                                        v-model="form.satuan_luas"
-                                        type="text"
-                                        maxlength="20"
-                                        placeholder="Ha"
-                                        aria-label="Satuan luas"
-                                        :class="[
-                                            smallInputClass,
-                                            errors.satuan_luas &&
-                                                inputErrorClass,
-                                        ]"
-                                    />
-                                </div>
-                                <p v-if="errors.luas_lahan" :class="errorClass">
-                                    {{ errors.luas_lahan }}
-                                </p>
-                                <p
-                                    v-if="errors.satuan_luas"
-                                    :class="errorClass"
-                                >
-                                    {{ errors.satuan_luas }}
-                                </p>
-                            </div>
-
-                            <!-- NILAI INVESTASI -->
-                            <div>
-                                <label for="f-nilai" :class="labelClass"
-                                    >Nilai Investasi</label
-                                >
-                                <div class="flex gap-2">
-                                    <input
-                                        id="f-nilai"
-                                        v-model="form.nilai_investasi"
-                                        type="number"
-                                        inputmode="decimal"
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="0"
-                                        :class="[
-                                            inputClass,
-                                            'min-w-0 flex-1',
-                                            errors.nilai_investasi &&
-                                                inputErrorClass,
-                                        ]"
-                                    />
-                                    <input
-                                        v-model="form.mata_uang"
-                                        type="text"
-                                        maxlength="10"
-                                        placeholder="IDR"
-                                        aria-label="Mata uang"
-                                        :class="[
-                                            smallInputClass,
-                                            'uppercase',
-                                            errors.mata_uang && inputErrorClass,
-                                        ]"
-                                    />
-                                </div>
-                                <p
-                                    v-if="errors.nilai_investasi"
-                                    :class="errorClass"
-                                >
-                                    {{ errors.nilai_investasi }}
-                                </p>
-                                <p v-if="errors.mata_uang" :class="errorClass">
-                                    {{ errors.mata_uang }}
-                                </p>
-                            </div>
-
-                            <!-- LOKASI -->
-                            <div class="md:col-span-2">
-                                <label for="f-lokasi" :class="labelClass"
-                                    >Lokasi</label
-                                >
-                                <input
-                                    id="f-lokasi"
-                                    v-model="form.lokasi"
-                                    type="text"
-                                    maxlength="255"
-                                    placeholder="Contoh: Zona Industri Utama KITB"
-                                    :class="[
-                                        inputClass,
-                                        errors.lokasi && inputErrorClass,
-                                    ]"
-                                />
-                                <p v-if="errors.lokasi" :class="errorClass">
-                                    {{ errors.lokasi }}
-                                </p>
-                            </div>
-
-                            <!-- AKTIF -->
-                            <div>
-                                <span :class="labelClass"
-                                    >Status Publikasi</span
-                                >
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    :aria-checked="form.aktif"
-                                    class="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                                    :class="
-                                        form.aktif
-                                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400'
-                                            : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
-                                    "
-                                    @click="form.aktif = !form.aktif"
-                                >
-                                    <span class="flex items-center gap-2">
-                                        <ToggleRight
-                                            v-if="form.aktif"
-                                            class="size-5 shrink-0"
-                                        />
-                                        <ToggleLeft
-                                            v-else
-                                            class="size-5 shrink-0"
-                                        />
-                                        {{
-                                            form.aktif
-                                                ? "Data Aktif"
-                                                : "Data Nonaktif"
-                                        }}
-                                    </span>
-                                    <span
-                                        class="hidden text-xs opacity-70 sm:inline"
-                                        >Klik untuk ubah</span
-                                    >
-                                </button>
-                                <p v-if="errors.aktif" :class="errorClass">
-                                    {{ errors.aktif }}
-                                </p>
-                            </div>
-
-                            <!-- DESKRIPSI -->
-                            <div class="md:col-span-2">
-                                <label for="f-deskripsi" :class="labelClass"
-                                    >Deskripsi</label
-                                >
-                                <textarea
-                                    id="f-deskripsi"
-                                    v-model="form.deskripsi"
-                                    rows="6"
-                                    maxlength="10000"
-                                    placeholder="Tuliskan informasi lengkap mengenai peluang investasi..."
-                                    :class="[
-                                        inputClass,
-                                        'resize-none leading-6',
-                                        errors.deskripsi && inputErrorClass,
-                                    ]"
-                                ></textarea>
-                                <p v-if="errors.deskripsi" :class="errorClass">
-                                    {{ errors.deskripsi }}
-                                </p>
-                            </div>
-
-                            <!-- GAMBAR -->
-                            <div class="md:col-span-2">
-                                <span :class="labelClass"
-                                    >Gambar Peluang Investasi</span
-                                >
-
+                            <!-- LANGUAGE TABS -->
+                            <div
+                                class="mb-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 dark:border-slate-700 dark:bg-slate-800/50"
+                            >
                                 <div
-                                    class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-3 sm:p-4 dark:border-slate-700 dark:bg-slate-800/50"
+                                    class="grid grid-cols-3 gap-1"
+                                    role="tablist"
                                 >
-                                    <!-- PREVIEW -->
-                                    <div v-if="displayImage" class="mb-4">
-                                        <div
-                                            class="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
-                                        >
-                                            <img
-                                                :src="displayImage"
-                                                alt="Preview gambar"
-                                                class="h-64 w-full bg-slate-100 object-contain sm:h-80 dark:bg-slate-800"
-                                                @error="handleImageError"
-                                            />
+                                    <button
+                                        v-for="tab in languageTabs"
+                                        :key="tab.code"
+                                        type="button"
+                                        role="tab"
+                                        :aria-selected="
+                                            activeLanguage === tab.code
+                                        "
+                                        class="relative rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                        :class="
+                                            activeLanguage === tab.code
+                                                ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                                                : hasLanguageError(tab.code)
+                                                  ? 'text-red-600 hover:bg-white/70 dark:text-red-400 dark:hover:bg-slate-700/50'
+                                                  : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200'
+                                        "
+                                        @click="activeLanguage = tab.code"
+                                    >
+                                        {{ tab.flag }} {{ tab.label }}
+                                        <span
+                                            v-if="hasLanguageError(tab.code)"
+                                            class="absolute right-2 top-2 size-2 rounded-full bg-red-500"
+                                            aria-label="Ada kesalahan pada bahasa ini"
+                                        ></span>
+                                    </button>
+                                </div>
+                            </div>
 
-                                            <span
-                                                v-if="previewUrl"
-                                                class="absolute left-3 top-3 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-medium text-white shadow"
-                                            >
-                                                Gambar baru
-                                            </span>
-
-                                            <button
-                                                type="button"
-                                                :disabled="processing"
-                                                :title="
-                                                    previewUrl
-                                                        ? 'Batalkan gambar baru'
-                                                        : 'Hapus gambar'
-                                                "
-                                                :aria-label="
-                                                    previewUrl
-                                                        ? 'Batalkan gambar baru'
-                                                        : 'Hapus gambar'
-                                                "
-                                                class="absolute right-3 top-3 rounded-lg bg-red-600 p-2 text-white shadow-lg transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 disabled:opacity-50"
-                                                @click="
-                                                    previewUrl
-                                                        ? removeSelectedImage()
-                                                        : removeExistingImage()
-                                                "
-                                            >
-                                                <Trash2 class="size-4" />
-                                            </button>
-                                        </div>
-
+                            <!-- LANGUAGE NOTICE -->
+                            <div class="mb-5">
+                                <div
+                                    class="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/20"
+                                >
+                                    <div
+                                        class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+                                    >
+                                        <Check class="size-4" />
+                                    </div>
+                                    <div>
                                         <p
-                                            v-if="imageInfo"
-                                            class="mt-2 text-xs text-slate-500 dark:text-slate-400"
+                                            class="text-sm font-semibold text-blue-800 dark:text-blue-300"
                                         >
-                                            {{ imageInfo.width }}×{{
-                                                imageInfo.height
-                                            }}px ·
-                                            {{ formatBytes(imageInfo.size) }}
-                                            <span
-                                                v-if="
-                                                    imageInfo.size <
-                                                    imageInfo.originalSize
-                                                "
-                                            >
-                                                (dikompres dari
-                                                {{
-                                                    formatBytes(
-                                                        imageInfo.originalSize,
-                                                    )
-                                                }})
-                                            </span>
+                                            {{ languageLabel }}
+                                        </p>
+                                        <p
+                                            class="mt-0.5 text-xs leading-5 text-blue-600/80 dark:text-blue-400/80"
+                                        >
+                                            Isi judul, sektor, lokasi, dan
+                                            deskripsi sesuai bahasa yang sedang
+                                            dipilih.
                                         </p>
                                     </div>
+                                </div>
+                            </div>
 
-                                    <!-- GAMBAR LAMA DITANDAI HAPUS -->
+                            <!-- TRANSLATED CONTENT -->
+                            <div class="grid gap-5 md:grid-cols-2">
+                                <div class="md:col-span-2">
                                     <div
-                                        v-else-if="removedExistingImage"
-                                        class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+                                        class="mb-4 flex items-center justify-between gap-3"
                                     >
+                                        <div>
+                                            <p
+                                                class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                                            >
+                                                Konten {{ languageLabel }}
+                                            </p>
+                                            <p
+                                                class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
+                                            >
+                                                Isi informasi peluang investasi
+                                                sesuai bahasa yang dipilih.
+                                            </p>
+                                        </div>
                                         <span
-                                            >Gambar saat ini akan dihapus saat
-                                            disimpan.</span
+                                            v-if="activeLanguage === 'id'"
+                                            class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
                                         >
-                                        <button
-                                            type="button"
-                                            :disabled="processing"
-                                            class="shrink-0 font-medium underline underline-offset-2 disabled:opacity-50"
-                                            @click="restoreExistingImage"
-                                        >
-                                            Batalkan
-                                        </button>
+                                            Utama
+                                        </span>
                                     </div>
+                                </div>
 
-                                    <!-- DROPZONE -->
+                                <!-- JUDUL -->
+                                <div class="md:col-span-2">
                                     <label
-                                        class="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-xl border px-4 py-7 text-center transition focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10"
+                                        :for="`f-judul-${activeLanguage}`"
+                                        :class="labelClass"
+                                    >
+                                        Judul Peluang Investasi
+                                        <span
+                                            v-if="activeLanguage === 'id'"
+                                            class="text-red-500"
+                                            >*</span
+                                        >
+                                    </label>
+                                    <input
+                                        :id="`f-judul-${activeLanguage}`"
+                                        :value="
+                                            getFormValue(
+                                                'judul',
+                                                activeLanguage,
+                                            )
+                                        "
+                                        @input="
+                                            setFormValue(
+                                                'judul',
+                                                activeLanguage,
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).value,
+                                            )
+                                        "
+                                        type="text"
+                                        maxlength="255"
+                                        :required="activeLanguage === 'id'"
+                                        :placeholder="
+                                            activeLanguage === 'id'
+                                                ? 'Contoh: Lahan Industri Tahap 1'
+                                                : activeLanguage === 'en'
+                                                  ? 'Example: Industrial Land Phase 1'
+                                                  : '例如：第一阶段工业用地'
+                                        "
                                         :class="[
-                                            isDragging
-                                                ? 'border-blue-500 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/30'
-                                                : 'border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-600 dark:hover:bg-blue-950/20',
-                                            (processing || isProcessingImage) &&
-                                                'pointer-events-none opacity-70',
+                                            inputClass,
+                                            getFormError(
+                                                'judul',
+                                                activeLanguage,
+                                            ) && inputErrorClass,
                                         ]"
-                                        @dragenter.prevent="isDragging = true"
-                                        @dragover.prevent="isDragging = true"
-                                        @dragleave.prevent="isDragging = false"
-                                        @drop.prevent="handleDrop"
+                                    />
+                                    <p
+                                        v-if="
+                                            getFormError(
+                                                'judul',
+                                                activeLanguage,
+                                            )
+                                        "
+                                        :class="errorClass"
+                                    >
+                                        {{
+                                            getFormError(
+                                                "judul",
+                                                activeLanguage,
+                                            )
+                                        }}
+                                    </p>
+                                </div>
+
+                                <!-- SEKTOR -->
+                                <div>
+                                    <label
+                                        :for="`f-sektor-${activeLanguage}`"
+                                        :class="labelClass"
+                                        >Sektor Industri</label
+                                    >
+                                    <input
+                                        :id="`f-sektor-${activeLanguage}`"
+                                        :value="
+                                            getFormValue(
+                                                'sektor_industri',
+                                                activeLanguage,
+                                            )
+                                        "
+                                        @input="
+                                            setFormValue(
+                                                'sektor_industri',
+                                                activeLanguage,
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).value,
+                                            )
+                                        "
+                                        type="text"
+                                        maxlength="255"
+                                        :placeholder="
+                                            activeLanguage === 'id'
+                                                ? 'Contoh: Industri Hilirisasi'
+                                                : activeLanguage === 'en'
+                                                  ? 'Example: Downstream Industry'
+                                                  : '例如：下游工业'
+                                        "
+                                        :class="[
+                                            inputClass,
+                                            getFormError(
+                                                'sektor_industri',
+                                                activeLanguage,
+                                            ) && inputErrorClass,
+                                        ]"
+                                    />
+                                    <p
+                                        v-if="
+                                            getFormError(
+                                                'sektor_industri',
+                                                activeLanguage,
+                                            )
+                                        "
+                                        :class="errorClass"
+                                    >
+                                        {{
+                                            getFormError(
+                                                "sektor_industri",
+                                                activeLanguage,
+                                            )
+                                        }}
+                                    </p>
+                                </div>
+
+                                <!-- LOKASI -->
+                                <div>
+                                    <label
+                                        :for="`f-lokasi-${activeLanguage}`"
+                                        :class="labelClass"
+                                        >Lokasi</label
+                                    >
+                                    <input
+                                        :id="`f-lokasi-${activeLanguage}`"
+                                        :value="
+                                            getFormValue(
+                                                'lokasi',
+                                                activeLanguage,
+                                            )
+                                        "
+                                        @input="
+                                            setFormValue(
+                                                'lokasi',
+                                                activeLanguage,
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).value,
+                                            )
+                                        "
+                                        type="text"
+                                        maxlength="255"
+                                        :placeholder="
+                                            activeLanguage === 'id'
+                                                ? 'Contoh: Zona Industri Utama'
+                                                : activeLanguage === 'en'
+                                                  ? 'Example: Main Industrial Zone'
+                                                  : '例如：主要工业区'
+                                        "
+                                        :class="[
+                                            inputClass,
+                                            getFormError(
+                                                'lokasi',
+                                                activeLanguage,
+                                            ) && inputErrorClass,
+                                        ]"
+                                    />
+                                    <p
+                                        v-if="
+                                            getFormError(
+                                                'lokasi',
+                                                activeLanguage,
+                                            )
+                                        "
+                                        :class="errorClass"
+                                    >
+                                        {{
+                                            getFormError(
+                                                "lokasi",
+                                                activeLanguage,
+                                            )
+                                        }}
+                                    </p>
+                                </div>
+
+                                <!-- DESKRIPSI -->
+                                <div class="md:col-span-2">
+                                    <label
+                                        :for="`f-deskripsi-${activeLanguage}`"
+                                        :class="labelClass"
+                                        >Deskripsi</label
+                                    >
+                                    <textarea
+                                        :id="`f-deskripsi-${activeLanguage}`"
+                                        :value="
+                                            getFormValue(
+                                                'deskripsi',
+                                                activeLanguage,
+                                            )
+                                        "
+                                        @input="
+                                            setFormValue(
+                                                'deskripsi',
+                                                activeLanguage,
+                                                (
+                                                    $event.target as HTMLTextAreaElement
+                                                ).value,
+                                            )
+                                        "
+                                        rows="6"
+                                        maxlength="10000"
+                                        :placeholder="
+                                            activeLanguage === 'id'
+                                                ? 'Tuliskan informasi lengkap mengenai peluang investasi...'
+                                                : activeLanguage === 'en'
+                                                  ? 'Describe the investment opportunity in detail...'
+                                                  : '请详细描述投资机会...'
+                                        "
+                                        :class="[
+                                            inputClass,
+                                            'resize-none leading-6',
+                                            getFormError(
+                                                'deskripsi',
+                                                activeLanguage,
+                                            ) && inputErrorClass,
+                                        ]"
+                                    ></textarea>
+                                    <p
+                                        v-if="
+                                            getFormError(
+                                                'deskripsi',
+                                                activeLanguage,
+                                            )
+                                        "
+                                        :class="errorClass"
+                                    >
+                                        {{
+                                            getFormError(
+                                                "deskripsi",
+                                                activeLanguage,
+                                            )
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- SHARED DATA -->
+                            <div class="my-6 flex items-center gap-3">
+                                <div
+                                    class="h-px flex-1 bg-slate-200 dark:bg-slate-800"
+                                ></div>
+                                <span
+                                    class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500"
+                                >
+                                    Informasi Umum
+                                </span>
+                                <div
+                                    class="h-px flex-1 bg-slate-200 dark:bg-slate-800"
+                                ></div>
+                            </div>
+
+                            <div class="grid gap-5 md:grid-cols-2">
+                                <!-- SLUG -->
+                                <div class="md:col-span-2">
+                                    <label for="f-slug" :class="labelClass"
+                                        >Slug</label
+                                    >
+                                    <div class="relative">
+                                        <span
+                                            class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"
+                                            >/</span
+                                        >
+                                        <input
+                                            id="f-slug"
+                                            v-model="form.slug"
+                                            type="text"
+                                            readonly
+                                            disabled
+                                            tabindex="-1"
+                                            placeholder="slug-otomatis"
+                                            class="min-h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-2.5 pl-8 pr-4 text-sm text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400"
+                                        />
+                                    </div>
+                                    <p
+                                        class="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-slate-400 dark:text-slate-500"
                                     >
                                         <span
-                                            v-if="isProcessingImage"
-                                            class="size-8 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-500"
+                                            class="mt-1.5 inline-flex size-1.5 shrink-0 rounded-full bg-blue-500"
                                         ></span>
-                                        <ImageIcon
-                                            v-else
-                                            class="size-8 text-slate-400"
-                                        />
+                                        <span>{{
+                                            modalMode === "edit"
+                                                ? "Slug tidak berubah saat edit agar tautan yang sudah dibagikan tetap berfungsi."
+                                                : "Slug dibuat otomatis dari judul Bahasa Indonesia."
+                                        }}</span>
+                                    </p>
+                                </div>
 
-                                        <span
-                                            class="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200"
+                                <!-- STATUS -->
+                                <div>
+                                    <label for="f-status" :class="labelClass"
+                                        >Status Investasi</label
+                                    >
+                                    <select
+                                        id="f-status"
+                                        v-model="form.status"
+                                        :class="[
+                                            inputClass,
+                                            errors.status && inputErrorClass,
+                                        ]"
+                                    >
+                                        <option
+                                            v-for="status in statusOptions"
+                                            :key="status.value"
+                                            :value="status.value"
                                         >
+                                            {{ status.label }}
+                                        </option>
+                                    </select>
+                                    <p v-if="errors.status" :class="errorClass">
+                                        {{ errors.status }}
+                                    </p>
+                                </div>
+
+                                <!-- URUTAN -->
+                                <div>
+                                    <label for="f-urutan" :class="labelClass"
+                                        >Urutan</label
+                                    >
+                                    <input
+                                        id="f-urutan"
+                                        v-model="form.urutan"
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        inputmode="numeric"
+                                        :class="[
+                                            inputClass,
+                                            errors.urutan && inputErrorClass,
+                                        ]"
+                                    />
+                                    <p v-if="errors.urutan" :class="errorClass">
+                                        {{ errors.urutan }}
+                                    </p>
+                                </div>
+
+                                <!-- LUAS -->
+                                <div>
+                                    <label for="f-luas" :class="labelClass"
+                                        >Luas Lahan</label
+                                    >
+                                    <div class="flex gap-2">
+                                        <input
+                                            id="f-luas"
+                                            v-model="form.luas_lahan"
+                                            type="number"
+                                            inputmode="decimal"
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="0"
+                                            :class="[
+                                                inputClass,
+                                                'min-w-0 flex-1',
+                                                errors.luas_lahan &&
+                                                    inputErrorClass,
+                                            ]"
+                                        />
+                                        <input
+                                            v-model="form.satuan_luas"
+                                            type="text"
+                                            maxlength="20"
+                                            placeholder="Ha"
+                                            aria-label="Satuan luas"
+                                            :class="[
+                                                smallInputClass,
+                                                errors.satuan_luas &&
+                                                    inputErrorClass,
+                                            ]"
+                                        />
+                                    </div>
+                                    <p
+                                        v-if="errors.luas_lahan"
+                                        :class="errorClass"
+                                    >
+                                        {{ errors.luas_lahan }}
+                                    </p>
+                                    <p
+                                        v-if="errors.satuan_luas"
+                                        :class="errorClass"
+                                    >
+                                        {{ errors.satuan_luas }}
+                                    </p>
+                                </div>
+
+                                <!-- NILAI -->
+                                <div>
+                                    <label for="f-nilai" :class="labelClass"
+                                        >Nilai Investasi</label
+                                    >
+                                    <div class="flex gap-2">
+                                        <input
+                                            id="f-nilai"
+                                            v-model="form.nilai_investasi"
+                                            type="number"
+                                            inputmode="decimal"
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="0"
+                                            :class="[
+                                                inputClass,
+                                                'min-w-0 flex-1',
+                                                errors.nilai_investasi &&
+                                                    inputErrorClass,
+                                            ]"
+                                        />
+                                        <input
+                                            v-model="form.mata_uang"
+                                            type="text"
+                                            maxlength="10"
+                                            placeholder="IDR"
+                                            aria-label="Mata uang"
+                                            :class="[
+                                                smallInputClass,
+                                                'uppercase',
+                                                errors.mata_uang &&
+                                                    inputErrorClass,
+                                            ]"
+                                        />
+                                    </div>
+                                    <p
+                                        v-if="errors.nilai_investasi"
+                                        :class="errorClass"
+                                    >
+                                        {{ errors.nilai_investasi }}
+                                    </p>
+                                    <p
+                                        v-if="errors.mata_uang"
+                                        :class="errorClass"
+                                    >
+                                        {{ errors.mata_uang }}
+                                    </p>
+                                </div>
+
+                                <!-- AKTIF -->
+                                <div>
+                                    <span :class="labelClass"
+                                        >Status Publikasi</span
+                                    >
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        :aria-checked="form.aktif"
+                                        class="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                        :class="
+                                            form.aktif
+                                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400'
+                                                : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                        "
+                                        @click="form.aktif = !form.aktif"
+                                    >
+                                        <span class="flex items-center gap-2">
+                                            <ToggleRight
+                                                v-if="form.aktif"
+                                                class="size-5 shrink-0"
+                                            />
+                                            <ToggleLeft
+                                                v-else
+                                                class="size-5 shrink-0"
+                                            />
                                             {{
-                                                isProcessingImage
-                                                    ? "Memproses gambar..."
-                                                    : isDragging
-                                                      ? "Lepaskan gambar di sini"
-                                                      : displayImage
-                                                        ? "Ganti gambar"
-                                                        : "Pilih atau seret gambar ke sini"
+                                                form.aktif
+                                                    ? "Data Aktif"
+                                                    : "Data Nonaktif"
                                             }}
                                         </span>
                                         <span
-                                            class="mt-1 max-w-sm text-xs leading-5 text-slate-400 dark:text-slate-500"
+                                            class="hidden text-xs opacity-70 sm:inline"
+                                            >Klik untuk ubah</span
                                         >
-                                            JPG, PNG, WEBP — otomatis dikompres
-                                            ke maks. 1 MB
-                                        </span>
-                                        <input
-                                            ref="fileInput"
-                                            type="file"
-                                            accept="image/jpeg,image/png,image/webp"
-                                            class="sr-only"
-                                            :disabled="
-                                                processing || isProcessingImage
-                                            "
-                                            @change="handleImageChange"
-                                        />
-                                    </label>
+                                    </button>
+                                    <p v-if="errors.aktif" :class="errorClass">
+                                        {{ errors.aktif }}
+                                    </p>
                                 </div>
 
-                                <p
-                                    v-if="errors.gambar"
-                                    :class="errorClass"
-                                    role="alert"
-                                >
-                                    {{ errors.gambar }}
-                                </p>
+                                <!-- GAMBAR -->
+                                <div class="md:col-span-2">
+                                    <span :class="labelClass"
+                                        >Gambar Peluang Investasi</span
+                                    >
+                                    <div
+                                        class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-3 sm:p-4 dark:border-slate-700 dark:bg-slate-800/50"
+                                    >
+                                        <div v-if="displayImage" class="mb-4">
+                                            <div
+                                                class="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                                            >
+                                                <img
+                                                    :src="displayImage"
+                                                    alt="Preview gambar"
+                                                    class="h-64 w-full bg-slate-100 object-contain sm:h-80 dark:bg-slate-800"
+                                                    @error="handleImageError"
+                                                />
+                                                <span
+                                                    v-if="previewUrl"
+                                                    class="absolute left-3 top-3 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-medium text-white shadow"
+                                                    >Gambar baru</span
+                                                >
+                                                <button
+                                                    type="button"
+                                                    :disabled="processing"
+                                                    :title="
+                                                        previewUrl
+                                                            ? 'Batalkan gambar baru'
+                                                            : 'Hapus gambar'
+                                                    "
+                                                    :aria-label="
+                                                        previewUrl
+                                                            ? 'Batalkan gambar baru'
+                                                            : 'Hapus gambar'
+                                                    "
+                                                    class="absolute right-3 top-3 rounded-lg bg-red-600 p-2 text-white shadow-lg transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 disabled:opacity-50"
+                                                    @click="
+                                                        previewUrl
+                                                            ? removeSelectedImage()
+                                                            : removeExistingImage()
+                                                    "
+                                                >
+                                                    <Trash2 class="size-4" />
+                                                </button>
+                                            </div>
+                                            <p
+                                                v-if="imageInfo"
+                                                class="mt-2 text-xs text-slate-500 dark:text-slate-400"
+                                            >
+                                                {{ imageInfo.width }}×{{
+                                                    imageInfo.height
+                                                }}px ·
+                                                {{
+                                                    formatBytes(imageInfo.size)
+                                                }}
+                                                <span
+                                                    v-if="
+                                                        imageInfo.size <
+                                                        imageInfo.originalSize
+                                                    "
+                                                >
+                                                    (dikompres dari
+                                                    {{
+                                                        formatBytes(
+                                                            imageInfo.originalSize,
+                                                        )
+                                                    }})</span
+                                                >
+                                            </p>
+                                        </div>
+
+                                        <div
+                                            v-else-if="removedExistingImage"
+                                            class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-400"
+                                        >
+                                            Gambar lama akan dihapus saat data
+                                            disimpan.
+                                            <button
+                                                type="button"
+                                                class="ml-1 font-semibold underline underline-offset-2"
+                                                @click="restoreExistingImage"
+                                            >
+                                                Batalkan
+                                            </button>
+                                        </div>
+
+                                        <label
+                                            class="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-6 text-center transition hover:border-blue-300 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:bg-blue-950/20"
+                                            :class="
+                                                isDragging &&
+                                                'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                                            "
+                                            @dragover.prevent="
+                                                isDragging = true
+                                            "
+                                            @dragleave.prevent="
+                                                isDragging = false
+                                            "
+                                            @drop.prevent="handleDrop"
+                                        >
+                                            <ImageIcon
+                                                class="size-8 text-slate-400"
+                                            />
+                                            <span
+                                                class="mt-3 text-sm font-medium text-slate-600 dark:text-slate-300"
+                                            >
+                                                {{
+                                                    isProcessingImage
+                                                        ? "Memproses gambar..."
+                                                        : isDragging
+                                                          ? "Lepaskan gambar di sini"
+                                                          : displayImage
+                                                            ? "Ganti gambar"
+                                                            : "Pilih atau seret gambar ke sini"
+                                                }}
+                                            </span>
+                                            <span
+                                                class="mt-1 max-w-sm text-xs leading-5 text-slate-400 dark:text-slate-500"
+                                                >JPG, PNG, WEBP — otomatis
+                                                dikompres ke maks. 1 MB</span
+                                            >
+                                            <input
+                                                ref="fileInput"
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/webp"
+                                                class="sr-only"
+                                                :disabled="
+                                                    processing ||
+                                                    isProcessingImage
+                                                "
+                                                @change="handleImageChange"
+                                            />
+                                        </label>
+                                    </div>
+                                    <p
+                                        v-if="errors.gambar"
+                                        :class="errorClass"
+                                        role="alert"
+                                    >
+                                        {{ errors.gambar }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -2984,7 +3375,7 @@ onBeforeUnmount(() => {
                                     )!
                                 "
                                 :alt="selectedPeluangInvestasi.judul"
-                                class="max-h-80 w-full object-cover"
+                                class="max-h-[24rem] w-full object-contain sm:max-h-[28rem]"
                                 @error="handleImageError"
                             />
                             <div
@@ -3002,11 +3393,34 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
+                        <!-- LANGUAGE TABS -->
+                        <div
+                            class="mt-5 inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800"
+                            role="tablist"
+                        >
+                            <button
+                                v-for="tab in languageTabs"
+                                :key="tab.code"
+                                type="button"
+                                role="tab"
+                                :aria-selected="detailLanguage === tab.code"
+                                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                :class="
+                                    detailLanguage === tab.code
+                                        ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                "
+                                @click="detailLanguage = tab.code"
+                            >
+                                {{ tab.flag }} {{ tab.label }}
+                            </button>
+                        </div>
+
                         <div class="mt-5 flex flex-wrap items-center gap-2">
                             <h3
                                 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white"
                             >
-                                {{ selectedPeluangInvestasi.judul }}
+                                {{ detailTitle }}
                             </h3>
 
                             <span
@@ -3077,10 +3491,7 @@ onBeforeUnmount(() => {
                                 class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
                             >
                                 <p class="whitespace-pre-line break-words">
-                                    {{
-                                        selectedPeluangInvestasi.deskripsi ||
-                                        "-"
-                                    }}
+                                    {{ detailDescription }}
                                 </p>
                             </div>
                         </div>
@@ -3196,6 +3607,7 @@ onBeforeUnmount(() => {
         </Transition>
     </div>
 </template>
+
 <style scoped>
 .blob-shape {
     animation: blob-float 12s ease-in-out infinite;

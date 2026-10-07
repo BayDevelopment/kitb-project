@@ -7,7 +7,9 @@ import {
     ref,
     watch,
 } from "vue";
+
 import { Head, Link, router } from "@inertiajs/vue3";
+
 import {
     ArrowRight,
     BriefcaseBusiness,
@@ -24,32 +26,55 @@ import {
     Search,
     X,
 } from "lucide-vue-next";
+
 import PublicLayout from "@/layouts/PublicLayout.vue";
+
+import { currentLanguage, type LanguageCode } from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
 });
 
 /* =========================================================
-   TYPES
-========================================================= */
+ * TYPES
+ * ========================================================= */
 
 interface PeluangInvestasi {
     id: number;
+
     judul: string;
+    judul_en: string | null;
+    judul_zh: string | null;
+
     slug: string;
+
     sektor_industri: string | null;
+    sektor_industri_en: string | null;
+    sektor_industri_zh: string | null;
+
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
     luas_lahan: number | string | null;
     satuan_luas: string | null;
+
     lokasi: string | null;
+    lokasi_en: string | null;
+    lokasi_zh: string | null;
+
     status: string;
+
     nilai_investasi: number | string | null;
     mata_uang: string | null;
+
     gambar: string | null;
+
     urutan: number;
     aktif: boolean;
-    created_at: string;
+
+    created_at?: string;
+    updated_at?: string;
 }
 
 interface LinkItem {
@@ -70,16 +95,16 @@ interface Paginator<T> {
 }
 
 /* =========================================================
-   PROPS
-========================================================= */
+ * PROPS
+ * ========================================================= */
 
 const props = defineProps<{
     peluangInvestasis: Paginator<PeluangInvestasi>;
 }>();
 
 /* =========================================================
-   STATE
-========================================================= */
+ * STATE
+ * ========================================================= */
 
 const search = ref("");
 const selectedSector = ref("all");
@@ -92,6 +117,7 @@ const isLoading = ref(true);
 const isNavigating = ref(false);
 
 const searchInput = ref<HTMLInputElement | null>(null);
+
 const modalPanel = ref<HTMLElement | null>(null);
 
 const prefersReducedMotion =
@@ -99,10 +125,371 @@ const prefersReducedMotion =
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* =========================================================
-   HELPERS
-========================================================= */
+ * LANGUAGE
+ * ========================================================= */
 
-const imageUrl = (path: string | null) => {
+const languageTabs: {
+    code: LanguageCode;
+    flag: string;
+    label: string;
+}[] = [
+    {
+        code: "id",
+        flag: "🇮🇩",
+        label: "Indonesia",
+    },
+    {
+        code: "en",
+        flag: "🇬🇧",
+        label: "English",
+    },
+    {
+        code: "zh",
+        flag: "🇨🇳",
+        label: "中文",
+    },
+];
+
+type InvestmentLanguageField =
+    | "judul"
+    | "sektor_industri"
+    | "deskripsi"
+    | "lokasi";
+
+const fieldKey = (
+    field: InvestmentLanguageField,
+    language: LanguageCode,
+): string => {
+    return language === "id" ? field : `${field}_${language}`;
+};
+
+/**
+ * Mengambil nilai sesuai bahasa aktif.
+ *
+ * ID:
+ *   judul
+ *
+ * EN:
+ *   judul_en
+ *
+ * ZH:
+ *   judul_zh
+ *
+ * Jika terjemahan tidak tersedia, fallback ke Indonesia.
+ */
+const getLocalizedValue = (
+    investment: PeluangInvestasi,
+    field: InvestmentLanguageField,
+): string => {
+    const record = investment as unknown as Record<string, unknown>;
+
+    const language = currentLanguage.value;
+
+    const localizedField = fieldKey(field, language);
+
+    const localized = String(record[localizedField] ?? "").trim();
+
+    if (localized !== "") {
+        return localized;
+    }
+
+    if (language !== "id") {
+        return String(record[field] ?? "").trim();
+    }
+
+    return "";
+};
+
+/**
+ * Mengambil nilai bahasa tertentu tanpa fallback.
+ */
+const getRawLanguageValue = (
+    investment: PeluangInvestasi,
+    field: InvestmentLanguageField,
+    language: LanguageCode,
+): string => {
+    const record = investment as unknown as Record<string, unknown>;
+
+    return String(record[fieldKey(field, language)] ?? "").trim();
+};
+
+/**
+ * Ganti bahasa tampilan.
+ */
+const changeLanguage = (language: LanguageCode): void => {
+    currentLanguage.value = language;
+
+    // Label sektor berubah sesuai bahasa,
+    // sehingga filter sektor lama harus di-reset.
+    selectedSector.value = "all";
+};
+
+/* =========================================================
+ * TRANSLATION
+ * ========================================================= */
+
+const translations: Record<
+    LanguageCode,
+    {
+        pageTitle: string;
+        pageDescription: string;
+
+        home: string;
+        investorRelations: string;
+        investmentOpportunities: string;
+
+        searchPlaceholder: string;
+        searchAria: string;
+
+        filter: string;
+        industrySector: string;
+        allSectors: string;
+        status: string;
+        allStatuses: string;
+        resetFilter: string;
+        reset: string;
+
+        showing: string;
+        investmentData: string;
+
+        noDataTitle: string;
+        noDataDescription: string;
+        noSearchTitle: string;
+        noSearchDescription: string;
+
+        landVisit: string;
+        investment: string;
+        area: string;
+        location: string;
+        viewDetail: string;
+
+        opportunity: string;
+        investmentOpportunity: string;
+
+        available: string;
+        inProgress: string;
+        occupied: string;
+        unavailable: string;
+        closed: string;
+
+        aboutOpportunity: string;
+        informationAvailable: string;
+        detailFallback: string;
+
+        close: string;
+        interested: string;
+        interestedTitle: string;
+        interestedDescription: string;
+        contactUs: string;
+
+        previousPage: string;
+        nextPage: string;
+        page: string;
+        loading: string;
+        noImage: string;
+    }
+> = {
+    id: {
+        pageTitle: "Peluang Investasi | KITB",
+        pageDescription:
+            "Temukan berbagai peluang investasi yang tersedia di Kawasan Industri Tanjung Buton.",
+
+        home: "Beranda",
+        investorRelations: "Hubungan Investor",
+        investmentOpportunities: "Peluang Investasi",
+
+        searchPlaceholder: "Cari peluang investasi...",
+        searchAria: "Cari peluang investasi",
+
+        filter: "Filter",
+        industrySector: "Sektor Industri",
+        allSectors: "Semua Sektor",
+        status: "Status",
+        allStatuses: "Semua Status",
+        resetFilter: "Reset Filter",
+        reset: "Reset",
+
+        showing: "Menampilkan",
+        investmentData: "peluang investasi",
+
+        noDataTitle: "Data Peluang Investasi Belum Tersedia",
+        noDataDescription:
+            "Saat ini belum terdapat informasi peluang investasi yang dapat ditampilkan. Silakan kembali lagi nanti untuk mendapatkan informasi terbaru mengenai peluang investasi di KITB.",
+
+        noSearchTitle: "Data Tidak Ditemukan",
+        noSearchDescription:
+            "Tidak ada peluang investasi yang sesuai dengan pencarian atau filter yang Anda pilih.",
+
+        landVisit: "Ajukan Kunjungan Lahan",
+        investment: "Investasi",
+        area: "Luas",
+        location: "Lokasi",
+        viewDetail: "Lihat Detail",
+
+        opportunity: "Investasi",
+        investmentOpportunity: "Peluang Investasi",
+
+        available: "Tersedia",
+        inProgress: "Dalam Proses",
+        occupied: "Terisi",
+        unavailable: "Tidak Tersedia",
+        closed: "Ditutup",
+
+        aboutOpportunity: "Tentang Peluang Investasi",
+        informationAvailable: "Informasi tersedia",
+        detailFallback:
+            "Informasi detail mengenai peluang investasi ini dapat diperoleh dengan menghubungi tim KITB.",
+
+        close: "Tutup",
+        interested: "Tertarik Berinvestasi?",
+        interestedTitle: "Mari wujudkan peluang investasi Anda bersama KITB.",
+        interestedDescription:
+            "Hubungi tim kami untuk mendapatkan informasi lebih lanjut mengenai ketersediaan lahan, fasilitas, dan proses investasi.",
+        contactUs: "Hubungi Kami",
+
+        previousPage: "Halaman sebelumnya",
+        nextPage: "Halaman berikutnya",
+        page: "Halaman",
+        loading: "Memuat data peluang investasi...",
+        noImage: "Tidak ada gambar",
+    },
+
+    en: {
+        pageTitle: "Investment Opportunities | KITB",
+        pageDescription:
+            "Discover strategic investment opportunities available at Tanjung Buton Industrial Estate.",
+
+        home: "Home",
+        investorRelations: "Investor Relations",
+        investmentOpportunities: "Investment Opportunities",
+
+        searchPlaceholder: "Search investment opportunities...",
+        searchAria: "Search investment opportunities",
+
+        filter: "Filter",
+        industrySector: "Industry Sector",
+        allSectors: "All Sectors",
+        status: "Status",
+        allStatuses: "All Statuses",
+        resetFilter: "Reset Filter",
+        reset: "Reset",
+
+        showing: "Showing",
+        investmentData: "investment opportunities",
+
+        noDataTitle: "Investment Opportunities Not Available",
+        noDataDescription:
+            "There are currently no investment opportunities available to display. Please check back later for the latest information from KITB.",
+
+        noSearchTitle: "No Data Found",
+        noSearchDescription:
+            "No investment opportunities match your search or selected filters.",
+
+        landVisit: "Request Site Visit",
+        investment: "Investment",
+        area: "Area",
+        location: "Location",
+        viewDetail: "View Details",
+
+        opportunity: "Investment",
+        investmentOpportunity: "Investment Opportunity",
+
+        available: "Available",
+        inProgress: "In Progress",
+        occupied: "Occupied",
+        unavailable: "Unavailable",
+        closed: "Closed",
+
+        aboutOpportunity: "About the Investment Opportunity",
+        informationAvailable: "Information available",
+        detailFallback:
+            "Detailed information about this investment opportunity can be obtained by contacting the KITB team.",
+
+        close: "Close",
+        interested: "Interested in Investing?",
+        interestedTitle:
+            "Let's turn your investment opportunity into reality with KITB.",
+        interestedDescription:
+            "Contact our team for more information about land availability, facilities, and the investment process.",
+        contactUs: "Contact Us",
+
+        previousPage: "Previous page",
+        nextPage: "Next page",
+        page: "Page",
+        loading: "Loading investment opportunities...",
+        noImage: "No image",
+    },
+
+    zh: {
+        pageTitle: "投资机会 | KITB",
+        pageDescription: "探索丹绒布顿工业园区提供的战略投资机会。",
+
+        home: "首页",
+        investorRelations: "投资者关系",
+        investmentOpportunities: "投资机会",
+
+        searchPlaceholder: "搜索投资机会...",
+        searchAria: "搜索投资机会",
+
+        filter: "筛选",
+        industrySector: "产业领域",
+        allSectors: "所有领域",
+        status: "状态",
+        allStatuses: "所有状态",
+        resetFilter: "重置筛选",
+        reset: "重置",
+
+        showing: "显示",
+        investmentData: "项投资机会",
+
+        noDataTitle: "暂无投资机会",
+        noDataDescription:
+            "目前暂无可显示的投资机会信息。请稍后再次查看，以获取 KITB 的最新投资信息。",
+
+        noSearchTitle: "未找到数据",
+        noSearchDescription: "没有符合搜索条件或筛选条件的投资机会。",
+
+        landVisit: "申请土地参观",
+        investment: "投资",
+        area: "土地面积",
+        location: "位置",
+        viewDetail: "查看详情",
+
+        opportunity: "投资",
+        investmentOpportunity: "投资机会",
+
+        available: "可用",
+        inProgress: "处理中",
+        occupied: "已入驻",
+        unavailable: "不可用",
+        closed: "已关闭",
+
+        aboutOpportunity: "投资机会详情",
+        informationAvailable: "暂无位置信息",
+        detailFallback: "如需了解该投资机会的详细信息，请联系 KITB 团队。",
+
+        close: "关闭",
+        interested: "对投资感兴趣？",
+        interestedTitle: "与 KITB 一起实现您的投资机会。",
+        interestedDescription:
+            "联系我们的团队，了解土地供应、设施以及投资流程的更多信息。",
+        contactUs: "联系我们",
+
+        previousPage: "上一页",
+        nextPage: "下一页",
+        page: "第",
+        loading: "正在加载投资机会...",
+        noImage: "暂无图片",
+    },
+};
+
+const t = computed(() => translations[currentLanguage.value]);
+
+/* =========================================================
+ * IMAGE
+ * ========================================================= */
+
+const imageUrl = (path: string | null): string => {
     if (!path) {
         return "";
     }
@@ -118,10 +505,14 @@ const imageUrl = (path: string | null) => {
     return `/storage/${path}`;
 };
 
+/* =========================================================
+ * NUMBER FORMATTING
+ * ========================================================= */
+
 const formatNumber = (
     value: number | string | null,
     maximumFractionDigits = 2,
-) => {
+): string => {
     if (value === null || value === undefined || value === "") {
         return "-";
     }
@@ -132,12 +523,15 @@ const formatNumber = (
         return "-";
     }
 
-    return new Intl.NumberFormat("id-ID", {
-        maximumFractionDigits,
-    }).format(number);
+    return new Intl.NumberFormat(
+        currentLanguage.value === "zh" ? "zh-CN" : "id-ID",
+        {
+            maximumFractionDigits,
+        },
+    ).format(number);
 };
 
-const formatArea = (investment: PeluangInvestasi) => {
+const formatArea = (investment: PeluangInvestasi): string => {
     if (
         investment.luas_lahan === null ||
         investment.luas_lahan === undefined ||
@@ -146,56 +540,81 @@ const formatArea = (investment: PeluangInvestasi) => {
         return "-";
     }
 
-    return `${formatNumber(investment.luas_lahan)} ${
-        investment.satuan_luas || "Ha"
-    }`;
+    return `${formatNumber(
+        investment.luas_lahan,
+    )} ${investment.satuan_luas || "Ha"}`;
 };
 
-const formatInvestmentValue = (investment: PeluangInvestasi) => {
+const formatInvestmentValue = (investment: PeluangInvestasi): string => {
     if (
         investment.nilai_investasi === null ||
         investment.nilai_investasi === undefined ||
         investment.nilai_investasi === ""
     ) {
-        return "Hubungi Kami";
+        return t.value.contactUs;
     }
 
     const value = Number(investment.nilai_investasi);
 
     if (Number.isNaN(value)) {
-        return "Hubungi Kami";
+        return t.value.contactUs;
     }
 
-    const currency = investment.mata_uang || "IDR";
+    const currency = (investment.mata_uang || "IDR").toUpperCase();
 
-    if (currency.toUpperCase() === "IDR") {
+    if (currency === "IDR") {
         return `Rp ${new Intl.NumberFormat("id-ID", {
             maximumFractionDigits: 0,
         }).format(value)}`;
     }
 
-    return `${currency} ${new Intl.NumberFormat("id-ID", {
-        maximumFractionDigits: 2,
-    }).format(value)}`;
+    return `${currency} ${new Intl.NumberFormat(
+        currentLanguage.value === "zh" ? "zh-CN" : "en-US",
+        {
+            maximumFractionDigits: 2,
+        },
+    ).format(value)}`;
 };
 
-const formatStatus = (status: string) => {
-    const labels: Record<string, string> = {
-        tersedia: "Tersedia",
-        proses: "Dalam Proses",
-        terisi: "Terisi",
-        tidak_tersedia: "Tidak Tersedia",
+/* =========================================================
+ * STATUS
+ * ========================================================= */
+
+const formatStatus = (status: string): string => {
+    const normalized = status.toLowerCase();
+
+    const labels: Record<LanguageCode, Record<string, string>> = {
+        id: {
+            tersedia: "Tersedia",
+            proses: "Dalam Proses",
+            terisi: "Terisi",
+            tidak_tersedia: "Tidak Tersedia",
+            ditutup: "Ditutup",
+        },
+
+        en: {
+            tersedia: "Available",
+            proses: "In Progress",
+            terisi: "Occupied",
+            tidak_tersedia: "Unavailable",
+            ditutup: "Closed",
+        },
+
+        zh: {
+            tersedia: "可用",
+            proses: "处理中",
+            terisi: "已入驻",
+            tidak_tersedia: "不可用",
+            ditutup: "已关闭",
+        },
     };
 
     return (
-        labels[status.toLowerCase()] ||
-        status
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (letter) => letter.toUpperCase())
+        labels[currentLanguage.value][normalized] ?? status.replace(/_/g, " ")
     );
 };
 
-const statusClass = (status: string) => {
+const statusClass = (status: string): string => {
     switch (status.toLowerCase()) {
         case "tersedia":
             return "text-emerald-700 dark:text-emerald-400";
@@ -207,6 +626,7 @@ const statusClass = (status: string) => {
             return "text-blue-700 dark:text-blue-400";
 
         case "tidak_tersedia":
+        case "ditutup":
             return "text-rose-700 dark:text-rose-400";
 
         default:
@@ -214,26 +634,18 @@ const statusClass = (status: string) => {
     }
 };
 
-const truncate = (value: string | null, length = 150) => {
-    if (!value) {
-        return "";
-    }
-
-    return value.length > length
-        ? `${value.substring(0, length).trim()}...`
-        : value;
-};
-
 /* =========================================================
-   FILTER OPTIONS
-========================================================= */
+ * FILTER OPTIONS
+ * ========================================================= */
 
 const sectors = computed(() => {
     const values = props.peluangInvestasis.data
-        .map((item) => item.sektor_industri)
-        .filter((value): value is string => Boolean(value));
+        .map((item) => getLocalizedValue(item, "sektor_industri"))
+        .filter((value) => value.trim() !== "");
 
-    return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+    return [...new Set(values)].sort((a, b) =>
+        a.localeCompare(b, currentLanguage.value),
+    );
 });
 
 const statuses = computed(() => {
@@ -245,23 +657,44 @@ const statuses = computed(() => {
 });
 
 /* =========================================================
-   FILTERED DATA
-========================================================= */
+ * FILTERED DATA
+ * ========================================================= */
 
 const filteredInvestments = computed(() => {
     const keyword = search.value.trim().toLowerCase();
 
     return props.peluangInvestasis.data.filter((investment) => {
+        const searchableValues = [
+            investment.judul,
+            investment.judul_en,
+            investment.judul_zh,
+
+            investment.sektor_industri,
+            investment.sektor_industri_en,
+            investment.sektor_industri_zh,
+
+            investment.lokasi,
+            investment.lokasi_en,
+            investment.lokasi_zh,
+
+            investment.deskripsi,
+            investment.deskripsi_en,
+            investment.deskripsi_zh,
+        ]
+            .filter(
+                (value): value is string =>
+                    value !== null && value !== undefined && value !== "",
+            )
+            .map((value) => value.toLowerCase());
+
         const matchesSearch =
-            !keyword ||
-            investment.judul.toLowerCase().includes(keyword) ||
-            investment.sektor_industri?.toLowerCase().includes(keyword) ||
-            investment.lokasi?.toLowerCase().includes(keyword) ||
-            investment.deskripsi?.toLowerCase().includes(keyword);
+            keyword === "" ||
+            searchableValues.some((value) => value.includes(keyword));
 
         const matchesSector =
             selectedSector.value === "all" ||
-            investment.sektor_industri === selectedSector.value;
+            getLocalizedValue(investment, "sektor_industri") ===
+                selectedSector.value;
 
         const matchesStatus =
             selectedStatus.value === "all" ||
@@ -271,29 +704,28 @@ const filteredInvestments = computed(() => {
     });
 });
 
-const hasActiveFilter = computed(() => {
-    return (
+const hasActiveFilter = computed(
+    () =>
         search.value.trim() !== "" ||
         selectedSector.value !== "all" ||
-        selectedStatus.value !== "all"
-    );
-});
+        selectedStatus.value !== "all",
+);
 
 /* =========================================================
-   FILTER ACTION
-========================================================= */
+ * FILTER ACTION
+ * ========================================================= */
 
-const resetFilters = () => {
+const resetFilters = (): void => {
     search.value = "";
     selectedSector.value = "all";
     selectedStatus.value = "all";
 };
 
 /* =========================================================
-   PAGINATION
-========================================================= */
+ * PAGINATION
+ * ========================================================= */
 
-const goToPage = (url: string | null) => {
+const goToPage = (url: string | null): void => {
     if (!url || isNavigating.value) {
         return;
     }
@@ -308,6 +740,7 @@ const goToPage = (url: string | null) => {
             preserveState: true,
             preserveScroll: true,
             only: ["peluangInvestasis"],
+
             onFinish: () => {
                 isNavigating.value = false;
 
@@ -319,18 +752,21 @@ const goToPage = (url: string | null) => {
     );
 };
 
-const isPreviousLink = (link: LinkItem, index: number) => {
+const isPreviousLink = (link: LinkItem, index: number): boolean => {
     if (index === 0) {
         return true;
     }
 
-    return (
-        link.label.toLowerCase().includes("previous") ||
-        link.label.toLowerCase().includes("prev")
-    );
+    const label = link.label.toLowerCase();
+
+    return label.includes("previous") || label.includes("prev");
 };
 
-const isNextLink = (link: LinkItem, index: number, links: LinkItem[]) => {
+const isNextLink = (
+    link: LinkItem,
+    index: number,
+    links: LinkItem[],
+): boolean => {
     if (index === links.length - 1) {
         return true;
     }
@@ -339,10 +775,10 @@ const isNextLink = (link: LinkItem, index: number, links: LinkItem[]) => {
 };
 
 /* =========================================================
-   MODAL
-========================================================= */
+ * MODAL
+ * ========================================================= */
 
-const openModal = async (investment: PeluangInvestasi) => {
+const openModal = async (investment: PeluangInvestasi): Promise<void> => {
     selectedInvestment.value = investment;
 
     await nextTick();
@@ -352,24 +788,24 @@ const openModal = async (investment: PeluangInvestasi) => {
     modalPanel.value?.focus();
 };
 
-const closeModal = () => {
+const closeModal = (): void => {
     selectedInvestment.value = null;
     document.body.style.overflow = "";
 };
 
-const handleKeydown = (event: KeyboardEvent) => {
+const handleKeydown = (event: KeyboardEvent): void => {
     if (event.key === "Escape" && selectedInvestment.value) {
         closeModal();
     }
 };
 
 /* =========================================================
-   REVEAL
-========================================================= */
+ * REVEAL ANIMATION
+ * ========================================================= */
 
 let revealObserver: IntersectionObserver | null = null;
 
-const initializeReveal = () => {
+const initializeReveal = (): void => {
     if (typeof window === "undefined") {
         return;
     }
@@ -391,6 +827,7 @@ const initializeReveal = () => {
             entries.forEach((entry) => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add("is-visible");
+
                     revealObserver?.unobserve(entry.target);
                 }
             });
@@ -407,27 +844,23 @@ const initializeReveal = () => {
 };
 
 /* =========================================================
-   LIFECYCLE
-========================================================= */
+ * LIFECYCLE
+ * ========================================================= */
 
 onMounted(() => {
     window.addEventListener("keydown", handleKeydown);
 
-    if (props.peluangInvestasis) {
-        window.requestAnimationFrame(() => {
-            isLoading.value = false;
-
-            nextTick(() => {
-                initializeReveal();
-            });
-        });
-    } else {
+    window.requestAnimationFrame(() => {
         isLoading.value = false;
-    }
+
+        nextTick(() => {
+            initializeReveal();
+        });
+    });
 });
 
 watch(
-    () => props.peluangInvestasis.data,
+    () => [props.peluangInvestasis.data, currentLanguage.value],
     async () => {
         isLoading.value = false;
 
@@ -448,27 +881,28 @@ onBeforeUnmount(() => {
 
 <template>
     <Head>
-        <title>Peluang Investasi | KITB</title>
+        <title>{{ t.pageTitle }}</title>
 
-        <meta
-            name="description"
-            content="Temukan berbagai peluang investasi yang tersedia di Kawasan Industri Tanjung Buton."
-        />
+        <meta name="description" :content="t.pageDescription" />
     </Head>
 
     <main
         class="relative min-h-screen overflow-hidden bg-slate-50/50 dark:bg-slate-950"
     >
-        <!-- Decorative Blob -->
+        <!-- Decorative Background -->
+
         <div
             class="pointer-events-none absolute -left-32 top-24 h-80 w-80 rounded-full bg-blue-200/30 blur-3xl dark:bg-blue-900/20"
             aria-hidden="true"
         />
 
+        <div
+            class="pointer-events-none absolute -right-40 top-[35%] h-96 w-96 rounded-full bg-indigo-200/20 blur-3xl dark:bg-indigo-900/10"
+            aria-hidden="true"
+        />
+
         <div class="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <!-- =====================================================
-                 BREADCRUMB
-            ====================================================== -->
+            <!-- Breadcrumb -->
 
             <nav
                 aria-label="Breadcrumb"
@@ -485,7 +919,10 @@ onBeforeUnmount(() => {
                             class="inline-flex items-center gap-1.5 transition hover:text-blue-600 dark:hover:text-blue-400"
                         >
                             <Home class="h-4 w-4" aria-hidden="true" />
-                            <span>Beranda</span>
+
+                            <span>
+                                {{ t.home }}
+                            </span>
                         </Link>
                     </li>
 
@@ -498,7 +935,10 @@ onBeforeUnmount(() => {
 
                     <li class="flex items-center gap-2">
                         <BriefcaseBusiness class="h-4 w-4" aria-hidden="true" />
-                        <span>Hubungan Investor</span>
+
+                        <span>
+                            {{ t.investorRelations }}
+                        </span>
                     </li>
 
                     <li
@@ -516,40 +956,64 @@ onBeforeUnmount(() => {
                             class="h-4 w-4 text-blue-600 dark:text-blue-400"
                             aria-hidden="true"
                         />
-                        <span>Peluang Investasi</span>
+
+                        <span>
+                            {{ t.investmentOpportunities }}
+                        </span>
                     </li>
                 </ol>
             </nav>
 
-            <!-- =====================================================
-                 HEADING
-            ====================================================== -->
+            <!-- Heading -->
 
             <header class="mb-8 max-w-3xl" data-reveal style="--d: 80ms">
                 <div
                     class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-400"
                 >
                     <BriefcaseBusiness class="h-4 w-4" aria-hidden="true" />
-                    Hubungan Investor
+
+                    {{ t.investorRelations }}
                 </div>
 
                 <h1
                     class="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white"
                 >
-                    Peluang Investasi
+                    {{ t.investmentOpportunities }}
                 </h1>
 
                 <p
                     class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                 >
-                    Temukan peluang investasi strategis dan potensi pengembangan
-                    usaha di Kawasan Industri Tanjung Buton.
+                    {{ t.pageDescription }}
                 </p>
             </header>
 
-            <!-- =====================================================
-                 SEARCH & FILTER
-            ====================================================== -->
+            <!-- Language Switcher -->
+
+            <div
+                class="mb-6 inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                role="group"
+                aria-label="Bahasa tampilan"
+            >
+                <button
+                    v-for="tab in languageTabs"
+                    :key="tab.code"
+                    type="button"
+                    :aria-pressed="currentLanguage === tab.code"
+                    class="rounded-lg px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    :class="
+                        currentLanguage === tab.code
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
+                    "
+                    @click="changeLanguage(tab.code)"
+                >
+                    {{ tab.flag }}
+                    {{ tab.code.toUpperCase() }}
+                </button>
+            </div>
+
+            <!-- Search & Filter -->
 
             <section
                 v-if="!isLoading && props.peluangInvestasis.total > 0"
@@ -558,7 +1022,6 @@ onBeforeUnmount(() => {
                 style="--d: 120ms"
             >
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
-                    <!-- Search -->
                     <div class="relative flex-1">
                         <Search
                             class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
@@ -569,15 +1032,15 @@ onBeforeUnmount(() => {
                             ref="searchInput"
                             v-model="search"
                             type="search"
-                            placeholder="Cari peluang investasi..."
-                            aria-label="Cari peluang investasi"
+                            :placeholder="t.searchPlaceholder"
+                            :aria-label="t.searchAria"
                             class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500 dark:focus:bg-slate-950"
                         />
 
                         <button
                             v-if="search"
                             type="button"
-                            aria-label="Hapus pencarian"
+                            :aria-label="t.reset"
                             class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                             @click="search = ''"
                         >
@@ -585,7 +1048,6 @@ onBeforeUnmount(() => {
                         </button>
                     </div>
 
-                    <!-- Filter Toggle -->
                     <button
                         type="button"
                         class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-offset-slate-900"
@@ -595,7 +1057,7 @@ onBeforeUnmount(() => {
                     >
                         <Filter class="h-4 w-4" aria-hidden="true" />
 
-                        Filter
+                        {{ t.filter }}
 
                         <span
                             v-if="
@@ -613,6 +1075,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <!-- Filter Panel -->
+
                 <div
                     v-if="showFilters"
                     id="investment-filters"
@@ -623,7 +1086,7 @@ onBeforeUnmount(() => {
                             for="sector-filter"
                             class="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300"
                         >
-                            Sektor Industri
+                            {{ t.industrySector }}
                         </label>
 
                         <select
@@ -631,7 +1094,9 @@ onBeforeUnmount(() => {
                             v-model="selectedSector"
                             class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                         >
-                            <option value="all">Semua Sektor</option>
+                            <option value="all">
+                                {{ t.allSectors }}
+                            </option>
 
                             <option
                                 v-for="sector in sectors"
@@ -648,7 +1113,7 @@ onBeforeUnmount(() => {
                             for="status-filter"
                             class="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300"
                         >
-                            Status
+                            {{ t.status }}
                         </label>
 
                         <select
@@ -656,7 +1121,9 @@ onBeforeUnmount(() => {
                             v-model="selectedStatus"
                             class="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                         >
-                            <option value="all">Semua Status</option>
+                            <option value="all">
+                                {{ t.allStatuses }}
+                            </option>
 
                             <option
                                 v-for="status in statuses"
@@ -678,28 +1145,29 @@ onBeforeUnmount(() => {
                             @click="resetFilters"
                         >
                             <X class="h-4 w-4" aria-hidden="true" />
-                            Reset Filter
+
+                            {{ t.resetFilter }}
                         </button>
                     </div>
                 </div>
             </section>
 
-            <!-- =====================================================
-                 RESULT META
-            ====================================================== -->
+            <!-- Result Meta -->
 
             <div
                 v-if="!isLoading && props.peluangInvestasis.total > 0"
                 class="mb-5 flex items-center justify-between gap-4"
             >
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    Menampilkan
+                    {{ t.showing }}
+
                     <span
                         class="font-semibold text-slate-700 dark:text-slate-200"
                     >
                         {{ filteredInvestments.length }}
                     </span>
-                    peluang investasi
+
+                    {{ t.investmentData }}
                 </p>
 
                 <button
@@ -708,23 +1176,19 @@ onBeforeUnmount(() => {
                     class="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
                     @click="resetFilters"
                 >
-                    Reset
+                    {{ t.reset }}
                 </button>
             </div>
 
-            <!-- =====================================================
-                 CONTENT
-            ====================================================== -->
+            <!-- Content -->
 
             <section class="space-y-6" data-reveal style="--d: 140ms">
-                <!-- =========================
-                     SKELETON
-                ========================== -->
+                <!-- Loading -->
 
                 <div
                     v-if="isLoading"
                     class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                    aria-label="Memuat data peluang investasi"
+                    :aria-label="t.loading"
                     aria-busy="true"
                 >
                     <div
@@ -745,6 +1209,7 @@ onBeforeUnmount(() => {
                                 <div
                                     class="skeleton-shimmer h-5 w-4/5 rounded-lg bg-slate-200 dark:bg-slate-800"
                                 />
+
                                 <div
                                     class="skeleton-shimmer h-5 w-3/5 rounded-lg bg-slate-200 dark:bg-slate-800"
                                 />
@@ -754,9 +1219,11 @@ onBeforeUnmount(() => {
                                 <div
                                     class="skeleton-shimmer h-3.5 w-full rounded bg-slate-200 dark:bg-slate-800"
                                 />
+
                                 <div
                                     class="skeleton-shimmer h-3.5 w-11/12 rounded bg-slate-200 dark:bg-slate-800"
                                 />
+
                                 <div
                                     class="skeleton-shimmer h-3.5 w-3/4 rounded bg-slate-200 dark:bg-slate-800"
                                 />
@@ -769,6 +1236,7 @@ onBeforeUnmount(() => {
                                     <div
                                         class="skeleton-shimmer mb-2 h-3 w-16 rounded bg-slate-200 dark:bg-slate-800"
                                     />
+
                                     <div
                                         class="skeleton-shimmer h-4 w-20 rounded bg-slate-200 dark:bg-slate-800"
                                     />
@@ -780,6 +1248,7 @@ onBeforeUnmount(() => {
                                     <div
                                         class="skeleton-shimmer mb-2 h-3 w-16 rounded bg-slate-200 dark:bg-slate-800"
                                     />
+
                                     <div
                                         class="skeleton-shimmer h-4 w-20 rounded bg-slate-200 dark:bg-slate-800"
                                     />
@@ -793,9 +1262,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <!-- =========================
-                     DATABASE EMPTY
-                ========================== -->
+                <!-- Database Empty -->
 
                 <div
                     v-else-if="props.peluangInvestasis.total === 0"
@@ -810,31 +1277,26 @@ onBeforeUnmount(() => {
                     <h2
                         class="mt-5 text-xl font-bold text-slate-900 dark:text-white"
                     >
-                        Data Peluang Investasi Belum Tersedia
+                        {{ t.noDataTitle }}
                     </h2>
 
                     <p
                         class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Saat ini belum terdapat informasi peluang investasi yang
-                        dapat ditampilkan. Silakan kembali lagi nanti untuk
-                        mendapatkan informasi terbaru mengenai peluang investasi
-                        di KITB.
+                        {{ t.noDataDescription }}
                     </p>
 
                     <Link
                         href="/ajukan-kunjungan"
                         class="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                     >
-                        Ajukan Kunjungan Lahan
+                        {{ t.landVisit }}
 
                         <ArrowRight class="h-4 w-4" aria-hidden="true" />
                     </Link>
                 </div>
 
-                <!-- =========================
-                     FILTER EMPTY
-                ========================== -->
+                <!-- Filter Empty -->
 
                 <div
                     v-else-if="filteredInvestments.length === 0"
@@ -849,30 +1311,28 @@ onBeforeUnmount(() => {
                     <h2
                         class="mt-5 text-xl font-bold text-slate-900 dark:text-white"
                     >
-                        Data Tidak Ditemukan
+                        {{ t.noSearchTitle }}
                     </h2>
 
                     <p
                         class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Tidak ada peluang investasi yang sesuai dengan pencarian
-                        atau filter yang Anda pilih.
+                        {{ t.noSearchDescription }}
                     </p>
 
                     <button
                         v-if="hasActiveFilter"
                         type="button"
-                        class="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-offset-slate-900"
+                        class="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                         @click="resetFilters"
                     >
                         <X class="h-4 w-4" aria-hidden="true" />
-                        Reset Filter
+
+                        {{ t.resetFilter }}
                     </button>
                 </div>
 
-                <!-- =========================
-                     CARDS
-                ========================== -->
+                <!-- Cards -->
 
                 <div v-else class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <article
@@ -885,13 +1345,14 @@ onBeforeUnmount(() => {
                         class="group overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
                     >
                         <!-- Image -->
+
                         <div
                             class="relative aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800"
                         >
                             <img
                                 v-if="investment.gambar"
                                 :src="imageUrl(investment.gambar)"
-                                :alt="investment.judul"
+                                :alt="getLocalizedValue(investment, 'judul')"
                                 class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                                 loading="lazy"
                             />
@@ -922,27 +1383,41 @@ onBeforeUnmount(() => {
                         </div>
 
                         <!-- Card Content -->
+
                         <div class="p-6">
                             <div
                                 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400"
                             >
                                 <Factory class="h-4 w-4" aria-hidden="true" />
 
-                                {{ investment.sektor_industri || "Investasi" }}
+                                {{
+                                    getLocalizedValue(
+                                        investment,
+                                        "sektor_industri",
+                                    ) || t.opportunity
+                                }}
                             </div>
 
                             <h2
                                 class="mt-3 line-clamp-2 text-xl font-bold tracking-tight text-slate-900 dark:text-white"
                             >
-                                {{ investment.judul }}
+                                {{ getLocalizedValue(investment, "judul") }}
                             </h2>
 
                             <p
-                                v-if="investment.deskripsi"
+                                v-if="
+                                    selectedInvestment &&
+                                    getLocalizedValue(
+                                        selectedInvestment,
+                                        'deskripsi',
+                                    )
+                                "
                                 class="mt-3 line-clamp-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                             >
-                                {{ investment.deskripsi }}
+                                {{ getLocalizedValue(investment, "deskripsi") }}
                             </p>
+
+                            <!-- Stats -->
 
                             <div class="mt-5 grid grid-cols-2 gap-3">
                                 <div
@@ -956,7 +1431,7 @@ onBeforeUnmount(() => {
                                             aria-hidden="true"
                                         />
 
-                                        Luas
+                                        {{ t.area }}
                                     </div>
 
                                     <p
@@ -977,7 +1452,7 @@ onBeforeUnmount(() => {
                                             aria-hidden="true"
                                         />
 
-                                        Investasi
+                                        {{ t.investment }}
                                     </div>
 
                                     <p
@@ -988,8 +1463,10 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
 
+                            <!-- Location -->
+
                             <div
-                                v-if="investment.lokasi"
+                                v-if="getLocalizedValue(investment, 'lokasi')"
                                 class="mt-4 flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400"
                             >
                                 <MapPin
@@ -998,16 +1475,20 @@ onBeforeUnmount(() => {
                                 />
 
                                 <span class="line-clamp-2">
-                                    {{ investment.lokasi }}
+                                    {{
+                                        getLocalizedValue(investment, "lokasi")
+                                    }}
                                 </span>
                             </div>
+
+                            <!-- Detail Button -->
 
                             <button
                                 type="button"
                                 class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                                 @click="openModal(investment)"
                             >
-                                Lihat Detail
+                                {{ t.viewDetail }}
 
                                 <ArrowRight
                                     class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
@@ -1019,9 +1500,7 @@ onBeforeUnmount(() => {
                 </div>
             </section>
 
-            <!-- =====================================================
-                 PAGINATION
-            ====================================================== -->
+            <!-- Pagination -->
 
             <nav
                 v-if="
@@ -1030,7 +1509,7 @@ onBeforeUnmount(() => {
                     props.peluangInvestasis.last_page > 1
                 "
                 class="mt-10 flex flex-wrap items-center justify-center gap-2"
-                aria-label="Pagination peluang investasi"
+                :aria-label="t.investmentOpportunities"
             >
                 <template
                     v-for="(link, index) in props.peluangInvestasis.links"
@@ -1043,14 +1522,14 @@ onBeforeUnmount(() => {
                         :aria-current="link.active ? 'page' : undefined"
                         :aria-label="
                             isPreviousLink(link, index)
-                                ? 'Halaman sebelumnya'
+                                ? t.previousPage
                                 : isNextLink(
                                         link,
                                         index,
                                         props.peluangInvestasis.links,
                                     )
-                                  ? 'Halaman berikutnya'
-                                  : `Halaman ${link.label}`
+                                  ? t.nextPage
+                                  : `${t.page} ${link.label}`
                         "
                         class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-slate-950"
                         :class="
@@ -1083,9 +1562,7 @@ onBeforeUnmount(() => {
                 </template>
             </nav>
 
-            <!-- =====================================================
-                 CTA
-            ====================================================== -->
+            <!-- CTA -->
 
             <section
                 v-if="!isLoading && props.peluangInvestasis.total > 0"
@@ -1105,21 +1582,19 @@ onBeforeUnmount(() => {
                                 aria-hidden="true"
                             />
 
-                            Tertarik Berinvestasi?
+                            {{ t.interested }}
                         </div>
 
                         <h2
                             class="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
                         >
-                            Mari wujudkan peluang investasi Anda bersama KITB.
+                            {{ t.interestedTitle }}
                         </h2>
 
                         <p
                             class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400"
                         >
-                            Hubungi tim kami untuk mendapatkan informasi lebih
-                            lanjut mengenai ketersediaan lahan, fasilitas, dan
-                            proses investasi.
+                            {{ t.interestedDescription }}
                         </p>
                     </div>
 
@@ -1127,7 +1602,7 @@ onBeforeUnmount(() => {
                         href="/kunjungan-lahan"
                         class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-blue-950"
                     >
-                        Hubungi Kami
+                        {{ t.contactUs }}
 
                         <ArrowRight class="h-4 w-4" aria-hidden="true" />
                     </Link>
@@ -1135,9 +1610,7 @@ onBeforeUnmount(() => {
             </section>
         </div>
 
-        <!-- =========================================================
-             DETAIL MODAL
-        ========================================================== -->
+        <!-- Detail Modal -->
 
         <Transition name="modal">
             <div
@@ -1159,14 +1632,17 @@ onBeforeUnmount(() => {
                     aria-labelledby="investment-modal-title"
                     class="relative my-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl outline-none dark:border-slate-800 dark:bg-slate-900"
                 >
-                    <!-- Modal Header -->
+                    <!-- Modal Image -->
+
                     <div
                         class="relative h-56 bg-slate-100 sm:h-72 dark:bg-slate-800"
                     >
                         <img
                             v-if="selectedInvestment.gambar"
                             :src="imageUrl(selectedInvestment.gambar)"
-                            :alt="selectedInvestment.judul"
+                            :alt="
+                                getLocalizedValue(selectedInvestment, 'judul')
+                            "
                             class="h-full w-full object-cover"
                         />
 
@@ -1187,7 +1663,7 @@ onBeforeUnmount(() => {
 
                         <button
                             type="button"
-                            aria-label="Tutup detail peluang investasi"
+                            :aria-label="t.close"
                             class="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-lg backdrop-blur transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-900"
                             @click="closeModal"
                         >
@@ -1210,13 +1686,16 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- Modal Body -->
+
                     <div class="p-6 sm:p-8">
                         <div
                             class="text-xs font-bold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-400"
                         >
                             {{
-                                selectedInvestment.sektor_industri ||
-                                "Peluang Investasi"
+                                getLocalizedValue(
+                                    selectedInvestment,
+                                    "sektor_industri",
+                                ) || t.investmentOpportunity
                             }}
                         </div>
 
@@ -1224,10 +1703,11 @@ onBeforeUnmount(() => {
                             id="investment-modal-title"
                             class="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white"
                         >
-                            {{ selectedInvestment.judul }}
+                            {{ getLocalizedValue(selectedInvestment, "judul") }}
                         </h2>
 
                         <!-- Stats -->
+
                         <div class="mt-6 grid gap-3 sm:grid-cols-3">
                             <div
                                 class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/50"
@@ -1240,7 +1720,7 @@ onBeforeUnmount(() => {
                                         aria-hidden="true"
                                     />
 
-                                    Luas Lahan
+                                    {{ t.area }}
                                 </div>
 
                                 <p
@@ -1261,7 +1741,7 @@ onBeforeUnmount(() => {
                                         aria-hidden="true"
                                     />
 
-                                    Nilai Investasi
+                                    {{ t.investment }}
                                 </div>
 
                                 <p
@@ -1286,62 +1766,76 @@ onBeforeUnmount(() => {
                                         aria-hidden="true"
                                     />
 
-                                    Lokasi
+                                    {{ t.location }}
                                 </div>
 
                                 <p
                                     class="mt-2 text-base font-bold text-slate-900 dark:text-white"
                                 >
                                     {{
-                                        selectedInvestment.lokasi ||
-                                        "Informasi tersedia"
+                                        getLocalizedValue(
+                                            selectedInvestment,
+                                            "lokasi",
+                                        ) || t.informationAvailable
                                     }}
                                 </p>
                             </div>
                         </div>
 
                         <!-- Description -->
+
                         <div class="mt-7">
                             <h3
                                 class="text-sm font-bold text-slate-900 dark:text-white"
                             >
-                                Tentang Peluang Investasi
+                                {{ t.aboutOpportunity }}
                             </h3>
 
                             <p
-                                v-if="selectedInvestment.deskripsi"
+                                v-if="
+                                    selectedInvestment &&
+                                    getLocalizedValue(
+                                        selectedInvestment,
+                                        'deskripsi',
+                                    )
+                                "
                                 class="mt-2 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-400"
                             >
-                                {{ selectedInvestment.deskripsi }}
+                                {{
+                                    getLocalizedValue(
+                                        selectedInvestment,
+                                        "deskripsi",
+                                    )
+                                }}
                             </p>
 
                             <p
                                 v-else
                                 class="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400"
                             >
-                                Informasi detail mengenai peluang investasi ini
-                                dapat diperoleh dengan menghubungi tim KITB.
+                                {{ t.detailFallback }}
                             </p>
                         </div>
 
                         <!-- Actions -->
+
                         <div
                             class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"
                         >
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-offset-slate-900"
+                                class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                                 @click="closeModal"
                             >
-                                Tutup
+                                {{ t.close }}
                             </button>
 
                             <Link
                                 href="/kunjungan-lahan"
-                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                 @click="closeModal"
                             >
-                                Ajukan Kunjungan Lahan
+                                {{ t.landVisit }}
 
                                 <ArrowRight
                                     class="h-4 w-4"
@@ -1357,9 +1851,11 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* =========================================================
-   REVEAL
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| Reveal
+|--------------------------------------------------------------------------
+*/
 
 [data-reveal] {
     opacity: 0;
@@ -1375,9 +1871,11 @@ onBeforeUnmount(() => {
     transform: translateY(0);
 }
 
-/* =========================================================
-   SKELETON
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| Skeleton
+|--------------------------------------------------------------------------
+*/
 
 .skeleton-shimmer {
     position: relative;
@@ -1404,9 +1902,11 @@ onBeforeUnmount(() => {
     }
 }
 
-/* =========================================================
-   MODAL
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| Modal
+|--------------------------------------------------------------------------
+*/
 
 .modal-enter-active,
 .modal-leave-active {
@@ -1425,9 +1925,11 @@ onBeforeUnmount(() => {
     transform: translateY(12px) scale(0.98);
 }
 
-/* =========================================================
-   REDUCED MOTION
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| Reduced Motion
+|--------------------------------------------------------------------------
+*/
 
 @media (prefers-reduced-motion: reduce) {
     [data-reveal] {

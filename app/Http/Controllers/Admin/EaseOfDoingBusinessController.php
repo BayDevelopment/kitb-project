@@ -26,8 +26,14 @@ class EaseOfDoingBusinessController extends Controller
                 $query->where(function ($query) use ($search) {
                     $query
                         ->where('judul', 'like', "%{$search}%")
+                        ->orWhere('judul_en', 'like', "%{$search}%")
+                        ->orWhere('judul_zh', 'like', "%{$search}%")
                         ->orWhere('ringkasan', 'like', "%{$search}%")
-                        ->orWhere('deskripsi', 'like', "%{$search}%");
+                        ->orWhere('ringkasan_en', 'like', "%{$search}%")
+                        ->orWhere('ringkasan_zh', 'like', "%{$search}%")
+                        ->orWhere('deskripsi', 'like', "%{$search}%")
+                        ->orWhere('deskripsi_en', 'like', "%{$search}%")
+                        ->orWhere('deskripsi_zh', 'like', "%{$search}%");
                 });
             })
             ->when(
@@ -47,7 +53,6 @@ class EaseOfDoingBusinessController extends Controller
         return Inertia::render(
             'admin/HubunganInvestor/EaseOfDoingBusiness',
             [
-                // HARUS sama dengan props di Vue
                 'kemudahanBerusaha' => $easeOfDoingBusinesses,
 
                 'filters' => [
@@ -64,6 +69,7 @@ class EaseOfDoingBusinessController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            // Bahasa Indonesia
             'judul' => [
                 'required',
                 'string',
@@ -82,11 +88,45 @@ class EaseOfDoingBusinessController extends Controller
                 'max:20000',
             ],
 
-            /*
-             * `ikon` bukan file.
-             * Vue mengirim key Lucide seperti:
-             * file-text, building-2, stamp, dll.
-             */
+            // Bahasa Inggris
+            'judul_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'ringkasan_en' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+                'max:20000',
+            ],
+
+            // Bahasa Mandarin
+            'judul_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'ringkasan_zh' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+                'max:20000',
+            ],
+
+            // Data umum
             'ikon' => [
                 'nullable',
                 'string',
@@ -101,19 +141,29 @@ class EaseOfDoingBusinessController extends Controller
 
         try {
             EaseOfDoingBusiness::create([
+                // Bahasa Indonesia
                 'judul' => $validated['judul'],
+                'ringkasan' => $validated['ringkasan'] ?? null,
+                'deskripsi' => $validated['deskripsi'] ?? null,
 
+                // Bahasa Inggris
+                'judul_en' => $validated['judul_en'] ?? null,
+                'ringkasan_en' => $validated['ringkasan_en'] ?? null,
+                'deskripsi_en' => $validated['deskripsi_en'] ?? null,
+
+                // Bahasa Mandarin
+                'judul_zh' => $validated['judul_zh'] ?? null,
+                'ringkasan_zh' => $validated['ringkasan_zh'] ?? null,
+                'deskripsi_zh' => $validated['deskripsi_zh'] ?? null,
+
+                // Data umum
                 'slug' => $this->generateUniqueSlug(
                     $validated['judul']
                 ),
 
-                'ringkasan' => $validated['ringkasan'] ?? null,
-
-                'deskripsi' => $validated['deskripsi'] ?? null,
-
                 'ikon' => $validated['ikon'] ?? null,
 
-                /*
+                /**
                  * Jika data baru ditambahkan,
                  * letakkan di urutan paling belakang.
                  */
@@ -146,6 +196,7 @@ class EaseOfDoingBusinessController extends Controller
         EaseOfDoingBusiness $easeOfDoingBusiness
     ): RedirectResponse {
         $validated = $request->validate([
+            // Bahasa Indonesia
             'judul' => [
                 'required',
                 'string',
@@ -164,6 +215,45 @@ class EaseOfDoingBusinessController extends Controller
                 'max:20000',
             ],
 
+            // Bahasa Inggris
+            'judul_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'ringkasan_en' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+                'max:20000',
+            ],
+
+            // Bahasa Mandarin
+            'judul_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'ringkasan_zh' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+                'max:20000',
+            ],
+
+            // Data umum
             'ikon' => [
                 'nullable',
                 'string',
@@ -177,16 +267,26 @@ class EaseOfDoingBusinessController extends Controller
         ]);
 
         try {
-            /*
+            /**
              * Slug TIDAK diubah saat edit.
              */
             $easeOfDoingBusiness->update([
+                // Bahasa Indonesia
                 'judul' => $validated['judul'],
-
                 'ringkasan' => $validated['ringkasan'] ?? null,
-
                 'deskripsi' => $validated['deskripsi'] ?? null,
 
+                // Bahasa Inggris
+                'judul_en' => $validated['judul_en'] ?? null,
+                'ringkasan_en' => $validated['ringkasan_en'] ?? null,
+                'deskripsi_en' => $validated['deskripsi_en'] ?? null,
+
+                // Bahasa Mandarin
+                'judul_zh' => $validated['judul_zh'] ?? null,
+                'ringkasan_zh' => $validated['ringkasan_zh'] ?? null,
+                'deskripsi_zh' => $validated['deskripsi_zh'] ?? null,
+
+                // Data umum
                 'ikon' => $validated['ikon'] ?? null,
 
                 'aktif' => $validated['aktif']
@@ -219,7 +319,7 @@ class EaseOfDoingBusinessController extends Controller
 
                 $easeOfDoingBusiness->delete();
 
-                /*
+                /**
                  * Rapikan urutan setelah data dihapus.
                  */
                 EaseOfDoingBusiness::query()
@@ -281,8 +381,14 @@ class EaseOfDoingBusinessController extends Controller
                 $neighbor = EaseOfDoingBusiness::query()
                     ->where(function ($query) use ($easeOfDoingBusiness) {
                         $query
-                            ->where('urutan', '<', $easeOfDoingBusiness->urutan)
-                            ->orWhere(function ($query) use ($easeOfDoingBusiness) {
+                            ->where(
+                                'urutan',
+                                '<',
+                                $easeOfDoingBusiness->urutan
+                            )
+                            ->orWhere(function ($query) use (
+                                $easeOfDoingBusiness
+                            ) {
                                 $query
                                     ->where(
                                         'urutan',
@@ -354,8 +460,14 @@ class EaseOfDoingBusinessController extends Controller
                 $neighbor = EaseOfDoingBusiness::query()
                     ->where(function ($query) use ($easeOfDoingBusiness) {
                         $query
-                            ->where('urutan', '>', $easeOfDoingBusiness->urutan)
-                            ->orWhere(function ($query) use ($easeOfDoingBusiness) {
+                            ->where(
+                                'urutan',
+                                '>',
+                                $easeOfDoingBusiness->urutan
+                            )
+                            ->orWhere(function ($query) use (
+                                $easeOfDoingBusiness
+                            ) {
                                 $query
                                     ->where(
                                         'urutan',

@@ -11,19 +11,32 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('peluang_investasis', function (Blueprint $table) {
+        Schema::create('peluang_investasis', function (Blueprint $table): void {
             $table->id();
 
+            // Bahasa Indonesia
             $table->string('judul');
-            $table->string('slug')->unique();
-
             $table->string('sektor_industri')->nullable();
             $table->text('deskripsi')->nullable();
+            $table->string('lokasi')->nullable();
+
+            // English
+            $table->string('judul_en')->nullable();
+            $table->string('sektor_industri_en')->nullable();
+            $table->text('deskripsi_en')->nullable();
+            $table->string('lokasi_en')->nullable();
+
+            // Chinese
+            $table->string('judul_zh')->nullable();
+            $table->string('sektor_industri_zh')->nullable();
+            $table->text('deskripsi_zh')->nullable();
+            $table->string('lokasi_zh')->nullable();
+
+            // General
+            $table->string('slug')->unique();
 
             $table->decimal('luas_lahan', 15, 2)->nullable();
             $table->string('satuan_luas', 20)->default('Ha');
-
-            $table->string('lokasi')->nullable();
 
             $table->string('status', 30)
                 ->default('tersedia')

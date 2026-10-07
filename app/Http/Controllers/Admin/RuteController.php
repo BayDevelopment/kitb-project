@@ -26,11 +26,24 @@ class RuteController extends Controller
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query
+                        // Bahasa Indonesia
                         ->where('nama_rute', 'like', "%{$search}%")
                         ->orWhere('jalur', 'like', "%{$search}%")
+                        ->orWhere('deskripsi', 'like', "%{$search}%")
+
+                        // Bahasa Inggris
+                        ->orWhere('nama_rute_en', 'like', "%{$search}%")
+                        ->orWhere('jalur_en', 'like', "%{$search}%")
+                        ->orWhere('deskripsi_en', 'like', "%{$search}%")
+
+                        // Bahasa Mandarin
+                        ->orWhere('nama_rute_zh', 'like', "%{$search}%")
+                        ->orWhere('jalur_zh', 'like', "%{$search}%")
+                        ->orWhere('deskripsi_zh', 'like', "%{$search}%")
+
+                        // Data umum
                         ->orWhere('asal', 'like', "%{$search}%")
-                        ->orWhere('tujuan', 'like', "%{$search}%")
-                        ->orWhere('deskripsi', 'like', "%{$search}%");
+                        ->orWhere('tujuan', 'like', "%{$search}%");
                 });
             })
             ->when(
@@ -38,7 +51,11 @@ class RuteController extends Controller
                 function ($query) use ($aktif) {
                     $query->where(
                         'aktif',
-                        filter_var($aktif, FILTER_VALIDATE_BOOLEAN)
+                        filter_var(
+                            $aktif,
+                            FILTER_VALIDATE_BOOLEAN,
+                            FILTER_NULL_ON_FAILURE
+                        ) ?? false
                     );
                 }
             )
@@ -50,6 +67,7 @@ class RuteController extends Controller
             'admin/HubunganInvestor/Rute',
             [
                 'rutes' => $rutes,
+
                 'filters' => [
                     'search' => $search,
                     'aktif' => $aktif,
@@ -69,7 +87,7 @@ class RuteController extends Controller
             $validated['geometry'] ?? null
         );
 
-        /*
+        /**
          * Jika urutan kosong, gunakan urutan berikutnya.
          */
         if (
@@ -80,7 +98,7 @@ class RuteController extends Controller
             $validated['urutan'] = $this->nextOrder();
         }
 
-        /*
+        /**
          * Default aktif.
          */
         $validated['aktif'] = $validated['aktif'] ?? true;
@@ -88,7 +106,7 @@ class RuteController extends Controller
         $imagePath = null;
 
         try {
-            /*
+            /**
              * Upload gambar.
              */
             if ($request->hasFile('gambar')) {
@@ -99,7 +117,7 @@ class RuteController extends Controller
                 $validated['gambar'] = $imagePath;
             }
 
-            /*
+            /**
              * Simpan database.
              */
             Rute::create($validated);
@@ -109,8 +127,8 @@ class RuteController extends Controller
                 'Rute berhasil ditambahkan.'
             );
         } catch (\Throwable $e) {
-            /*
-             * Kalau database gagal setelah upload,
+            /**
+             * Jika database gagal setelah upload,
              * hapus gambar yang sudah terlanjur disimpan.
              */
             if ($imagePath) {
@@ -139,7 +157,7 @@ class RuteController extends Controller
             $validated['geometry'] ?? null
         );
 
-        /*
+        /**
          * Pertahankan urutan lama jika tidak dikirim.
          */
         if (
@@ -150,7 +168,7 @@ class RuteController extends Controller
             $validated['urutan'] = $rute->urutan;
         }
 
-        /*
+        /**
          * Pertahankan status aktif lama jika tidak dikirim.
          */
         if (!array_key_exists('aktif', $validated)) {
@@ -161,7 +179,7 @@ class RuteController extends Controller
         $newImage = null;
 
         try {
-            /*
+            /**
              * Upload gambar baru jika ada.
              */
             if ($request->hasFile('gambar')) {
@@ -172,12 +190,12 @@ class RuteController extends Controller
                 $validated['gambar'] = $newImage;
             }
 
-            /*
+            /**
              * Update database.
              */
             $rute->update($validated);
 
-            /*
+            /**
              * Hapus gambar lama setelah update berhasil.
              */
             if ($newImage && $oldImage) {
@@ -189,8 +207,8 @@ class RuteController extends Controller
                 'Rute berhasil diperbarui.'
             );
         } catch (\Throwable $e) {
-            /*
-             * Kalau update gagal, hapus file baru.
+            /**
+             * Jika update gagal, hapus file baru.
              */
             if ($newImage) {
                 $this->deleteImage($newImage);
@@ -218,7 +236,7 @@ class RuteController extends Controller
 
                 $rute->delete();
 
-                /*
+                /**
                  * Rapikan urutan setelah data dihapus.
                  */
                 Rute::query()
@@ -226,7 +244,7 @@ class RuteController extends Controller
                     ->decrement('urutan');
             });
 
-            /*
+            /**
              * Hapus gambar setelah transaksi database berhasil.
              */
             $this->deleteImage($image);
@@ -278,18 +296,20 @@ class RuteController extends Controller
 
         $direction = $validated['direction'];
 
-        /*
+        /**
          * Cari tetangga berdasarkan urutan.
          */
         if ($direction === 'up') {
             $neighbor = Rute::query()
                 ->where('urutan', '<', $rute->urutan)
                 ->orderByDesc('urutan')
+                ->orderByDesc('id')
                 ->first();
         } else {
             $neighbor = Rute::query()
                 ->where('urutan', '>', $rute->urutan)
                 ->orderBy('urutan')
+                ->orderBy('id')
                 ->first();
         }
 
@@ -306,10 +326,11 @@ class RuteController extends Controller
             $currentOrder = $rute->urutan;
             $neighborOrder = $neighbor->urutan;
 
-            /*
+            /**
              * Pakai angka sementara supaya tidak bentrok.
              */
-            $temporaryOrder = Rute::query()->max('urutan') + 1;
+            $temporaryOrder =
+                ((int) Rute::query()->max('urutan')) + 1;
 
             $rute->update([
                 'urutan' => $temporaryOrder,
@@ -336,6 +357,11 @@ class RuteController extends Controller
     private function validateData(Request $request): array
     {
         return $request->validate([
+            /*
+            |--------------------------------------------------------------------------
+            | Bahasa Indonesia
+            |--------------------------------------------------------------------------
+            */
             'nama_rute' => [
                 'required',
                 'string',
@@ -348,6 +374,63 @@ class RuteController extends Controller
                 'max:255',
             ],
 
+            'deskripsi' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Bahasa Inggris
+            |--------------------------------------------------------------------------
+            */
+            'nama_rute_en' => [
+                'nullable',
+                'string',
+                'max:200',
+            ],
+
+            'jalur_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Bahasa Mandarin
+            |--------------------------------------------------------------------------
+            */
+            'nama_rute_zh' => [
+                'nullable',
+                'string',
+                'max:200',
+            ],
+
+            'jalur_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Data Teknis
+            |--------------------------------------------------------------------------
+            */
             'jarak' => [
                 'required',
                 'numeric',
@@ -367,12 +450,11 @@ class RuteController extends Controller
                 'max:100',
             ],
 
-            'deskripsi' => [
-                'nullable',
-                'string',
-                'max:10000',
-            ],
-
+            /*
+            |--------------------------------------------------------------------------
+            | Asal & Tujuan
+            |--------------------------------------------------------------------------
+            */
             'asal' => [
                 'nullable',
                 'string',
@@ -385,6 +467,11 @@ class RuteController extends Controller
                 'max:200',
             ],
 
+            /*
+            |--------------------------------------------------------------------------
+            | Koordinat
+            |--------------------------------------------------------------------------
+            */
             'latitude' => [
                 'nullable',
                 'numeric',
@@ -397,10 +484,20 @@ class RuteController extends Controller
                 'between:-180,180',
             ],
 
+            /*
+            |--------------------------------------------------------------------------
+            | Geometry
+            |--------------------------------------------------------------------------
+            */
             'geometry' => [
                 'nullable',
             ],
 
+            /*
+            |--------------------------------------------------------------------------
+            | Gambar
+            |--------------------------------------------------------------------------
+            */
             'gambar' => [
                 'nullable',
                 'image',
@@ -408,6 +505,11 @@ class RuteController extends Controller
                 'max:2048',
             ],
 
+            /*
+            |--------------------------------------------------------------------------
+            | Pengaturan
+            |--------------------------------------------------------------------------
+            */
             'urutan' => [
                 'nullable',
                 'integer',
@@ -434,7 +536,7 @@ class RuteController extends Controller
             return null;
         }
 
-        /*
+        /**
          * Jika geometry dikirim sebagai JSON string,
          * decode terlebih dahulu.
          */
@@ -449,7 +551,8 @@ class RuteController extends Controller
                 !is_array($decoded)
             ) {
                 throw ValidationException::withMessages([
-                    'geometry' => 'Format geometry GeoJSON tidak valid.',
+                    'geometry' =>
+                    'Format geometry GeoJSON tidak valid.',
                 ]);
             }
 
@@ -458,16 +561,21 @@ class RuteController extends Controller
 
         if (!is_array($geometry)) {
             throw ValidationException::withMessages([
-                'geometry' => 'Format geometry GeoJSON tidak valid.',
+                'geometry' =>
+                'Format geometry GeoJSON tidak valid.',
             ]);
         }
 
         if (
             !isset($geometry['type']) ||
-            !array_key_exists('coordinates', $geometry)
+            !array_key_exists(
+                'coordinates',
+                $geometry
+            )
         ) {
             throw ValidationException::withMessages([
-                'geometry' => 'Geometry harus memiliki type dan coordinates.',
+                'geometry' =>
+                'Geometry harus memiliki type dan coordinates.',
             ]);
         }
 
@@ -485,7 +593,8 @@ class RuteController extends Controller
             )
         ) {
             throw ValidationException::withMessages([
-                'geometry' => 'Tipe geometry hanya Point, LineString, atau MultiLineString.',
+                'geometry' =>
+                'Tipe geometry hanya Point, LineString, atau MultiLineString.',
             ]);
         }
 
@@ -509,43 +618,50 @@ class RuteController extends Controller
     ): void {
         if (!is_array($coordinates)) {
             throw ValidationException::withMessages([
-                'geometry' => 'Coordinates GeoJSON tidak valid.',
+                'geometry' =>
+                'Coordinates GeoJSON tidak valid.',
             ]);
         }
 
-        /*
+        /**
          * Point
          */
         if ($type === 'Point') {
-            $this->validateCoordinatePair($coordinates);
+            $this->validateCoordinatePair(
+                $coordinates
+            );
 
             return;
         }
 
-        /*
+        /**
          * LineString
          */
         if ($type === 'LineString') {
             if (count($coordinates) < 2) {
                 throw ValidationException::withMessages([
-                    'geometry' => 'LineString minimal harus memiliki dua titik.',
+                    'geometry' =>
+                    'LineString minimal harus memiliki dua titik.',
                 ]);
             }
 
             foreach ($coordinates as $coordinate) {
-                $this->validateCoordinatePair($coordinate);
+                $this->validateCoordinatePair(
+                    $coordinate
+                );
             }
 
             return;
         }
 
-        /*
+        /**
          * MultiLineString
          */
         if ($type === 'MultiLineString') {
             if (count($coordinates) === 0) {
                 throw ValidationException::withMessages([
-                    'geometry' => 'MultiLineString harus memiliki minimal satu garis.',
+                    'geometry' =>
+                    'MultiLineString harus memiliki minimal satu garis.',
                 ]);
             }
 
@@ -555,12 +671,15 @@ class RuteController extends Controller
                     count($line) < 2
                 ) {
                     throw ValidationException::withMessages([
-                        'geometry' => 'Setiap garis harus memiliki minimal dua titik.',
+                        'geometry' =>
+                        'Setiap garis harus memiliki minimal dua titik.',
                     ]);
                 }
 
                 foreach ($line as $coordinate) {
-                    $this->validateCoordinatePair($coordinate);
+                    $this->validateCoordinatePair(
+                        $coordinate
+                    );
                 }
             }
         }
@@ -580,7 +699,8 @@ class RuteController extends Controller
             count($coordinate) < 2
         ) {
             throw ValidationException::withMessages([
-                'geometry' => 'Pasangan koordinat GeoJSON tidak valid.',
+                'geometry' =>
+                'Pasangan koordinat GeoJSON tidak valid.',
             ]);
         }
 
@@ -592,7 +712,8 @@ class RuteController extends Controller
             !is_numeric($latitude)
         ) {
             throw ValidationException::withMessages([
-                'geometry' => 'Longitude dan latitude harus berupa angka.',
+                'geometry' =>
+                'Longitude dan latitude harus berupa angka.',
             ]);
         }
 
@@ -604,7 +725,8 @@ class RuteController extends Controller
             $longitude > 180
         ) {
             throw ValidationException::withMessages([
-                'geometry' => 'Longitude harus berada antara -180 sampai 180.',
+                'geometry' =>
+                'Longitude harus berada antara -180 sampai 180.',
             ]);
         }
 
@@ -613,7 +735,8 @@ class RuteController extends Controller
             $latitude > 90
         ) {
             throw ValidationException::withMessages([
-                'geometry' => 'Latitude harus berada antara -90 sampai 90.',
+                'geometry' =>
+                'Latitude harus berada antara -90 sampai 90.',
             ]);
         }
     }

@@ -723,56 +723,128 @@ class DatabaseSeeder extends Seeder
                 );
             }
             /*
-            |--------------------------------------------------------------------------
-            | 12. RUTE
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 12. RUTE
+|--------------------------------------------------------------------------
+*/
+
             $rutes = [
                 [
+                    // Bahasa Indonesia
                     'nama_rute' => 'Rute Tanjung Buton - Pelabuhan',
                     'jalur' => 'Kawasan Industri Tanjung Buton → Pelabuhan Tanjung Buton',
+                    'deskripsi' => 'Rute utama menuju fasilitas pelabuhan untuk mendukung kegiatan logistik kawasan.',
+
+                    // Bahasa Inggris
+                    'nama_rute_en' => 'Tanjung Buton - Port Route',
+                    'jalur_en' => 'Tanjung Buton Industrial Estate → Tanjung Buton Port',
+                    'deskripsi_en' => 'The main route to the port facility supporting logistics activities within the industrial estate.',
+
+                    // Bahasa Mandarin
+                    'nama_rute_zh' => '丹戎布顿 - 港口路线',
+                    'jalur_zh' => '丹戎布顿工业园区 → 丹戎布顿港',
+                    'deskripsi_zh' => '通往港口设施的主要路线，为园区物流活动提供支持。',
+
+                    // Data teknis
                     'jarak' => 8.50,
                     'satuan_jarak' => 'km',
                     'waktu_tempuh' => '15 - 20 menit',
-                    'deskripsi' => 'Rute utama menuju fasilitas pelabuhan untuk mendukung kegiatan logistik kawasan.',
+
+                    // Asal & tujuan
                     'asal' => 'Kawasan Industri Tanjung Buton',
                     'tujuan' => 'Pelabuhan Tanjung Buton',
+
+                    // Lokasi
                     'latitude' => 0.9321000,
                     'longitude' => 102.1425000,
+
+                    // GeoJSON
                     'geometry' => null,
+
+                    // Gambar
                     'gambar' => null,
+
+                    // Pengaturan
                     'urutan' => 1,
                     'aktif' => true,
                 ],
+
                 [
+                    // Bahasa Indonesia
                     'nama_rute' => 'Rute Kawasan - Pusat Kabupaten',
                     'jalur' => 'Kawasan Industri Tanjung Buton → Pusat Kabupaten',
+                    'deskripsi' => 'Rute penghubung kawasan menuju pusat pemerintahan dan layanan kabupaten.',
+
+                    // Bahasa Inggris
+                    'nama_rute_en' => 'Industrial Estate - Regency Center Route',
+                    'jalur_en' => 'Tanjung Buton Industrial Estate → Regency Center',
+                    'deskripsi_en' => 'A connecting route from the industrial estate to the regency government center and public services.',
+
+                    // Bahasa Mandarin
+                    'nama_rute_zh' => '园区 - 县城路线',
+                    'jalur_zh' => '丹戎布顿工业园区 → 县城中心',
+                    'deskripsi_zh' => '连接工业园区与县政府中心及公共服务设施的路线。',
+
+                    // Data teknis
                     'jarak' => 35.00,
                     'satuan_jarak' => 'km',
                     'waktu_tempuh' => '45 - 60 menit',
-                    'deskripsi' => 'Rute penghubung kawasan menuju pusat pemerintahan dan layanan kabupaten.',
+
+                    // Asal & tujuan
                     'asal' => 'Kawasan Industri Tanjung Buton',
                     'tujuan' => 'Pusat Kabupaten',
+
+                    // Lokasi
                     'latitude' => 0.9321000,
                     'longitude' => 102.1425000,
+
+                    // GeoJSON
                     'geometry' => null,
+
+                    // Gambar
                     'gambar' => null,
+
+                    // Pengaturan
                     'urutan' => 2,
                     'aktif' => true,
                 ],
+
                 [
+                    // Bahasa Indonesia
                     'nama_rute' => 'Rute Kawasan - Kota Pekanbaru',
                     'jalur' => 'Kawasan Industri Tanjung Buton → Pekanbaru',
+                    'deskripsi' => 'Rute darat menuju pusat ekonomi Provinsi Riau.',
+
+                    // Bahasa Inggris
+                    'nama_rute_en' => 'Industrial Estate - Pekanbaru Route',
+                    'jalur_en' => 'Tanjung Buton Industrial Estate → Pekanbaru',
+                    'deskripsi_en' => 'A land route connecting the industrial estate to Pekanbaru, the economic center of Riau Province.',
+
+                    // Bahasa Mandarin
+                    'nama_rute_zh' => '园区 - 北干巴鲁路线',
+                    'jalur_zh' => '丹戎布顿工业园区 → 北干巴鲁',
+                    'deskripsi_zh' => '连接工业园区与廖内省经济中心北干巴鲁的陆路路线。',
+
+                    // Data teknis
                     'jarak' => 180.00,
                     'satuan_jarak' => 'km',
                     'waktu_tempuh' => '4 - 5 jam',
-                    'deskripsi' => 'Rute darat menuju pusat ekonomi Provinsi Riau.',
+
+                    // Asal & tujuan
                     'asal' => 'Kawasan Industri Tanjung Buton',
                     'tujuan' => 'Pekanbaru',
+
+                    // Lokasi
                     'latitude' => 0.9321000,
                     'longitude' => 102.1425000,
+
+                    // GeoJSON
                     'geometry' => null,
+
+                    // Gambar
                     'gambar' => null,
+
+                    // Pengaturan
                     'urutan' => 3,
                     'aktif' => true,
                 ],
@@ -780,41 +852,83 @@ class DatabaseSeeder extends Seeder
 
             foreach ($rutes as $item) {
                 DB::table('rutes')->updateOrInsert(
-                    ['nama_rute' => $item['nama_rute']],
                     [
+                        'nama_rute' => $item['nama_rute'],
+                    ],
+                    [
+                        // Bahasa Indonesia
                         'jalur' => $item['jalur'],
+                        'deskripsi' => $item['deskripsi'],
+
+                        // Bahasa Inggris
+                        'nama_rute_en' => $item['nama_rute_en'],
+                        'jalur_en' => $item['jalur_en'],
+                        'deskripsi_en' => $item['deskripsi_en'],
+
+                        // Bahasa Mandarin
+                        'nama_rute_zh' => $item['nama_rute_zh'],
+                        'jalur_zh' => $item['jalur_zh'],
+                        'deskripsi_zh' => $item['deskripsi_zh'],
+
+                        // Data teknis
                         'jarak' => $item['jarak'],
                         'satuan_jarak' => $item['satuan_jarak'],
                         'waktu_tempuh' => $item['waktu_tempuh'],
-                        'deskripsi' => $item['deskripsi'],
+
+                        // Asal & tujuan
                         'asal' => $item['asal'],
                         'tujuan' => $item['tujuan'],
+
+                        // Lokasi
                         'latitude' => $item['latitude'],
                         'longitude' => $item['longitude'],
+
+                        // GeoJSON
                         'geometry' => $item['geometry'],
+
+                        // Gambar
                         'gambar' => $item['gambar'],
+
+                        // Pengaturan
                         'urutan' => $item['urutan'],
                         'aktif' => $item['aktif'],
+
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]
                 );
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 13. PELUANG INVESTASI
-            |--------------------------------------------------------------------------
-            */
+            /********************************************************************************
+             * |--------------------------------------------------------------------------|
+             * | 13. PELUANG INVESTASI                                                     |
+             * |--------------------------------------------------------------------------|
+             ********************************************************************************/
+
             $investasi = [
                 [
+                    // Indonesia
                     'judul' => 'Kawasan Industri Manufaktur',
-                    'slug' => 'kawasan-industri-manufaktur',
                     'sektor_industri' => 'Manufaktur',
                     'deskripsi' => 'Peluang investasi untuk pengembangan industri manufaktur dan industri pendukung.',
+                    'lokasi' => 'Zona Industri Utama',
+
+                    // English
+                    'judul_en' => 'Manufacturing Industrial Estate',
+                    'sektor_industri_en' => 'Manufacturing',
+                    'deskripsi_en' => 'An investment opportunity for the development of manufacturing industries and supporting industries.',
+                    'lokasi_en' => 'Main Industrial Zone',
+
+                    // Mandarin
+                    'judul_zh' => '制造业工业园区',
+                    'sektor_industri_zh' => '制造业',
+                    'deskripsi_zh' => '为制造业及配套产业发展提供投资机会。',
+                    'lokasi_zh' => '主要工业区',
+
+                    // General
+                    'slug' => 'kawasan-industri-manufaktur',
                     'luas_lahan' => 500.00,
                     'satuan_luas' => 'Ha',
-                    'lokasi' => 'Zona Industri Utama',
                     'status' => 'tersedia',
                     'nilai_investasi' => 2500000000000.00,
                     'mata_uang' => 'IDR',
@@ -822,14 +936,30 @@ class DatabaseSeeder extends Seeder
                     'urutan' => 1,
                     'aktif' => true,
                 ],
+
                 [
+                    // Indonesia
                     'judul' => 'Kawasan Logistik dan Pergudangan',
-                    'slug' => 'kawasan-logistik-pergudangan',
                     'sektor_industri' => 'Logistik',
                     'deskripsi' => 'Area investasi untuk pergudangan, distribusi, dan kegiatan logistik terpadu.',
+                    'lokasi' => 'Zona Logistik',
+
+                    // English
+                    'judul_en' => 'Logistics and Warehousing Area',
+                    'sektor_industri_en' => 'Logistics',
+                    'deskripsi_en' => 'An investment area for warehousing, distribution, and integrated logistics activities.',
+                    'lokasi_en' => 'Logistics Zone',
+
+                    // Mandarin
+                    'judul_zh' => '物流与仓储园区',
+                    'sektor_industri_zh' => '物流业',
+                    'deskripsi_zh' => '为仓储、配送及综合物流活动提供投资区域。',
+                    'lokasi_zh' => '物流区',
+
+                    // General
+                    'slug' => 'kawasan-logistik-pergudangan',
                     'luas_lahan' => 250.00,
                     'satuan_luas' => 'Ha',
-                    'lokasi' => 'Zona Logistik',
                     'status' => 'tersedia',
                     'nilai_investasi' => 1250000000000.00,
                     'mata_uang' => 'IDR',
@@ -837,14 +967,30 @@ class DatabaseSeeder extends Seeder
                     'urutan' => 2,
                     'aktif' => true,
                 ],
+
                 [
+                    // Indonesia
                     'judul' => 'Industri Hilirisasi',
-                    'slug' => 'industri-hilirisasi',
                     'sektor_industri' => 'Hilirisasi',
                     'deskripsi' => 'Peluang investasi bagi industri pengolahan dan hilirisasi komoditas strategis.',
+                    'lokasi' => 'Zona Industri Pengembangan',
+
+                    // English
+                    'judul_en' => 'Downstream Processing Industry',
+                    'sektor_industri_en' => 'Downstream Processing',
+                    'deskripsi_en' => 'An investment opportunity for processing industries and the downstream development of strategic commodities.',
+                    'lokasi_en' => 'Industrial Development Zone',
+
+                    // Mandarin
+                    'judul_zh' => '下游产业',
+                    'sektor_industri_zh' => '下游产业',
+                    'deskripsi_zh' => '为战略性商品加工及下游产业发展提供投资机会。',
+                    'lokasi_zh' => '工业开发区',
+
+                    // General
+                    'slug' => 'industri-hilirisasi',
                     'luas_lahan' => 750.00,
                     'satuan_luas' => 'Ha',
-                    'lokasi' => 'Zona Industri Pengembangan',
                     'status' => 'tersedia',
                     'nilai_investasi' => 5000000000000.00,
                     'mata_uang' => 'IDR',
@@ -858,18 +1004,34 @@ class DatabaseSeeder extends Seeder
                 DB::table('peluang_investasis')->updateOrInsert(
                     ['slug' => $item['slug']],
                     [
+                        // Indonesia
                         'judul' => $item['judul'],
                         'sektor_industri' => $item['sektor_industri'],
                         'deskripsi' => $item['deskripsi'],
+                        'lokasi' => $item['lokasi'],
+
+                        // English
+                        'judul_en' => $item['judul_en'],
+                        'sektor_industri_en' => $item['sektor_industri_en'],
+                        'deskripsi_en' => $item['deskripsi_en'],
+                        'lokasi_en' => $item['lokasi_en'],
+
+                        // Mandarin
+                        'judul_zh' => $item['judul_zh'],
+                        'sektor_industri_zh' => $item['sektor_industri_zh'],
+                        'deskripsi_zh' => $item['deskripsi_zh'],
+                        'lokasi_zh' => $item['lokasi_zh'],
+
+                        // General
                         'luas_lahan' => $item['luas_lahan'],
                         'satuan_luas' => $item['satuan_luas'],
-                        'lokasi' => $item['lokasi'],
                         'status' => $item['status'],
                         'nilai_investasi' => $item['nilai_investasi'],
                         'mata_uang' => $item['mata_uang'],
                         'gambar' => $item['gambar'],
                         'urutan' => $item['urutan'],
                         'aktif' => $item['aktif'],
+
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]
@@ -877,43 +1039,87 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | 14. EASE OF DOING BUSINESS
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 14. EASE OF DOING BUSINESS
+|--------------------------------------------------------------------------
+*/
+
             $ease = [
                 [
                     'judul' => 'Perizinan Terintegrasi',
+                    'judul_en' => 'Integrated Licensing',
+                    'judul_zh' => '一体化许可服务',
+
                     'slug' => 'perizinan-terintegrasi',
+
                     'ringkasan' => 'Proses perizinan yang mudah dan terkoordinasi.',
+                    'ringkasan_en' => 'Easy and coordinated licensing processes.',
+                    'ringkasan_zh' => '便捷且协调的许可办理流程。',
+
                     'deskripsi' => 'Investor mendapatkan dukungan informasi dan pendampingan dalam proses perizinan usaha.',
-                    'ikon' => 'FileCheck2',
+                    'deskripsi_en' => 'Investors receive information support and assistance throughout the business licensing process.',
+                    'deskripsi_zh' => '投资者可在企业许可办理过程中获得信息支持与咨询协助。',
+
+                    'ikon' => 'FileCheck',
                     'urutan' => 1,
                     'aktif' => true,
                 ],
+
                 [
                     'judul' => 'Infrastruktur Terpadu',
+                    'judul_en' => 'Integrated Infrastructure',
+                    'judul_zh' => '综合基础设施',
+
                     'slug' => 'infrastruktur-terpadu',
+
                     'ringkasan' => 'Infrastruktur kawasan yang mendukung kegiatan industri.',
-                    'deskripsi' => 'Kawasan dilengkapi dengan infrastruktur dasar dan fasilitas pendukung untuk kebutuhan tenant.',
-                    'ikon' => 'Factory',
+                    'ringkasan_en' => 'Integrated infrastructure supporting industrial activities.',
+                    'ringkasan_zh' => '为工业活动提供支持的综合园区基础设施。',
+
+                    'deskripsi' => 'Kawasan dilengkapi dengan infrastruktur dasar dan fasilitas pendukung untuk memenuhi kebutuhan tenant.',
+                    'deskripsi_en' => 'The area is equipped with basic infrastructure and supporting facilities to meet tenant needs.',
+                    'deskripsi_zh' => '园区配备完善的基础设施和配套设施，以满足入驻企业的需求。',
+
+                    'ikon' => 'Building2',
                     'urutan' => 2,
                     'aktif' => true,
                 ],
+
                 [
                     'judul' => 'Dukungan Investasi',
+                    'judul_en' => 'Investment Support',
+                    'judul_zh' => '投资支持',
+
                     'slug' => 'dukungan-investasi',
+
                     'ringkasan' => 'Pendampingan bagi calon investor dan tenant.',
+                    'ringkasan_en' => 'Assistance for prospective investors and tenants.',
+                    'ringkasan_zh' => '为潜在投资者和入驻企业提供支持。',
+
                     'deskripsi' => 'Tim pengelola kawasan membantu investor memahami potensi, fasilitas, serta proses pengembangan usaha.',
+                    'deskripsi_en' => 'The estate management team assists investors in understanding the potential, facilities, and business development processes.',
+                    'deskripsi_zh' => '园区管理团队协助投资者了解园区潜力、设施以及企业发展流程。',
+
                     'ikon' => 'Handshake',
                     'urutan' => 3,
                     'aktif' => true,
                 ],
+
                 [
                     'judul' => 'Konektivitas Logistik',
+                    'judul_en' => 'Logistics Connectivity',
+                    'judul_zh' => '物流连接',
+
                     'slug' => 'konektivitas-logistik',
+
                     'ringkasan' => 'Akses menuju jaringan transportasi dan pelabuhan.',
+                    'ringkasan_en' => 'Access to transportation networks and ports.',
+                    'ringkasan_zh' => '连接交通网络和港口的便捷通道。',
+
                     'deskripsi' => 'Konektivitas kawasan mendukung pergerakan bahan baku dan produk menuju pasar.',
+                    'deskripsi_en' => 'The area connectivity supports the movement of raw materials and products to domestic and international markets.',
+                    'deskripsi_zh' => '园区完善的交通连接有助于原材料和产品向市场高效流通。',
+
                     'ikon' => 'Truck',
                     'urutan' => 4,
                     'aktif' => true,
@@ -925,14 +1131,24 @@ class DatabaseSeeder extends Seeder
                     ['slug' => $item['slug']],
                     [
                         'judul' => $item['judul'],
+                        'judul_en' => $item['judul_en'],
+                        'judul_zh' => $item['judul_zh'],
+
                         'ringkasan' => $item['ringkasan'],
+                        'ringkasan_en' => $item['ringkasan_en'],
+                        'ringkasan_zh' => $item['ringkasan_zh'],
+
                         'deskripsi' => $item['deskripsi'],
+                        'deskripsi_en' => $item['deskripsi_en'],
+                        'deskripsi_zh' => $item['deskripsi_zh'],
+
                         'ikon' => $item['ikon'],
                         'urutan' => $item['urutan'],
                         'aktif' => $item['aktif'],
+
                         'created_at' => $now,
                         'updated_at' => $now,
-                    ]
+                    ],
                 );
             }
 

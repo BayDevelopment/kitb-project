@@ -12,18 +12,41 @@ class Rute extends Model
     protected $table = 'rutes';
 
     protected $fillable = [
+        // Bahasa Indonesia
         'nama_rute',
         'jalur',
+        'deskripsi',
+
+        // Bahasa Inggris
+        'nama_rute_en',
+        'jalur_en',
+        'deskripsi_en',
+
+        // Bahasa Mandarin
+        'nama_rute_zh',
+        'jalur_zh',
+        'deskripsi_zh',
+
+        // Data teknis
         'jarak',
         'satuan_jarak',
         'waktu_tempuh',
-        'deskripsi',
+
+        // Asal & tujuan
         'asal',
         'tujuan',
+
+        // Lokasi
         'latitude',
         'longitude',
+
+        // Geometry
         'geometry',
+
+        // Gambar
         'gambar',
+
+        // Pengaturan
         'urutan',
         'aktif',
     ];

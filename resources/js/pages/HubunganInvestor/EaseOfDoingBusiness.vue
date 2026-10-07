@@ -1,6 +1,15 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from "vue";
+
 import { Head, Link, router } from "@inertiajs/vue3";
+
 import {
     ArrowRight,
     BriefcaseBusiness,
@@ -8,31 +17,56 @@ import {
     ChevronLeft,
     ChevronRight,
     CircleCheck,
+    FileCheck,
     FileText,
+    Handshake,
     Home,
     Info,
     Search,
+    Truck,
     X,
 } from "lucide-vue-next";
+
 import PublicLayout from "@/layouts/PublicLayout.vue";
+
+import {
+    currentLanguage,
+    localizedValue,
+    type LanguageCode,
+} from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
 });
 
-/* =========================================================
-   TYPES
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| TYPES
+|--------------------------------------------------------------------------
+*/
 
 interface EaseOfDoingBusiness {
     id: number;
+
     judul: string;
+    judul_en: string | null;
+    judul_zh: string | null;
+
     slug: string;
+
     ringkasan: string | null;
+    ringkasan_en: string | null;
+    ringkasan_zh: string | null;
+
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
     ikon: string | null;
+
     urutan: number;
     aktif: boolean;
+
     created_at: string;
 }
 
@@ -44,32 +78,237 @@ interface LinkItem {
 
 interface Paginator<T> {
     data: T[];
+
     current_page: number;
     last_page: number;
     per_page: number;
     total: number;
+
     from: number | null;
     to: number | null;
+
     links: LinkItem[];
 }
-
-/* =========================================================
-   PROPS
-========================================================= */
 
 const props = defineProps<{
     easeOfDoingBusinesses: Paginator<EaseOfDoingBusiness>;
 }>();
 
-/* =========================================================
-   STATE
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| TRANSLATIONS
+|--------------------------------------------------------------------------
+*/
+
+const translations = {
+    id: {
+        pageTitle: "Ease of Doing Business | KITB",
+        meta: "Informasi kemudahan berusaha dan berbagai layanan pendukung investasi di Kawasan Industri Tanjung Buton.",
+
+        home: "Beranda",
+        investor: "Hubungan Investor",
+
+        heading: "Ease of Doing Business",
+
+        intro: "Kenali berbagai kemudahan, layanan, dan dukungan yang tersedia untuk membantu investor menjalankan kegiatan usaha di Kawasan Industri Tanjung Buton.",
+
+        search: "Cari informasi kemudahan berusaha...",
+        searchAria: "Cari informasi kemudahan berusaha",
+        clear: "Hapus pencarian",
+
+        loading: "Memuat informasi Ease of Doing Business",
+
+        unavailableTitle: "Data Belum Tersedia",
+
+        unavailable:
+            "Informasi mengenai Ease of Doing Business saat ini belum tersedia. Silakan kembali lagi nanti untuk mendapatkan informasi terbaru dari KITB.",
+
+        viewInvestment: "Lihat Peluang Investasi",
+
+        notFound: "Data Tidak Ditemukan",
+
+        notFoundText:
+            "Tidak ada informasi yang sesuai dengan kata pencarian Anda.",
+
+        reset: "Reset Pencarian",
+
+        more: "Lihat Selengkapnya",
+
+        ready: "Siap Berinvestasi di KITB?",
+
+        readyTitle: "Kami siap membantu perjalanan investasi Anda.",
+
+        readyText:
+            "Dapatkan informasi lebih lanjut mengenai peluang investasi, fasilitas kawasan, dan proses kunjungan lahan di KITB.",
+
+        investment: "Peluang Investasi",
+
+        detail: "Informasi Detail",
+
+        noDetail: "Informasi detail belum tersedia.",
+
+        close: "Tutup",
+
+        pagination: "Navigasi halaman Ease of Doing Business",
+    },
+
+    en: {
+        pageTitle: "Ease of Doing Business | KITB",
+
+        meta: "Information about ease of doing business and investment support services in Tanjung Buton Industrial Estate.",
+
+        home: "Home",
+
+        investor: "Investor Relations",
+
+        heading: "Ease of Doing Business",
+
+        intro: "Discover various facilities, services, and support available to help investors operate their businesses in Tanjung Buton Industrial Estate.",
+
+        search: "Search ease of doing business information...",
+
+        searchAria: "Search ease of doing business information",
+
+        clear: "Clear search",
+
+        loading: "Loading Ease of Doing Business information",
+
+        unavailableTitle: "Data Not Available",
+
+        unavailable:
+            "Ease of Doing Business information is currently unavailable. Please come back later for the latest information from KITB.",
+
+        viewInvestment: "View Investment Opportunities",
+
+        notFound: "No Data Found",
+
+        notFoundText: "No information matches your search keyword.",
+
+        reset: "Reset Search",
+
+        more: "View Details",
+
+        ready: "Ready to Invest in KITB?",
+
+        readyTitle: "We are ready to support your investment journey.",
+
+        readyText:
+            "Get more information about investment opportunities, estate facilities, and land visit procedures at KITB.",
+
+        investment: "Investment Opportunities",
+
+        detail: "Detailed Information",
+
+        noDetail: "Detailed information is not available yet.",
+
+        close: "Close",
+
+        pagination: "Ease of Doing Business page navigation",
+    },
+
+    zh: {
+        pageTitle: "营商便利度 | KITB",
+
+        meta: "了解丹戎布顿工业园区的营商便利政策及投资配套服务。",
+
+        home: "首页",
+
+        investor: "投资者关系",
+
+        heading: "营商便利度",
+
+        intro: "了解丹戎布顿工业园区为投资者开展经营活动提供的各项便利、服务与支持。",
+
+        search: "搜索营商便利度信息...",
+
+        searchAria: "搜索营商便利度信息",
+
+        clear: "清除搜索",
+
+        loading: "正在加载营商便利度信息",
+
+        unavailableTitle: "暂无数据",
+
+        unavailable:
+            "目前暂无营商便利度相关信息，请稍后返回查看 KITB 的最新信息。",
+
+        viewInvestment: "查看投资机会",
+
+        notFound: "未找到数据",
+
+        notFoundText: "没有找到符合搜索关键词的信息。",
+
+        reset: "重置搜索",
+
+        more: "查看详情",
+
+        ready: "准备投资 KITB？",
+
+        readyTitle: "我们将为您的投资之旅提供支持。",
+
+        readyText: "了解更多投资机会、园区设施以及 KITB 土地参观流程。",
+
+        investment: "投资机会",
+
+        detail: "详细信息",
+
+        noDetail: "暂无详细信息。",
+
+        close: "关闭",
+
+        pagination: "营商便利度页面导航",
+    },
+} as const;
+
+/*
+|--------------------------------------------------------------------------
+| ACTIVE LANGUAGE
+|--------------------------------------------------------------------------
+|
+| currentLanguage berasal dari navbar/shared locale.
+| Tidak ada language switcher lokal di halaman ini.
+|
+*/
+
+const t = computed(() => {
+    const language: LanguageCode = currentLanguage.value;
+
+    return translations[language];
+});
+
+/*
+|--------------------------------------------------------------------------
+| LOCALIZED DATABASE VALUE
+|--------------------------------------------------------------------------
+|
+| useLocale tetap menggunakan Record<string, unknown>.
+| Wrapper ini menjaga EaseOfDoingBusiness tetap strongly typed
+| tanpa harus melakukan "as Record<string, unknown>" di template.
+|
+*/
+
+const localized = (
+    object: EaseOfDoingBusiness | null | undefined,
+    field: string,
+): string => {
+    return localizedValue(
+        object as Record<string, unknown> | null | undefined,
+        field,
+    );
+};
+
+/*
+|--------------------------------------------------------------------------
+| STATE
+|--------------------------------------------------------------------------
+*/
 
 const search = ref("");
 
 const selectedBusiness = ref<EaseOfDoingBusiness | null>(null);
 
 const isLoading = ref(true);
+
 const isNavigating = ref(false);
 
 const modalPanel = ref<HTMLElement | null>(null);
@@ -78,51 +317,76 @@ const prefersReducedMotion =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/* =========================================================
-   FILTER
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| FILTER
+|--------------------------------------------------------------------------
+*/
 
-const filteredBusinesses = () => {
-    const keyword = search.value.trim().toLowerCase();
+const filteredBusinesses = computed(() => {
+    const keyword = search.value.trim().toLocaleLowerCase();
 
     if (!keyword) {
         return props.easeOfDoingBusinesses.data;
     }
 
-    return props.easeOfDoingBusinesses.data.filter(
-        (item) =>
-            item.judul.toLowerCase().includes(keyword) ||
-            item.ringkasan?.toLowerCase().includes(keyword) ||
-            item.deskripsi?.toLowerCase().includes(keyword),
-    );
+    return props.easeOfDoingBusinesses.data.filter((item) => {
+        const judul = localized(item, "judul").toLocaleLowerCase();
+
+        const ringkasan = localized(item, "ringkasan").toLocaleLowerCase();
+
+        const deskripsi = localized(item, "deskripsi").toLocaleLowerCase();
+
+        return (
+            judul.includes(keyword) ||
+            ringkasan.includes(keyword) ||
+            deskripsi.includes(keyword)
+        );
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| ICON
+|--------------------------------------------------------------------------
+*/
+
+const iconMap: Record<string, typeof Info> = {
+    info: Info,
+
+    file: FileText,
+    filetext: FileText,
+
+    filecheck: FileCheck,
+    filecheck2: FileCheck,
+
+    building: Building2,
+    building2: Building2,
+
+    business: BriefcaseBusiness,
+
+    handshake: Handshake,
+
+    truck: Truck,
+
+    check: CircleCheck,
 };
 
-/* =========================================================
-   HELPERS
-========================================================= */
-
 const getIcon = (icon: string | null) => {
-    /*
-     * Ikon dari database bersifat string.
-     * Untuk keamanan dan konsistensi UI, public page
-     * menggunakan ikon default dari lucide.
-     */
     if (!icon) {
         return Info;
     }
 
-    const iconMap: Record<string, typeof Info> = {
-        info: Info,
-        file: FileText,
-        building: Building2,
-        business: BriefcaseBusiness,
-        check: CircleCheck,
-    };
-
     return iconMap[icon.toLowerCase()] ?? Info;
 };
 
-const truncate = (value: string | null, length = 160) => {
+/*
+|--------------------------------------------------------------------------
+| TEXT HELPERS
+|--------------------------------------------------------------------------
+*/
+
+const truncate = (value: string | null | undefined, length = 160): string => {
     if (!value) {
         return "";
     }
@@ -132,11 +396,13 @@ const truncate = (value: string | null, length = 160) => {
         : value;
 };
 
-/* =========================================================
-   MODAL
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| MODAL
+|--------------------------------------------------------------------------
+*/
 
-const openModal = async (business: EaseOfDoingBusiness) => {
+const openModal = async (business: EaseOfDoingBusiness): Promise<void> => {
     selectedBusiness.value = business;
 
     await nextTick();
@@ -146,23 +412,25 @@ const openModal = async (business: EaseOfDoingBusiness) => {
     modalPanel.value?.focus();
 };
 
-const closeModal = () => {
+const closeModal = (): void => {
     selectedBusiness.value = null;
 
     document.body.style.overflow = "";
 };
 
-const handleKeydown = (event: KeyboardEvent) => {
+const handleKeydown = (event: KeyboardEvent): void => {
     if (event.key === "Escape" && selectedBusiness.value) {
         closeModal();
     }
 };
 
-/* =========================================================
-   PAGINATION
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| PAGINATION
+|--------------------------------------------------------------------------
+*/
 
-const goToPage = (url: string | null) => {
+const goToPage = (url: string | null): void => {
     if (!url || isNavigating.value) {
         return;
     }
@@ -177,6 +445,7 @@ const goToPage = (url: string | null) => {
             preserveState: true,
             preserveScroll: true,
             only: ["easeOfDoingBusinesses"],
+
             onFinish: () => {
                 isNavigating.value = false;
 
@@ -188,31 +457,43 @@ const goToPage = (url: string | null) => {
     );
 };
 
-const isPreviousLink = (link: LinkItem, index: number) => {
+const isPreviousLink = (link: LinkItem, index: number): boolean => {
     if (index === 0) {
         return true;
     }
 
     const label = link.label.toLowerCase();
 
-    return label.includes("previous") || label.includes("prev");
+    return (
+        label.includes("previous") ||
+        label.includes("prev") ||
+        label.includes("&laquo;")
+    );
 };
 
-const isNextLink = (link: LinkItem, index: number, links: LinkItem[]) => {
+const isNextLink = (
+    link: LinkItem,
+    index: number,
+    links: LinkItem[],
+): boolean => {
     if (index === links.length - 1) {
         return true;
     }
 
-    return link.label.toLowerCase().includes("next");
+    const label = link.label.toLowerCase();
+
+    return label.includes("next") || label.includes("&raquo;");
 };
 
-/* =========================================================
-   REVEAL
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| REVEAL ANIMATION
+|--------------------------------------------------------------------------
+*/
 
 let revealObserver: IntersectionObserver | null = null;
 
-const initializeReveal = () => {
+const initializeReveal = (): void => {
     if (typeof window === "undefined") {
         return;
     }
@@ -250,9 +531,26 @@ const initializeReveal = () => {
     });
 };
 
-/* =========================================================
-   LIFECYCLE
-========================================================= */
+/*
+|--------------------------------------------------------------------------
+| LANGUAGE SYNC
+|--------------------------------------------------------------------------
+|
+| Bahasa dikontrol navbar melalui currentLanguage.
+| Keyword pencarian direset ketika bahasa berubah agar pencarian
+| tidak tertinggal dari bahasa sebelumnya.
+|
+*/
+
+watch(currentLanguage, () => {
+    search.value = "";
+});
+
+/*
+|--------------------------------------------------------------------------
+| LIFECYCLE
+|--------------------------------------------------------------------------
+*/
 
 onMounted(() => {
     window.addEventListener("keydown", handleKeydown);
@@ -288,12 +586,9 @@ onBeforeUnmount(() => {
 
 <template>
     <Head>
-        <title>Ease of Doing Business | KITB</title>
+        <title>{{ t.pageTitle }}</title>
 
-        <meta
-            name="description"
-            content="Informasi kemudahan berusaha dan berbagai layanan pendukung investasi di Kawasan Industri Tanjung Buton."
-        />
+        <meta name="description" :content="t.meta" />
     </Head>
 
     <main
@@ -306,10 +601,7 @@ onBeforeUnmount(() => {
         />
 
         <div class="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <!-- =====================================================
-                 BREADCRUMB
-            ====================================================== -->
-
+            <!-- Breadcrumb -->
             <nav
                 aria-label="Breadcrumb"
                 class="mb-6"
@@ -326,7 +618,7 @@ onBeforeUnmount(() => {
                         >
                             <Home class="h-4 w-4" aria-hidden="true" />
 
-                            <span> Beranda </span>
+                            <span>{{ t.home }}</span>
                         </Link>
                     </li>
 
@@ -340,7 +632,7 @@ onBeforeUnmount(() => {
                     <li class="inline-flex items-center gap-1.5">
                         <BriefcaseBusiness class="h-4 w-4" aria-hidden="true" />
 
-                        <span> Hubungan Investor </span>
+                        <span>{{ t.investor }}</span>
                     </li>
 
                     <li
@@ -359,43 +651,35 @@ onBeforeUnmount(() => {
                             aria-hidden="true"
                         />
 
-                        <span> Ease of Doing Business </span>
+                        <span>{{ t.heading }}</span>
                     </li>
                 </ol>
             </nav>
 
-            <!-- =====================================================
-                 HEADER
-            ====================================================== -->
-
+            <!-- Header -->
             <header class="mb-8 max-w-3xl" data-reveal style="--d: 80ms">
                 <div
                     class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-400"
                 >
                     <BriefcaseBusiness class="h-4 w-4" aria-hidden="true" />
 
-                    Hubungan Investor
+                    {{ t.investor }}
                 </div>
 
                 <h1
                     class="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white"
                 >
-                    Ease of Doing Business
+                    {{ t.heading }}
                 </h1>
 
                 <p
                     class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                 >
-                    Kenali berbagai kemudahan, layanan, dan dukungan yang
-                    tersedia untuk membantu investor menjalankan kegiatan usaha
-                    di Kawasan Industri Tanjung Buton.
+                    {{ t.intro }}
                 </p>
             </header>
 
-            <!-- =====================================================
-                 SEARCH
-            ====================================================== -->
-
+            <!-- Search -->
             <section
                 v-if="!isLoading && props.easeOfDoingBusinesses.total > 0"
                 class="mb-8 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-800 dark:bg-slate-900"
@@ -411,15 +695,15 @@ onBeforeUnmount(() => {
                     <input
                         v-model="search"
                         type="search"
-                        placeholder="Cari informasi kemudahan berusaha..."
-                        aria-label="Cari informasi kemudahan berusaha"
+                        :placeholder="t.search"
+                        :aria-label="t.searchAria"
                         class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-500"
                     />
 
                     <button
                         v-if="search"
                         type="button"
-                        aria-label="Hapus pencarian"
+                        :aria-label="t.clear"
                         class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                         @click="search = ''"
                     >
@@ -428,19 +712,13 @@ onBeforeUnmount(() => {
                 </div>
             </section>
 
-            <!-- =====================================================
-                 CONTENT
-            ====================================================== -->
-
+            <!-- Content -->
             <section data-reveal style="--d: 140ms">
-                <!-- =========================
-                     SKELETON
-                ========================== -->
-
+                <!-- Skeleton -->
                 <div
                     v-if="isLoading"
                     class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                    aria-label="Memuat informasi Ease of Doing Business"
+                    :aria-label="t.loading"
                     aria-busy="true"
                 >
                     <div
@@ -476,10 +754,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <!-- =========================
-                     DATABASE EMPTY
-                ========================== -->
-
+                <!-- Database Empty -->
                 <div
                     v-else-if="props.easeOfDoingBusinesses.total === 0"
                     class="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12 dark:border-slate-800 dark:bg-slate-900"
@@ -493,33 +768,28 @@ onBeforeUnmount(() => {
                     <h2
                         class="mt-5 text-xl font-bold text-slate-900 dark:text-white"
                     >
-                        Data Belum Tersedia
+                        {{ t.unavailableTitle }}
                     </h2>
 
                     <p
                         class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Informasi mengenai Ease of Doing Business saat ini belum
-                        tersedia. Silakan kembali lagi nanti untuk mendapatkan
-                        informasi terbaru dari KITB.
+                        {{ t.unavailable }}
                     </p>
 
                     <Link
                         href="/hubungan-investor/peluang-investasi"
                         class="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                     >
-                        Lihat Peluang Investasi
+                        {{ t.viewInvestment }}
 
                         <ArrowRight class="h-4 w-4" aria-hidden="true" />
                     </Link>
                 </div>
 
-                <!-- =========================
-                     SEARCH EMPTY
-                ========================== -->
-
+                <!-- Search Empty -->
                 <div
-                    v-else-if="filteredBusinesses().length === 0"
+                    v-else-if="filteredBusinesses.length === 0"
                     class="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12 dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
@@ -531,14 +801,13 @@ onBeforeUnmount(() => {
                     <h2
                         class="mt-5 text-xl font-bold text-slate-900 dark:text-white"
                     >
-                        Data Tidak Ditemukan
+                        {{ t.notFound }}
                     </h2>
 
                     <p
                         class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Tidak ada informasi yang sesuai dengan kata pencarian
-                        Anda.
+                        {{ t.notFoundText }}
                     </p>
 
                     <button
@@ -548,17 +817,14 @@ onBeforeUnmount(() => {
                     >
                         <X class="h-4 w-4" aria-hidden="true" />
 
-                        Reset Pencarian
+                        {{ t.reset }}
                     </button>
                 </div>
 
-                <!-- =========================
-                     CARDS
-                ========================== -->
-
+                <!-- Cards -->
                 <div v-else class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <article
-                        v-for="(business, index) in filteredBusinesses()"
+                        v-for="(business, index) in filteredBusinesses"
                         :key="business.id"
                         data-reveal
                         :style="{
@@ -581,21 +847,21 @@ onBeforeUnmount(() => {
                         <h2
                             class="mt-5 text-xl font-bold tracking-tight text-slate-900 dark:text-white"
                         >
-                            {{ business.judul }}
+                            {{ localized(business, "judul") }}
                         </h2>
 
                         <p
-                            v-if="business.ringkasan"
+                            v-if="localized(business, 'ringkasan')"
                             class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                         >
-                            {{ truncate(business.ringkasan) }}
+                            {{ truncate(localized(business, "ringkasan")) }}
                         </p>
 
                         <p
-                            v-else-if="business.deskripsi"
+                            v-else-if="localized(business, 'deskripsi')"
                             class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                         >
-                            {{ truncate(business.deskripsi) }}
+                            {{ truncate(localized(business, "deskripsi")) }}
                         </p>
 
                         <button
@@ -603,7 +869,7 @@ onBeforeUnmount(() => {
                             class="mt-6 inline-flex items-center gap-2 text-sm font-bold text-blue-600 transition hover:gap-3 dark:text-blue-400"
                             @click="openModal(business)"
                         >
-                            Lihat Selengkapnya
+                            {{ t.more }}
 
                             <ArrowRight class="h-4 w-4" aria-hidden="true" />
                         </button>
@@ -611,10 +877,7 @@ onBeforeUnmount(() => {
                 </div>
             </section>
 
-            <!-- =====================================================
-                 PAGINATION
-            ====================================================== -->
-
+            <!-- Pagination -->
             <nav
                 v-if="
                     !isLoading &&
@@ -622,7 +885,7 @@ onBeforeUnmount(() => {
                     props.easeOfDoingBusinesses.last_page > 1
                 "
                 class="mt-10 flex flex-wrap items-center justify-center gap-2"
-                aria-label="Pagination Ease of Doing Business"
+                :aria-label="t.pagination"
             >
                 <template
                     v-for="(link, index) in props.easeOfDoingBusinesses.links"
@@ -664,10 +927,7 @@ onBeforeUnmount(() => {
                 </template>
             </nav>
 
-            <!-- =====================================================
-                 CTA
-            ====================================================== -->
-
+            <!-- CTA -->
             <section
                 v-if="!isLoading && props.easeOfDoingBusinesses.total > 0"
                 class="mt-14 overflow-hidden rounded-3xl border border-blue-100 bg-blue-50/70 p-6 sm:p-8 dark:border-blue-900/50 dark:bg-blue-950/20"
@@ -683,21 +943,19 @@ onBeforeUnmount(() => {
                         >
                             <CircleCheck class="h-5 w-5" aria-hidden="true" />
 
-                            Siap Berinvestasi di KITB?
+                            {{ t.ready }}
                         </div>
 
                         <h2
                             class="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
                         >
-                            Kami siap membantu perjalanan investasi Anda.
+                            {{ t.readyTitle }}
                         </h2>
 
                         <p
                             class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400"
                         >
-                            Dapatkan informasi lebih lanjut mengenai peluang
-                            investasi, fasilitas kawasan, dan proses kunjungan
-                            lahan di KITB.
+                            {{ t.readyText }}
                         </p>
                     </div>
 
@@ -705,7 +963,7 @@ onBeforeUnmount(() => {
                         href="/hubungan-investor/peluang-investasi"
                         class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-blue-950"
                     >
-                        Peluang Investasi
+                        {{ t.investment }}
 
                         <ArrowRight class="h-4 w-4" aria-hidden="true" />
                     </Link>
@@ -713,10 +971,7 @@ onBeforeUnmount(() => {
             </section>
         </div>
 
-        <!-- =========================================================
-             DETAIL MODAL
-        ========================================================== -->
-
+        <!-- Detail Modal -->
         <Transition name="modal">
             <div
                 v-if="selectedBusiness"
@@ -756,21 +1011,21 @@ onBeforeUnmount(() => {
                                 <p
                                     class="text-xs font-bold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-400"
                                 >
-                                    Ease of Doing Business
+                                    {{ t.heading }}
                                 </p>
 
                                 <h2
                                     id="eodb-modal-title"
                                     class="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-white"
                                 >
-                                    {{ selectedBusiness.judul }}
+                                    {{ localized(selectedBusiness, "judul") }}
                                 </h2>
                             </div>
                         </div>
 
                         <button
                             type="button"
-                            aria-label="Tutup detail"
+                            :aria-label="t.close"
                             class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                             @click="closeModal"
                         >
@@ -781,32 +1036,38 @@ onBeforeUnmount(() => {
                     <!-- Modal Body -->
                     <div class="max-h-[65vh] overflow-y-auto p-6 sm:p-7">
                         <div
-                            v-if="selectedBusiness.ringkasan"
+                            v-if="localized(selectedBusiness, 'ringkasan')"
                             class="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/50 dark:bg-blue-950/20"
                         >
                             <p
                                 class="text-sm font-medium leading-6 text-blue-900 dark:text-blue-200"
                             >
-                                {{ selectedBusiness.ringkasan }}
+                                {{ localized(selectedBusiness, "ringkasan") }}
                             </p>
                         </div>
 
-                        <div v-if="selectedBusiness.deskripsi" class="mt-6">
+                        <div
+                            v-if="localized(selectedBusiness, 'deskripsi')"
+                            class="mt-6"
+                        >
                             <h3
                                 class="text-sm font-bold text-slate-900 dark:text-white"
                             >
-                                Informasi Detail
+                                {{ t.detail }}
                             </h3>
 
                             <div
                                 class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-400"
                             >
-                                {{ selectedBusiness.deskripsi }}
+                                {{ localized(selectedBusiness, "deskripsi") }}
                             </div>
                         </div>
 
                         <div
-                            v-else-if="!selectedBusiness.ringkasan"
+                            v-if="
+                                !localized(selectedBusiness, 'ringkasan') &&
+                                !localized(selectedBusiness, 'deskripsi')
+                            "
                             class="py-8 text-center"
                         >
                             <Info
@@ -817,7 +1078,7 @@ onBeforeUnmount(() => {
                             <p
                                 class="mt-3 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Informasi detail belum tersedia.
+                                {{ t.noDetail }}
                             </p>
                         </div>
                     </div>
@@ -831,7 +1092,7 @@ onBeforeUnmount(() => {
                             class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-offset-slate-900"
                             @click="closeModal"
                         >
-                            Tutup
+                            {{ t.close }}
                         </button>
 
                         <Link
@@ -839,7 +1100,7 @@ onBeforeUnmount(() => {
                             class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                             @click="closeModal"
                         >
-                            Lihat Peluang Investasi
+                            {{ t.viewInvestment }}
 
                             <ArrowRight class="h-4 w-4" aria-hidden="true" />
                         </Link>
@@ -851,16 +1112,14 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* =========================================================
-   REVEAL
-========================================================= */
-
 [data-reveal] {
     opacity: 0;
     transform: translateY(16px);
+
     transition:
         opacity 700ms ease,
         transform 700ms ease;
+
     transition-delay: var(--d, 0ms);
 }
 
@@ -868,10 +1127,6 @@ onBeforeUnmount(() => {
     opacity: 1;
     transform: translateY(0);
 }
-
-/* =========================================================
-   SKELETON
-========================================================= */
 
 .skeleton-shimmer {
     position: relative;
@@ -881,14 +1136,18 @@ onBeforeUnmount(() => {
 .skeleton-shimmer::after {
     position: absolute;
     inset: 0;
+
     transform: translateX(-100%);
+
     background: linear-gradient(
         90deg,
         transparent,
         rgb(255 255 255 / 0.55),
         transparent
     );
+
     animation: skeleton-shimmer 1.5s infinite;
+
     content: "";
 }
 
@@ -897,10 +1156,6 @@ onBeforeUnmount(() => {
         transform: translateX(100%);
     }
 }
-
-/* =========================================================
-   MODAL
-========================================================= */
 
 .modal-enter-active,
 .modal-leave-active {
@@ -918,10 +1173,6 @@ onBeforeUnmount(() => {
 .modal-leave-to > div:last-child {
     transform: translateY(12px) scale(0.98);
 }
-
-/* =========================================================
-   REDUCED MOTION
-========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
     [data-reveal] {

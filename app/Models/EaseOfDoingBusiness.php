@@ -13,10 +13,23 @@ class EaseOfDoingBusiness extends Model
     protected $table = 'ease_of_doing_businesses';
 
     protected $fillable = [
+        // Bahasa Indonesia
         'judul',
-        'slug',
         'ringkasan',
         'deskripsi',
+
+        // Bahasa Inggris
+        'judul_en',
+        'ringkasan_en',
+        'deskripsi_en',
+
+        // Bahasa Mandarin
+        'judul_zh',
+        'ringkasan_zh',
+        'deskripsi_zh',
+
+        // Data umum
+        'slug',
         'ikon',
         'urutan',
         'aktif',

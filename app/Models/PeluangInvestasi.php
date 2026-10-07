@@ -15,13 +15,28 @@ class PeluangInvestasi extends Model
     protected $table = 'peluang_investasis';
 
     protected $fillable = [
+        // Indonesia
         'judul',
-        'slug',
         'sektor_industri',
         'deskripsi',
+        'lokasi',
+
+        // English
+        'judul_en',
+        'sektor_industri_en',
+        'deskripsi_en',
+        'lokasi_en',
+
+        // Chinese
+        'judul_zh',
+        'sektor_industri_zh',
+        'deskripsi_zh',
+        'lokasi_zh',
+
+        // General
+        'slug',
         'luas_lahan',
         'satuan_luas',
-        'lokasi',
         'status',
         'nilai_investasi',
         'mata_uang',

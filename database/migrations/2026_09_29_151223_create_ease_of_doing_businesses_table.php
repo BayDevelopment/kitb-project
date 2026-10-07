@@ -14,16 +14,26 @@ return new class extends Migration
         Schema::create('ease_of_doing_businesses', function (Blueprint $table) {
             $table->id();
 
+            // Bahasa Indonesia
             $table->string('judul');
-            $table->string('slug')->unique();
-
             $table->text('ringkasan')->nullable();
             $table->longText('deskripsi')->nullable();
 
+            // Bahasa Inggris
+            $table->string('judul_en')->nullable();
+            $table->text('ringkasan_en')->nullable();
+            $table->longText('deskripsi_en')->nullable();
+
+            // Bahasa Mandarin
+            $table->string('judul_zh')->nullable();
+            $table->text('ringkasan_zh')->nullable();
+            $table->longText('deskripsi_zh')->nullable();
+
+            // Data umum
+            $table->string('slug')->unique();
             $table->string('ikon')->nullable();
 
             $table->unsignedInteger('urutan')->default(0);
-
             $table->boolean('aktif')->default(true);
 
             $table->timestamps();

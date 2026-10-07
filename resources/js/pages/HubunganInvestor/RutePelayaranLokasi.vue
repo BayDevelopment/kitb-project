@@ -7,13 +7,15 @@ import {
     ref,
     watch,
 } from "vue";
+
 import { Head, Link, router } from "@inertiajs/vue3";
+
 import {
     Anchor,
     ArrowRight,
     Building2,
+    BriefcaseBusiness,
     CheckCircle2,
-    ChevronLeft,
     ChevronRight,
     Clock3,
     FileText,
@@ -26,15 +28,20 @@ import {
     Ship,
     X,
 } from "lucide-vue-next";
+
 import PublicLayout from "@/layouts/PublicLayout.vue";
+
+import { currentLanguage, localizedValue } from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
 });
 
-/* =========================================================
-   Types
-   ========================================================= */
+/**
+ * ============================================================
+ * TYPES
+ * ============================================================
+ */
 
 interface Geometry {
     type?: "Point" | "LineString" | "MultiLineString" | string;
@@ -43,56 +50,428 @@ interface Geometry {
 
 interface Rute {
     id: number;
+
+    // Bahasa Indonesia
     nama_rute: string;
     jalur: string;
+    deskripsi: string | null;
+
+    // Bahasa Inggris
+    nama_rute_en: string | null;
+    jalur_en: string | null;
+    deskripsi_en: string | null;
+
+    // Bahasa Mandarin
+    nama_rute_zh: string | null;
+    jalur_zh: string | null;
+    deskripsi_zh: string | null;
+
+    // Data teknis
     jarak: string | number | null;
     satuan_jarak: string;
+
+    // Waktu tempuh - ID / EN / ZH
     waktu_tempuh: string;
-    deskripsi: string | null;
+    waktu_tempuh_en: string | null;
+    waktu_tempuh_zh: string | null;
+
+    // Asal - ID / EN / ZH
     asal: string | null;
+    asal_en: string | null;
+    asal_zh: string | null;
+
+    // Tujuan - ID / EN / ZH
     tujuan: string | null;
+    tujuan_en: string | null;
+    tujuan_zh: string | null;
+
+    // Lokasi
     latitude: string | number | null;
     longitude: string | number | null;
+
+    // GeoJSON
     geometry: Geometry | null;
+
+    // Gambar
     gambar: string | null;
+
+    // Pengaturan
     urutan: number;
     aktif: boolean;
 }
-
-/* =========================================================
-   Props
-   ========================================================= */
 
 const props = defineProps<{
     rutes: Rute[];
 }>();
 
-/* =========================================================
-   State
-   ========================================================= */
+/**
+ * ============================================================
+ * LINKS
+ * ============================================================
+ *
+ * Satu sumber URL agar tidak tidak konsisten.
+ * Sesuaikan dengan route yang benar di web.php.
+ */
+
+const VISIT_URL = "/ajukan-kunjungan";
+const INVESTMENT_URL = "/hubungan-investor/peluang-investasi";
+
+/**
+ * ============================================================
+ * LOCALIZATION
+ * ============================================================
+ */
+
+const localized = (object: Rute | null | undefined, field: string): string => {
+    return localizedValue(
+        object as Record<string, unknown> | null | undefined,
+        field,
+    );
+};
+
+/**
+ * ============================================================
+ * TRANSLATIONS
+ * ============================================================
+ */
+
+const translations = {
+    id: {
+        pageTitle: "Rute Pelayaran & Lokasi | KITB",
+
+        meta: "Informasi rute pelayaran, akses, lokasi, jarak, dan waktu tempuh menuju Kawasan Industri Tanjung Buton.",
+
+        home: "Beranda",
+        investor: "Hubungan Investor",
+        page: "Rute Pelayaran & Lokasi",
+
+        badge: "Akses & Lokasi",
+
+        heading: "Rute Pelayaran & Lokasi",
+
+        intro: "Temukan informasi rute, jarak, waktu tempuh, serta lokasi utama untuk mendukung akses menuju Kawasan Industri Tanjung Buton.",
+
+        loading: "Memuat informasi rute",
+
+        unavailableTitle: "Data Rute Belum Tersedia",
+
+        unavailableDescription:
+            "Informasi rute pelayaran dan lokasi saat ini belum tersedia. Silakan kembali lagi untuk mendapatkan informasi terbaru.",
+
+        investment: "Lihat Peluang Investasi",
+
+        listTitle: "Daftar Rute",
+
+        searchDescription:
+            "Cari berdasarkan nama rute, jalur, asal, atau tujuan.",
+
+        searchPlaceholder: "Cari rute...",
+
+        searchAria: "Cari rute",
+
+        clearSearch: "Hapus pencarian",
+
+        searchEmptyTitle: "Data Tidak Ditemukan",
+
+        searchEmptyDescription:
+            "Tidak ada rute yang sesuai dengan kata kunci pencarian. Coba kata kunci lain atau reset pencarian.",
+
+        searchKeyword: "Pencarian:",
+
+        resetSearch: "Reset Pencarian",
+
+        route: "Rute Pelayaran",
+
+        mapAvailable: "Peta tersedia",
+
+        distance: "Jarak",
+
+        duration: "Waktu Tempuh",
+
+        origin: "Asal",
+
+        destination: "Tujuan",
+
+        detail: "Lihat Detail Rute",
+
+        available: "rute tersedia",
+
+        reference:
+            "Gunakan informasi rute sebagai referensi akses menuju kawasan.",
+
+        visit: "Ajukan Kunjungan Lahan",
+
+        investorLabel: "Hubungan Investor",
+
+        ctaTitle: "Ingin melihat langsung kawasan KITB?",
+
+        ctaDescription:
+            "Ajukan kunjungan lahan dan dapatkan kesempatan untuk melihat lokasi serta potensi kawasan secara langsung.",
+
+        ctaButton: "Ajukan Kunjungan",
+
+        close: "Tutup",
+
+        detailRoute: "Detail Rute",
+
+        path: "Jalur",
+
+        originPoint: "Titik Asal",
+
+        destinationPoint: "Titik Tujuan",
+
+        coordinates: "Koordinat Lokasi",
+
+        unavailableCoordinates: "Koordinat belum tersedia",
+
+        description: "Deskripsi Rute",
+
+        geometryAvailable: "Data geometri tersedia",
+
+        geometryDescription:
+            "Rute ini memiliki data geometri yang dapat digunakan untuk visualisasi peta.",
+
+        needLocation: "Membutuhkan informasi lokasi secara langsung?",
+    },
+
+    en: {
+        pageTitle: "Shipping Routes & Location | KITB",
+
+        meta: "Information about shipping routes, access, locations, distances, and travel times to Tanjung Buton Industrial Estate.",
+
+        home: "Home",
+        investor: "Investor Relations",
+        page: "Shipping Routes & Location",
+
+        badge: "Access & Location",
+
+        heading: "Shipping Routes & Location",
+
+        intro: "Find information about routes, distances, travel times, and key locations supporting access to Tanjung Buton Industrial Estate.",
+
+        loading: "Loading route information",
+
+        unavailableTitle: "Route Data Unavailable",
+
+        unavailableDescription:
+            "Shipping route and location information is currently unavailable. Please check back later for the latest information.",
+
+        investment: "View Investment Opportunities",
+
+        listTitle: "Route List",
+
+        searchDescription:
+            "Search by route name, path, origin, or destination.",
+
+        searchPlaceholder: "Search routes...",
+
+        searchAria: "Search routes",
+
+        clearSearch: "Clear search",
+
+        searchEmptyTitle: "No Data Found",
+
+        searchEmptyDescription:
+            "No routes match the search keyword. Try a different keyword or reset the search.",
+
+        searchKeyword: "Search:",
+
+        resetSearch: "Reset Search",
+
+        route: "Shipping Route",
+
+        mapAvailable: "Map available",
+
+        distance: "Distance",
+
+        duration: "Travel Time",
+
+        origin: "Origin",
+
+        destination: "Destination",
+
+        detail: "View Route Details",
+
+        available: "routes available",
+
+        reference:
+            "Use route information as a reference for accessing the area.",
+
+        visit: "Request Site Visit",
+
+        investorLabel: "Investor Relations",
+
+        ctaTitle: "Would you like to see KITB directly?",
+
+        ctaDescription:
+            "Request a site visit to explore the location and potential of the industrial estate firsthand.",
+
+        ctaButton: "Request a Visit",
+
+        close: "Close",
+
+        detailRoute: "Route Details",
+
+        path: "Path",
+
+        originPoint: "Origin Point",
+
+        destinationPoint: "Destination Point",
+
+        coordinates: "Location Coordinates",
+
+        unavailableCoordinates: "Coordinates are not available",
+
+        description: "Route Description",
+
+        geometryAvailable: "Geometry data available",
+
+        geometryDescription:
+            "This route contains geometry data that can be used for map visualization.",
+
+        needLocation: "Need detailed location information?",
+    },
+
+    zh: {
+        pageTitle: "航运路线与位置 | KITB",
+
+        meta: "提供前往丹戎布顿工业园区的航运路线、交通、位置、距离和行程时间信息。",
+
+        home: "首页",
+        investor: "投资者关系",
+        page: "航运路线与位置",
+
+        badge: "交通与位置",
+
+        heading: "航运路线与位置",
+
+        intro: "了解航运路线、距离、行程时间以及支持前往丹戎布顿工业园区的重要位置。",
+
+        loading: "正在加载路线信息",
+
+        unavailableTitle: "暂无路线数据",
+
+        unavailableDescription:
+            "目前暂无航运路线和位置信息，请稍后再回来查看最新信息。",
+
+        investment: "查看投资机会",
+
+        listTitle: "路线列表",
+
+        searchDescription: "可按路线名称、航线、起点或终点进行搜索。",
+
+        searchPlaceholder: "搜索路线...",
+
+        searchAria: "搜索路线",
+
+        clearSearch: "清除搜索",
+
+        searchEmptyTitle: "未找到数据",
+
+        searchEmptyDescription:
+            "没有符合搜索关键词的路线。请尝试其他关键词或重置搜索。",
+
+        searchKeyword: "搜索：",
+
+        resetSearch: "重置搜索",
+
+        route: "航运路线",
+
+        mapAvailable: "地图可用",
+
+        distance: "距离",
+
+        duration: "行程时间",
+
+        origin: "起点",
+
+        destination: "终点",
+
+        detail: "查看路线详情",
+
+        available: "条路线可用",
+
+        reference: "路线信息可作为前往园区的交通参考。",
+
+        visit: "申请园区参观",
+
+        investorLabel: "投资者关系",
+
+        ctaTitle: "希望亲自了解 KITB 园区？",
+
+        ctaDescription: "申请园区参观，亲自了解园区位置及其发展潜力。",
+
+        ctaButton: "申请参观",
+
+        close: "关闭",
+
+        detailRoute: "路线详情",
+
+        path: "航线",
+
+        originPoint: "起点位置",
+
+        destinationPoint: "终点位置",
+
+        coordinates: "位置坐标",
+
+        unavailableCoordinates: "暂无坐标信息",
+
+        description: "路线描述",
+
+        geometryAvailable: "已有几何数据",
+
+        geometryDescription: "该路线包含可用于地图可视化的几何数据。",
+
+        needLocation: "需要了解详细位置信息？",
+    },
+} as const;
+
+const t = computed(() => translations[currentLanguage.value]);
+
+/**
+ * ============================================================
+ * STATE
+ * ============================================================
+ */
 
 const search = ref("");
+
 const selectedRute = ref<Rute | null>(null);
 
 const isLoading = ref(true);
+
 const isNavigating = ref(false);
 
 const modalPanel = ref<HTMLElement | null>(null);
+
 const searchInput = ref<HTMLInputElement | null>(null);
 
 let previousActiveElement: HTMLElement | null = null;
+
 let revealObserver: IntersectionObserver | null = null;
+
+let loadingTimer: number | undefined;
+
+/**
+ * ============================================================
+ * ACCESSIBILITY / MOTION
+ * ============================================================
+ */
 
 const prefersReducedMotion =
     typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/* =========================================================
-   Computed
-   ========================================================= */
+/**
+ * ============================================================
+ * FILTER
+ * ============================================================
+ */
 
 const filteredRutes = computed(() => {
-    const keyword = search.value.trim().toLowerCase();
+    const keyword = search.value.trim().toLocaleLowerCase();
 
     if (!keyword) {
         return props.rutes;
@@ -101,23 +480,44 @@ const filteredRutes = computed(() => {
     return props.rutes.filter((rute) => {
         const searchable = [
             rute.nama_rute,
+            rute.nama_rute_en,
+            rute.nama_rute_zh,
+
             rute.jalur,
-            rute.asal,
-            rute.tujuan,
-            rute.waktu_tempuh,
+            rute.jalur_en,
+            rute.jalur_zh,
+
             rute.deskripsi,
+            rute.deskripsi_en,
+            rute.deskripsi_zh,
+
+            rute.asal,
+            rute.asal_en,
+            rute.asal_zh,
+
+            rute.tujuan,
+            rute.tujuan_en,
+            rute.tujuan_zh,
+
+            rute.waktu_tempuh,
+            rute.waktu_tempuh_en,
+            rute.waktu_tempuh_zh,
         ]
+            .filter((value) => value !== null && value !== undefined)
+            .map((value) => String(value).trim())
             .filter(Boolean)
             .join(" ")
-            .toLowerCase();
+            .toLocaleLowerCase();
 
         return searchable.includes(keyword);
     });
 });
 
-/* =========================================================
-   Helpers
-   ========================================================= */
+/**
+ * ============================================================
+ * HELPERS
+ * ============================================================
+ */
 
 const truncate = (value: string | null | undefined, length = 150): string => {
     if (!value) {
@@ -157,7 +557,7 @@ const getRouteImage = (gambar: string | null): string | null => {
 
 const getCoordinates = (rute: Rute): string => {
     if (rute.latitude == null || rute.longitude == null) {
-        return "Koordinat belum tersedia";
+        return t.value.unavailableCoordinates;
     }
 
     return `${rute.latitude}, ${rute.longitude}`;
@@ -172,9 +572,11 @@ const hasGeometry = (rute: Rute): boolean => {
     );
 };
 
-/* =========================================================
-   Modal
-   ========================================================= */
+/**
+ * ============================================================
+ * MODAL
+ * ============================================================
+ */
 
 const openModal = async (rute: Rute) => {
     previousActiveElement =
@@ -199,6 +601,7 @@ const closeModal = async () => {
     await nextTick();
 
     previousActiveElement?.focus();
+
     previousActiveElement = null;
 };
 
@@ -209,7 +612,9 @@ const handleModalKeydown = (event: KeyboardEvent) => {
 
     if (event.key === "Escape") {
         event.preventDefault();
+
         closeModal();
+
         return;
     }
 
@@ -223,7 +628,9 @@ const handleModalKeydown = (event: KeyboardEvent) => {
 
     if (!focusable.length) {
         event.preventDefault();
+
         modalPanel.value.focus();
+
         return;
     }
 
@@ -232,25 +639,40 @@ const handleModalKeydown = (event: KeyboardEvent) => {
 
     if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
+
         last.focus();
     } else if (!event.shiftKey && document.activeElement === last) {
         event.preventDefault();
+
         first.focus();
     }
 };
 
-/* =========================================================
-   Search
-   ========================================================= */
+/**
+ * ============================================================
+ * SEARCH
+ * ============================================================
+ */
 
 const resetSearch = () => {
     search.value = "";
+
     searchInput.value?.focus();
 };
 
-/* =========================================================
-   Navigation
-   ========================================================= */
+/**
+ * Ketika Navbar mengganti bahasa, pencarian lama dihapus
+ * karena bahasa konten yang dicari ikut berubah.
+ */
+watch(currentLanguage, () => {
+    search.value = "";
+});
+
+/**
+ * ============================================================
+ * NAVIGATION
+ * ============================================================
+ */
 
 const navigate = (href: string) => {
     if (isNavigating.value) {
@@ -261,15 +683,18 @@ const navigate = (href: string) => {
 
     router.visit(href, {
         preserveScroll: true,
+
         onFinish: () => {
             isNavigating.value = false;
         },
     });
 };
 
-/* =========================================================
-   Reveal animation
-   ========================================================= */
+/**
+ * ============================================================
+ * REVEAL ANIMATION
+ * ============================================================
+ */
 
 const setupRevealObserver = () => {
     if (typeof window === "undefined") {
@@ -293,6 +718,7 @@ const setupRevealObserver = () => {
             entries.forEach((entry) => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add("is-visible");
+
                     revealObserver?.unobserve(entry.target);
                 }
             });
@@ -304,18 +730,20 @@ const setupRevealObserver = () => {
     );
 
     document
-        .querySelectorAll<HTMLElement>("[data-reveal]")
+        .querySelectorAll<HTMLElement>("[data-reveal]:not(.is-visible)")
         .forEach((element) => {
             revealObserver?.observe(element);
         });
 };
 
-/* =========================================================
-   Lifecycle
-   ========================================================= */
+/**
+ * ============================================================
+ * LIFECYCLE
+ * ============================================================
+ */
 
 onMounted(() => {
-    const timer = window.setTimeout(
+    loadingTimer = window.setTimeout(
         () => {
             isLoading.value = false;
 
@@ -327,23 +755,38 @@ onMounted(() => {
     );
 
     window.addEventListener("keydown", handleModalKeydown);
-
-    onBeforeUnmount(() => {
-        window.clearTimeout(timer);
-    });
 });
 
+/**
+ * Data dari server berubah.
+ */
 watch(
     () => props.rutes,
     async () => {
         await nextTick();
+
         setupRevealObserver();
     },
-    { deep: true },
+    {
+        deep: true,
+    },
 );
 
+/**
+ * Hasil filter berubah: elemen baru yang muncul
+ * (card atau pesan kosong) perlu diobservasi ulang.
+ */
+watch(filteredRutes, async () => {
+    await nextTick();
+
+    setupRevealObserver();
+});
+
 onBeforeUnmount(() => {
+    window.clearTimeout(loadingTimer);
+
     revealObserver?.disconnect();
+
     revealObserver = null;
 
     window.removeEventListener("keydown", handleModalKeydown);
@@ -353,11 +796,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <Head title="Rute Pelayaran & Lokasi">
-        <meta
-            name="description"
-            content="Informasi rute pelayaran, akses, lokasi, jarak, dan waktu tempuh menuju kawasan industri Tanjung Buton."
-        />
+    <Head>
+        <title>{{ t.pageTitle }}</title>
+        <meta head-key="description" name="description" :content="t.meta" />
     </Head>
 
     <main
@@ -379,7 +820,7 @@ onBeforeUnmount(() => {
                  Breadcrumb
                  ===================================================== -->
             <nav
-                aria-label="Breadcrumb"
+                :aria-label="t.page"
                 class="mb-7 flex flex-wrap items-center gap-x-2 gap-y-2 text-xs text-slate-500 dark:text-slate-400"
                 data-reveal
             >
@@ -388,7 +829,7 @@ onBeforeUnmount(() => {
                     class="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 transition hover:bg-slate-100 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:bg-slate-900 dark:hover:text-blue-400"
                 >
                     <Home class="h-3.5 w-3.5" />
-                    <span>Beranda</span>
+                    <span>{{ t.home }}</span>
                 </Link>
 
                 <ChevronRight
@@ -398,7 +839,7 @@ onBeforeUnmount(() => {
 
                 <span class="inline-flex items-center gap-1.5">
                     <BriefcaseBusiness class="h-3.5 w-3.5" />
-                    <span>Hubungan Investor</span>
+                    <span>{{ t.investor }}</span>
                 </span>
 
                 <ChevronRight
@@ -411,7 +852,7 @@ onBeforeUnmount(() => {
                     class="inline-flex items-center gap-1.5 font-semibold text-blue-600 dark:text-blue-400"
                 >
                     <RouteIcon class="h-3.5 w-3.5" />
-                    <span>Rute Pelayaran & Lokasi</span>
+                    <span>{{ t.page }}</span>
                 </span>
             </nav>
 
@@ -423,21 +864,19 @@ onBeforeUnmount(() => {
                     class="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300"
                 >
                     <Navigation class="h-3.5 w-3.5" />
-                    Akses & Lokasi
+                    {{ t.badge }}
                 </div>
 
                 <h1
                     class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white"
                 >
-                    Rute Pelayaran & Lokasi
+                    {{ t.heading }}
                 </h1>
 
                 <p
                     class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                 >
-                    Temukan informasi rute, jarak, waktu tempuh, serta lokasi
-                    utama untuk mendukung akses menuju kawasan industri Tanjung
-                    Buton.
+                    {{ t.intro }}
                 </p>
             </header>
 
@@ -446,7 +885,7 @@ onBeforeUnmount(() => {
                  ===================================================== -->
             <section
                 v-if="isLoading"
-                aria-label="Memuat informasi rute"
+                :aria-label="t.loading"
                 class="grid gap-5 md:grid-cols-2 lg:grid-cols-3"
             >
                 <article
@@ -506,23 +945,21 @@ onBeforeUnmount(() => {
                     <h2
                         class="mt-5 text-xl font-bold text-slate-900 dark:text-white"
                     >
-                        Data Rute Belum Tersedia
+                        {{ t.unavailableTitle }}
                     </h2>
 
                     <p
                         class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Informasi rute pelayaran dan lokasi saat ini belum
-                        tersedia. Silakan kembali lagi untuk mendapatkan
-                        informasi terbaru.
+                        {{ t.unavailableDescription }}
                     </p>
 
                     <div class="mt-6">
                         <Link
-                            href="/hubungan-investor/peluang-investasi"
+                            :href="INVESTMENT_URL"
                             class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                         >
-                            Lihat Peluang Investasi
+                            {{ t.investment }}
                             <ArrowRight class="h-4 w-4" />
                         </Link>
                     </div>
@@ -547,14 +984,13 @@ onBeforeUnmount(() => {
                                     <Map
                                         class="h-4 w-4 text-blue-600 dark:text-blue-400"
                                     />
-                                    Daftar Rute
+                                    {{ t.listTitle }}
                                 </div>
 
                                 <p
                                     class="mt-1 text-xs text-slate-500 dark:text-slate-400"
                                 >
-                                    Cari berdasarkan nama rute, jalur, asal,
-                                    atau tujuan.
+                                    {{ t.searchDescription }}
                                 </p>
                             </div>
 
@@ -568,15 +1004,15 @@ onBeforeUnmount(() => {
                                     ref="searchInput"
                                     v-model="search"
                                     type="search"
-                                    aria-label="Cari rute"
-                                    placeholder="Cari rute..."
+                                    :aria-label="t.searchAria"
+                                    :placeholder="t.searchPlaceholder"
                                     class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-blue-500 dark:focus:bg-slate-950"
                                 />
 
                                 <button
                                     v-if="search"
                                     type="button"
-                                    aria-label="Hapus pencarian"
+                                    :aria-label="t.clearSearch"
                                     class="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                                     @click="resetSearch"
                                 >
@@ -588,14 +1024,16 @@ onBeforeUnmount(() => {
 
                     <!-- =================================================
                          Search Empty
+                         (tanpa data-reveal agar selalu langsung tampil)
                          ================================================= -->
                     <section
                         v-if="filteredRutes.length === 0"
-                        class="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12 dark:border-slate-800 dark:bg-slate-900"
-                        data-reveal
+                        role="status"
+                        aria-live="polite"
+                        class="empty-fade rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12 dark:border-slate-800 dark:bg-slate-900"
                     >
                         <div
-                            class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                            class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400"
                         >
                             <Search class="h-8 w-8" />
                         </div>
@@ -603,21 +1041,30 @@ onBeforeUnmount(() => {
                         <h2
                             class="mt-5 text-xl font-bold text-slate-900 dark:text-white"
                         >
-                            Data Tidak Ditemukan
+                            {{ t.searchEmptyTitle }}
                         </h2>
 
                         <p
                             class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                         >
-                            Tidak ada rute yang sesuai dengan kata kunci
-                            pencarian
+                            {{ t.searchEmptyDescription }}
+                        </p>
+
+                        <div
+                            v-if="search"
+                            class="mx-auto mt-4 inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        >
+                            <Search
+                                class="h-3.5 w-3.5 shrink-0 text-slate-400"
+                            />
+                            <span>{{ t.searchKeyword }}</span>
                             <span
-                                class="font-semibold text-slate-700 dark:text-slate-200"
+                                class="max-w-[240px] truncate font-semibold text-slate-900 dark:text-white"
+                                :title="search"
                             >
                                 "{{ search }}"
                             </span>
-                            .
-                        </p>
+                        </div>
 
                         <button
                             type="button"
@@ -625,7 +1072,7 @@ onBeforeUnmount(() => {
                             @click="resetSearch"
                         >
                             <X class="h-4 w-4" />
-                            Reset Pencarian
+                            {{ t.resetSearch }}
                         </button>
                     </section>
 
@@ -634,7 +1081,7 @@ onBeforeUnmount(() => {
                          ================================================= -->
                     <section
                         v-else
-                        aria-label="Daftar rute pelayaran"
+                        :aria-label="t.listTitle"
                         class="grid gap-5 md:grid-cols-2 lg:grid-cols-3"
                     >
                         <article
@@ -653,7 +1100,9 @@ onBeforeUnmount(() => {
                                 <img
                                     v-if="getRouteImage(rute.gambar)"
                                     :src="getRouteImage(rute.gambar)!"
-                                    :alt="`Ilustrasi ${rute.nama_rute}`"
+                                    :alt="
+                                        localized(rute, 'nama_rute') || t.route
+                                    "
                                     loading="lazy"
                                     class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                                 />
@@ -675,7 +1124,7 @@ onBeforeUnmount(() => {
                                     <Anchor
                                         class="h-3.5 w-3.5 text-blue-600 dark:text-blue-400"
                                     />
-                                    Rute Pelayaran
+                                    {{ t.route }}
                                 </div>
 
                                 <div
@@ -685,7 +1134,7 @@ onBeforeUnmount(() => {
                                     <Map
                                         class="h-3.5 w-3.5 text-blue-600 dark:text-blue-400"
                                     />
-                                    Peta tersedia
+                                    {{ t.mapAvailable }}
                                 </div>
                             </div>
 
@@ -694,18 +1143,18 @@ onBeforeUnmount(() => {
                                 <h2
                                     class="line-clamp-2 text-lg font-bold leading-7 text-slate-900 dark:text-white"
                                 >
-                                    {{ rute.nama_rute }}
+                                    {{ localized(rute, "nama_rute") }}
                                 </h2>
 
                                 <div
-                                    v-if="rute.jalur"
+                                    v-if="localized(rute, 'jalur')"
                                     class="mt-2 flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400"
                                 >
                                     <RouteIcon
                                         class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"
                                     />
                                     <span class="line-clamp-2">
-                                        {{ rute.jalur }}
+                                        {{ localized(rute, "jalur") }}
                                     </span>
                                 </div>
 
@@ -718,7 +1167,7 @@ onBeforeUnmount(() => {
                                             class="flex items-center gap-1.5 text-[11px] font-medium text-slate-400"
                                         >
                                             <MapPin class="h-3.5 w-3.5" />
-                                            Jarak
+                                            {{ t.distance }}
                                         </div>
 
                                         <div
@@ -735,24 +1184,29 @@ onBeforeUnmount(() => {
                                             class="flex items-center gap-1.5 text-[11px] font-medium text-slate-400"
                                         >
                                             <Clock3 class="h-3.5 w-3.5" />
-                                            Waktu
+                                            {{ t.duration }}
                                         </div>
 
                                         <div
                                             class="mt-1 line-clamp-1 text-sm font-bold text-slate-900 dark:text-white"
                                         >
-                                            {{ rute.waktu_tempuh }}
+                                            {{
+                                                localized(rute, "waktu_tempuh")
+                                            }}
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Origin destination -->
                                 <div
-                                    v-if="rute.asal || rute.tujuan"
+                                    v-if="
+                                        localized(rute, 'asal') ||
+                                        localized(rute, 'tujuan')
+                                    "
                                     class="mt-4 rounded-2xl border border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900"
                                 >
                                     <div
-                                        v-if="rute.asal"
+                                        v-if="localized(rute, 'asal')"
                                         class="flex items-start gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800"
                                     >
                                         <div
@@ -765,18 +1219,18 @@ onBeforeUnmount(() => {
                                             <p
                                                 class="text-[10px] font-semibold uppercase tracking-wider text-slate-400"
                                             >
-                                                Asal
+                                                {{ t.origin }}
                                             </p>
                                             <p
                                                 class="mt-0.5 truncate text-xs font-semibold text-slate-700 dark:text-slate-200"
                                             >
-                                                {{ rute.asal }}
+                                                {{ localized(rute, "asal") }}
                                             </p>
                                         </div>
                                     </div>
 
                                     <div
-                                        v-if="rute.tujuan"
+                                        v-if="localized(rute, 'tujuan')"
                                         class="flex items-start gap-3 px-4 py-3"
                                     >
                                         <div
@@ -789,22 +1243,27 @@ onBeforeUnmount(() => {
                                             <p
                                                 class="text-[10px] font-semibold uppercase tracking-wider text-slate-400"
                                             >
-                                                Tujuan
+                                                {{ t.destination }}
                                             </p>
                                             <p
                                                 class="mt-0.5 truncate text-xs font-semibold text-slate-700 dark:text-slate-200"
                                             >
-                                                {{ rute.tujuan }}
+                                                {{ localized(rute, "tujuan") }}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
                                 <p
-                                    v-if="rute.deskripsi"
+                                    v-if="localized(rute, 'deskripsi')"
                                     class="mt-4 line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
                                 >
-                                    {{ truncate(rute.deskripsi, 120) }}
+                                    {{
+                                        truncate(
+                                            localized(rute, "deskripsi"),
+                                            120,
+                                        )
+                                    }}
                                 </p>
 
                                 <button
@@ -812,7 +1271,7 @@ onBeforeUnmount(() => {
                                     class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-800 dark:hover:bg-blue-950/30 dark:hover:text-blue-300 dark:focus:ring-offset-slate-900"
                                     @click="openModal(rute)"
                                 >
-                                    Lihat Detail Rute
+                                    {{ t.detail }}
                                     <ArrowRight class="h-4 w-4" />
                                 </button>
                             </div>
@@ -839,23 +1298,22 @@ onBeforeUnmount(() => {
                                 <p
                                     class="font-semibold text-slate-800 dark:text-slate-200"
                                 >
-                                    {{ filteredRutes.length }} rute tersedia
+                                    {{ filteredRutes.length }} {{ t.available }}
                                 </p>
 
                                 <p
                                     class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
                                 >
-                                    Gunakan informasi rute sebagai referensi
-                                    akses menuju kawasan.
+                                    {{ t.reference }}
                                 </p>
                             </div>
                         </div>
 
                         <Link
-                            href="/ajukan-kunjungan"
+                            :href="VISIT_URL"
                             class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950"
                         >
-                            Ajukan Kunjungan Lahan
+                            {{ t.visit }}
                             <ArrowRight class="h-3.5 w-3.5" />
                         </Link>
                     </div>
@@ -881,29 +1339,27 @@ onBeforeUnmount(() => {
                                     class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-400"
                                 >
                                     <Building2 class="h-4 w-4" />
-                                    Hubungan Investor
+                                    {{ t.investorLabel }}
                                 </div>
 
                                 <h2
                                     class="mt-2 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-white"
                                 >
-                                    Ingin melihat langsung kawasan KITB?
+                                    {{ t.ctaTitle }}
                                 </h2>
 
                                 <p
                                     class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
                                 >
-                                    Ajukan kunjungan lahan dan dapatkan
-                                    kesempatan untuk melihat lokasi serta
-                                    potensi kawasan secara langsung.
+                                    {{ t.ctaDescription }}
                                 </p>
                             </div>
 
                             <Link
-                                href="/ajukan-kunjungan"
+                                :href="VISIT_URL"
                                 class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                             >
-                                Ajukan Kunjungan
+                                {{ t.ctaButton }}
                                 <ArrowRight class="h-4 w-4" />
                             </Link>
                         </div>
@@ -925,7 +1381,7 @@ onBeforeUnmount(() => {
             >
                 <button
                     type="button"
-                    aria-label="Tutup dialog"
+                    :aria-label="t.close"
                     class="absolute inset-0 cursor-default bg-slate-950/60 backdrop-blur-sm"
                     @click="closeModal"
                 />
@@ -942,7 +1398,9 @@ onBeforeUnmount(() => {
                         <img
                             v-if="getRouteImage(selectedRute.gambar)"
                             :src="getRouteImage(selectedRute.gambar)!"
-                            :alt="`Ilustrasi ${selectedRute.nama_rute}`"
+                            :alt="
+                                localized(selectedRute, 'nama_rute') || t.route
+                            "
                             class="h-full w-full object-cover"
                         />
 
@@ -966,20 +1424,20 @@ onBeforeUnmount(() => {
                                 <Anchor
                                     class="h-3.5 w-3.5 text-blue-600 dark:text-blue-400"
                                 />
-                                Rute Pelayaran
+                                {{ t.route }}
                             </div>
 
                             <h2
                                 :id="`rute-modal-title-${selectedRute.id}`"
                                 class="text-xl font-bold text-white sm:text-2xl"
                             >
-                                {{ selectedRute.nama_rute }}
+                                {{ localized(selectedRute, "nama_rute") }}
                             </h2>
                         </div>
 
                         <button
                             type="button"
-                            aria-label="Tutup detail rute"
+                            :aria-label="t.close"
                             class="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-slate-950/40 text-white backdrop-blur transition hover:bg-slate-950/60 focus:outline-none focus:ring-2 focus:ring-white/80"
                             @click="closeModal"
                         >
@@ -991,7 +1449,7 @@ onBeforeUnmount(() => {
                     <div class="overflow-y-auto p-5 sm:p-7">
                         <!-- Jalur -->
                         <div
-                            v-if="selectedRute.jalur"
+                            v-if="localized(selectedRute, 'jalur')"
                             class="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/40 dark:bg-blue-950/20"
                         >
                             <div class="flex items-start gap-3">
@@ -1005,13 +1463,13 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400"
                                     >
-                                        Jalur
+                                        {{ t.path }}
                                     </p>
 
                                     <p
                                         class="mt-1 text-sm font-semibold leading-6 text-slate-800 dark:text-slate-200"
                                     >
-                                        {{ selectedRute.jalur }}
+                                        {{ localized(selectedRute, "jalur") }}
                                     </p>
                                 </div>
                             </div>
@@ -1028,7 +1486,7 @@ onBeforeUnmount(() => {
                                     <MapPin
                                         class="h-4 w-4 text-blue-600 dark:text-blue-400"
                                     />
-                                    Jarak
+                                    {{ t.distance }}
                                 </div>
 
                                 <p
@@ -1047,24 +1505,29 @@ onBeforeUnmount(() => {
                                     <Clock3
                                         class="h-4 w-4 text-blue-600 dark:text-blue-400"
                                     />
-                                    Waktu Tempuh
+                                    {{ t.duration }}
                                 </div>
 
                                 <p
                                     class="mt-1.5 text-base font-bold text-slate-900 dark:text-white"
                                 >
-                                    {{ selectedRute.waktu_tempuh }}
+                                    {{
+                                        localized(selectedRute, "waktu_tempuh")
+                                    }}
                                 </p>
                             </div>
                         </div>
 
                         <!-- Origin destination -->
                         <div
-                            v-if="selectedRute.asal || selectedRute.tujuan"
+                            v-if="
+                                localized(selectedRute, 'asal') ||
+                                localized(selectedRute, 'tujuan')
+                            "
                             class="mt-5 rounded-2xl border border-slate-200 dark:border-slate-800"
                         >
                             <div
-                                v-if="selectedRute.asal"
+                                v-if="localized(selectedRute, 'asal')"
                                 class="flex items-start gap-3 border-b border-slate-200 p-4 dark:border-slate-800"
                             >
                                 <div
@@ -1077,18 +1540,18 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-[10px] font-bold uppercase tracking-wider text-slate-400"
                                     >
-                                        Titik Asal
+                                        {{ t.originPoint }}
                                     </p>
                                     <p
                                         class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                     >
-                                        {{ selectedRute.asal }}
+                                        {{ localized(selectedRute, "asal") }}
                                     </p>
                                 </div>
                             </div>
 
                             <div
-                                v-if="selectedRute.tujuan"
+                                v-if="localized(selectedRute, 'tujuan')"
                                 class="flex items-start gap-3 p-4"
                             >
                                 <div
@@ -1101,12 +1564,12 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-[10px] font-bold uppercase tracking-wider text-slate-400"
                                     >
-                                        Titik Tujuan
+                                        {{ t.destinationPoint }}
                                     </p>
                                     <p
                                         class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                     >
-                                        {{ selectedRute.tujuan }}
+                                        {{ localized(selectedRute, "tujuan") }}
                                     </p>
                                 </div>
                             </div>
@@ -1131,7 +1594,7 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-[10px] font-bold uppercase tracking-wider text-slate-400"
                                     >
-                                        Koordinat Lokasi
+                                        {{ t.coordinates }}
                                     </p>
 
                                     <p
@@ -1144,21 +1607,24 @@ onBeforeUnmount(() => {
                         </div>
 
                         <!-- Description -->
-                        <div v-if="selectedRute.deskripsi" class="mt-6">
+                        <div
+                            v-if="localized(selectedRute, 'deskripsi')"
+                            class="mt-6"
+                        >
                             <div
                                 class="mb-3 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white"
                             >
                                 <FileText
                                     class="h-4 w-4 text-blue-600 dark:text-blue-400"
                                 />
-                                Deskripsi Rute
+                                {{ t.description }}
                             </div>
 
                             <div
                                 class="prose prose-sm max-w-none leading-7 text-slate-600 dark:prose-invert dark:text-slate-300"
                             >
                                 <p class="whitespace-pre-line">
-                                    {{ selectedRute.deskripsi }}
+                                    {{ localized(selectedRute, "deskripsi") }}
                                 </p>
                             </div>
                         </div>
@@ -1176,14 +1642,13 @@ onBeforeUnmount(() => {
                                 <p
                                     class="text-sm font-semibold text-emerald-800 dark:text-emerald-300"
                                 >
-                                    Data geometri tersedia
+                                    {{ t.geometryAvailable }}
                                 </p>
 
                                 <p
                                     class="mt-1 text-xs leading-5 text-emerald-700/80 dark:text-emerald-300/70"
                                 >
-                                    Rute ini memiliki data geometri yang dapat
-                                    digunakan untuk visualisasi peta.
+                                    {{ t.geometryDescription }}
                                 </p>
                             </div>
                         </div>
@@ -1194,7 +1659,7 @@ onBeforeUnmount(() => {
                         class="flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 dark:border-slate-800 dark:bg-slate-950/70"
                     >
                         <p class="text-xs text-slate-500 dark:text-slate-400">
-                            Membutuhkan informasi lokasi secara langsung?
+                            {{ t.needLocation }}
                         </p>
 
                         <div class="flex gap-2">
@@ -1203,15 +1668,15 @@ onBeforeUnmount(() => {
                                 class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-offset-slate-950"
                                 @click="closeModal"
                             >
-                                Tutup
+                                {{ t.close }}
                             </button>
 
                             <Link
-                                href="/hubungan-investor/ajukan-kunjungan"
+                                :href="VISIT_URL"
                                 class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950"
                                 @click="closeModal"
                             >
-                                Ajukan Kunjungan
+                                {{ t.visit }}
                                 <ArrowRight class="h-4 w-4" />
                             </Link>
                         </div>
@@ -1239,6 +1704,25 @@ onBeforeUnmount(() => {
 [data-reveal].is-visible {
     opacity: 1;
     transform: translateY(0);
+}
+
+/* =========================================================
+   Empty search result (selalu tampil, tanpa observer)
+   ========================================================= */
+
+.empty-fade {
+    animation: emptyFade 300ms ease both;
+}
+
+@keyframes emptyFade {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* =========================================================
@@ -1305,6 +1789,10 @@ onBeforeUnmount(() => {
         opacity: 1;
         transform: none;
         transition: none;
+    }
+
+    .empty-fade {
+        animation: none;
     }
 
     .skeleton-shimmer::after {
