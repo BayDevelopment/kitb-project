@@ -38,7 +38,11 @@ class FasilitasController extends Controller
                 $query->where(function ($query) use ($keyword): void {
                     $query
                         ->where('nama', 'like', "%{$keyword}%")
-                        ->orWhere('deskripsi', 'like', "%{$keyword}%");
+                        ->orWhere('nama_en', 'like', "%{$keyword}%")
+                        ->orWhere('nama_zh', 'like', "%{$keyword}%")
+                        ->orWhere('deskripsi', 'like', "%{$keyword}%")
+                        ->orWhere('deskripsi_en', 'like', "%{$keyword}%")
+                        ->orWhere('deskripsi_zh', 'like', "%{$keyword}%");
                 });
             })
             ->ordered()
@@ -89,6 +93,7 @@ class FasilitasController extends Controller
                     'nama' => $nama,
                     'slug' => Fasilitas::generateUniqueSlug($nama),
                     'deskripsi' => $this->cleanText($validated['deskripsi'] ?? null),
+                    ...$this->translatedFields($validated),
                     'gambar' => $newImage,
                     'urutan' => $urutan,
                     'aktif' => (bool) $validated['aktif'],
@@ -170,11 +175,12 @@ class FasilitasController extends Controller
 
                 $data = [
                     'nama' => $nama,
-                    // Slug hanya dibuat ulang jika nama berubah.
+                    // Slug hanya dibuat ulang jika nama (Indonesia) berubah.
                     'slug' => $current->nama !== $nama
                         ? Fasilitas::generateUniqueSlug($nama, $current->id)
                         : $current->slug,
                     'deskripsi' => $this->cleanText($validated['deskripsi'] ?? null),
+                    ...$this->translatedFields($validated),
                     'urutan' => $newUrutan,
                     'aktif' => (bool) $validated['aktif'],
                 ];
@@ -355,6 +361,7 @@ class FasilitasController extends Controller
 
     /**
      * Aturan validasi bersama untuk store & update.
+     * Hanya nama Indonesia yang wajib; EN & ZH opsional.
      *
      * @return array<string, array<int, string>>
      */
@@ -362,7 +369,11 @@ class FasilitasController extends Controller
     {
         return [
             'nama' => ['required', 'string', 'max:150'],
+            'nama_en' => ['nullable', 'string', 'max:150'],
+            'nama_zh' => ['nullable', 'string', 'max:150'],
             'deskripsi' => ['nullable', 'string', 'max:10000'],
+            'deskripsi_en' => ['nullable', 'string', 'max:10000'],
+            'deskripsi_zh' => ['nullable', 'string', 'max:10000'],
             'gambar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'urutan' => ['nullable', 'integer', 'min:0'],
             'aktif' => ['required', 'boolean'],
@@ -385,6 +396,22 @@ class FasilitasController extends Controller
         $value = $value === null ? null : trim($value);
 
         return $value === '' ? null : $value;
+    }
+
+    /**
+     * Field terjemahan (EN & ZH) yang sudah dibersihkan.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, string|null>
+     */
+    private function translatedFields(array $validated): array
+    {
+        return [
+            'nama_en' => $this->cleanText($validated['nama_en'] ?? null),
+            'nama_zh' => $this->cleanText($validated['nama_zh'] ?? null),
+            'deskripsi_en' => $this->cleanText($validated['deskripsi_en'] ?? null),
+            'deskripsi_zh' => $this->cleanText($validated['deskripsi_zh'] ?? null),
+        ];
     }
 
     /**

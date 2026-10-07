@@ -11,9 +11,20 @@ class Fasilitas extends Model
     protected $table = 'fasilitas';
 
     protected $fillable = [
+        // Indonesia
         'nama',
-        'slug',
         'deskripsi',
+
+        // English
+        'nama_en',
+        'deskripsi_en',
+
+        // Chinese
+        'nama_zh',
+        'deskripsi_zh',
+
+        // General
+        'slug',
         'gambar',
         'urutan',
         'aktif',

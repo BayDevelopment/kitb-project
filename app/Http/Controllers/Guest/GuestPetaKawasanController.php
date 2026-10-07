@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Guest;
 
 use App\Http\Controllers\Controller;
-use App\Models\ProfilKawasan;
+use App\Models\PetaKawasan;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -12,27 +12,25 @@ class GuestPetaKawasanController extends Controller
 {
     public function index(Request $request): Response
     {
-        $kawasans = ProfilKawasan::query()
-            ->where('status', true)
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->orderByDesc('tahun_berdiri')
-            ->orderByDesc('id')
+        $petaKawasans = PetaKawasan::query()
+            ->where('aktif', true)
+            ->ordered()
             ->get([
                 'id',
-                'judul',
+                'nama',
+                'nama_en',
+                'nama_zh',
                 'slug',
-                'lokasi',
-                'luas_kawasan',
-                'tahun_berdiri',
+                'deskripsi',
+                'deskripsi_en',
+                'deskripsi_zh',
                 'gambar',
-                'latitude',
-                'longitude',
-                'batas_kawasan',
+                'urutan',
+                'aktif',
             ]);
 
         return Inertia::render('Kawasan/PetaKawasan', [
-            'kawasans' => $kawasans,
+            'petaKawasans' => $petaKawasans,
             'selectedSlug' => $request->query('kawasan'),
         ]);
     }

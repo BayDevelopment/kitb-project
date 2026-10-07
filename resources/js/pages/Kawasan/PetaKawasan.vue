@@ -1,330 +1,265 @@
 <script setup lang="ts">
-import "leaflet/dist/leaflet.css";
-
-import type {
-    GeoJSON as LeafletGeoJSON,
-    Map as LeafletMap,
-    Marker,
-} from "leaflet";
-
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
-
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
-
+import { trans } from "laravel-vue-i18n";
 import {
-    CalendarDays,
+    ChevronLeft,
     ChevronRight,
+    Expand,
     Home,
     Landmark,
-    Maximize2,
-    MapPin,
-    Navigation,
+    Map,
+    X,
 } from "lucide-vue-next";
 
 import PublicLayout from "@/layouts/PublicLayout.vue";
+import {
+    currentLanguage,
+    localizedValue,
+    type LanguageCode,
+} from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
 });
 
-/* ============================================================
-   TYPES & PROPS
-============================================================= */
+/*
+|--------------------------------------------------------------------------
+| TYPES
+|--------------------------------------------------------------------------
+*/
 
-interface KawasanPeta {
+interface PetaKawasan {
     id: number;
-    judul: string;
+    nama: string;
+    nama_en: string | null;
+    nama_zh: string | null;
     slug: string;
-    lokasi: string | null;
-    luas_kawasan: string | number | null;
-    tahun_berdiri: number | null;
+    deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
     gambar: string | null;
-    latitude: string | number | null;
-    longitude: string | number | null;
-    // GeoJSON (Polygon / MultiPolygon / Feature) — opsional
-    batas_kawasan: Record<string, unknown> | null;
+    urutan: number;
+    aktif: boolean;
 }
 
-interface Point extends Omit<KawasanPeta, "latitude" | "longitude"> {
-    latitude: number;
-    longitude: number;
-}
+/*
+|--------------------------------------------------------------------------
+| PROPS
+|--------------------------------------------------------------------------
+*/
 
 const props = defineProps<{
-    kawasans: KawasanPeta[];
+    petaKawasans: PetaKawasan[];
     selectedSlug?: string | null;
 }>();
 
-/* ============================================================
-   DATA
-============================================================= */
+/*
+|--------------------------------------------------------------------------
+| LANGUAGE
+|--------------------------------------------------------------------------
+*/
 
-// Hanya kawasan dengan koordinat valid yang bisa ditampilkan di peta
-const points = computed<Point[]>(() => {
-    const list = Array.isArray(props.kawasans) ? props.kawasans : [];
+const language = computed<LanguageCode>(() => currentLanguage.value);
 
-    return list
-        .map((item) => ({
-            ...item,
-            latitude: Number(item.latitude),
-            longitude: Number(item.longitude),
-        }))
-        .filter(
-            (item) =>
-                item.latitude !== null &&
-                Number.isFinite(item.latitude) &&
-                Number.isFinite(item.longitude) &&
-                Math.abs(item.latitude) <= 90 &&
-                Math.abs(item.longitude) <= 180,
-        ) as Point[];
+const getLocalizedValue = (
+    item: PetaKawasan,
+    field: "nama" | "deskripsi",
+): string => {
+    const value = localizedValue(
+        item as unknown as Record<string, unknown>,
+        field,
+    );
+
+    if (value?.trim()) {
+        return value;
+    }
+
+    if (field === "nama") {
+        return item.nama ?? "";
+    }
+
+    return item.deskripsi ?? "";
+};
+
+/*
+|--------------------------------------------------------------------------
+| DATA
+|--------------------------------------------------------------------------
+*/
+
+const petaKawasans = computed<PetaKawasan[]>(() => {
+    if (!Array.isArray(props.petaKawasans)) {
+        return [];
+    }
+
+    return [...props.petaKawasans]
+        .filter((item) => item.aktif)
+        .sort((a, b) => {
+            if (a.urutan !== b.urutan) {
+                return a.urutan - b.urutan;
+            }
+
+            return a.id - b.id;
+        });
 });
 
 const selectedId = ref<number | null>(null);
 
-const selected = computed<Point | null>(() => {
-    return points.value.find((item) => item.id === selectedId.value) ?? null;
+const selected = computed<PetaKawasan | null>(() => {
+    return (
+        petaKawasans.value.find((item) => item.id === selectedId.value) ?? null
+    );
 });
 
-/* ============================================================
-   HELPERS
-============================================================= */
+const selectedIndex = computed(() => {
+    if (!selected.value) {
+        return -1;
+    }
 
-const formatLuas = (luas: string | number | null): string | null => {
-    if (luas === null || luas === undefined || luas === "") {
+    return petaKawasans.value.findIndex(
+        (item) => item.id === selected.value?.id,
+    );
+});
+
+/*
+|--------------------------------------------------------------------------
+| IMAGE
+|--------------------------------------------------------------------------
+*/
+
+const getImageUrl = (image: string | null): string | null => {
+    if (!image) {
         return null;
     }
 
-    const value = Number(luas);
-
-    if (Number.isNaN(value)) {
-        return String(luas);
+    if (
+        image.startsWith("http://") ||
+        image.startsWith("https://") ||
+        image.startsWith("/")
+    ) {
+        return image;
     }
 
-    return new Intl.NumberFormat("id-ID", {
-        maximumFractionDigits: 2,
-    }).format(value);
+    if (image.startsWith("storage/")) {
+        return `/${image}`;
+    }
+
+    return `/storage/${image}`;
 };
 
-const formatCoordinate = (item: Point): string => {
-    return `${item.latitude.toFixed(5)}, ${item.longitude.toFixed(5)}`;
-};
+/*
+|--------------------------------------------------------------------------
+| FULLSCREEN IMAGE
+|--------------------------------------------------------------------------
+*/
 
-const directionsUrl = (item: Point): string => {
-    return `https://www.google.com/maps/dir/?api=1&destination=${item.latitude},${item.longitude}`;
-};
+const isImagePreviewOpen = ref(false);
 
-/* ============================================================
-   LEAFLET
-============================================================= */
-
-const mapElement = ref<HTMLElement | null>(null);
-const isMapReady = ref(false);
-const mapError = ref(false);
-
-// Daftar kawasan tampil setelah peta siap (atau jika peta gagal dimuat)
-const isListReady = computed(() => isMapReady.value || mapError.value);
-
-let L: typeof import("leaflet") | null = null;
-let map: LeafletMap | null = null;
-
-const markers = new Map<number, Marker>();
-const boundaries = new Map<number, LeafletGeoJSON>();
-
-let prefersReducedMotion = false;
-
-const pinHtml = (active: boolean): string => {
-    return `
-        <span class="kitb-pin${active ? " is-active" : ""}">
-            <svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true">
-                <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"
-                      fill="currentColor" stroke="white" stroke-width="1.5"/>
-                <circle cx="12" cy="10" r="2.6" fill="white"/>
-            </svg>
-        </span>
-    `;
-};
-
-const createIcon = (active: boolean) => {
-    return L!.divIcon({
-        className: "kitb-pin-wrapper",
-        html: pinHtml(active),
-        iconSize: [38, 38],
-        iconAnchor: [19, 36],
-    });
-};
-
-const boundaryStyle = (active: boolean) => ({
-    color: active ? "#2563eb" : "#64748b",
-    weight: active ? 3 : 2,
-    fillColor: active ? "#3b82f6" : "#94a3b8",
-    fillOpacity: active ? 0.22 : 0.12,
+const previewImage = computed<string | null>(() => {
+    return selected.value ? getImageUrl(selected.value.gambar) : null;
 });
 
-const refreshStyles = () => {
-    markers.forEach((marker, id) => {
-        const active = id === selectedId.value;
+const openImagePreview = (): void => {
+    if (!previewImage.value) {
+        return;
+    }
 
-        marker.setIcon(createIcon(active));
-        marker.setZIndexOffset(active ? 1000 : 0);
-    });
-
-    boundaries.forEach((layer, id) => {
-        layer.setStyle(boundaryStyle(id === selectedId.value));
-    });
+    isImagePreviewOpen.value = true;
+    document.body.style.overflow = "hidden";
 };
 
-const selectKawasan = (item: Point, fly = true) => {
+const closeImagePreview = (): void => {
+    isImagePreviewOpen.value = false;
+    document.body.style.overflow = "";
+};
+
+/*
+|--------------------------------------------------------------------------
+| SELECTION
+|--------------------------------------------------------------------------
+*/
+
+const selectPeta = (item: PetaKawasan): void => {
     selectedId.value = item.id;
-
-    refreshStyles();
-
-    if (!map || !fly) {
-        return;
-    }
-
-    const boundary = boundaries.get(item.id);
-    const animate = !prefersReducedMotion;
-
-    if (boundary) {
-        map.flyToBounds(boundary.getBounds(), {
-            padding: [48, 48],
-            animate,
-            duration: 1,
-        });
-
-        return;
-    }
-
-    map.flyTo([item.latitude, item.longitude], Math.max(map.getZoom(), 14), {
-        animate,
-        duration: 1,
-    });
 };
 
-const initMap = async () => {
-    if (!mapElement.value || !points.value.length) {
+const selectPrevious = (): void => {
+    if (!petaKawasans.value.length) {
         return;
     }
 
-    // Import dinamis agar aman untuk SSR (Leaflet butuh `window`)
-    const leaflet = await import("leaflet");
+    const index = selectedIndex.value;
 
-    L = (leaflet as any).default ?? leaflet;
+    if (index <= 0) {
+        selectedId.value =
+            petaKawasans.value[petaKawasans.value.length - 1]?.id ?? null;
 
-    if (!L || !mapElement.value) {
         return;
     }
 
-    map = L.map(mapElement.value, {
-        zoomControl: true,
-        scrollWheelZoom: false, // aktif setelah peta diklik, agar scroll halaman tidak "terjebak"
-        attributionControl: true,
-    });
+    selectedId.value = petaKawasans.value[index - 1]?.id ?? null;
+};
 
-    const streets = L.tileLayer(
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            maxZoom: 19,
-            attribution:
-                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        },
-    ).addTo(map);
+const selectNext = (): void => {
+    if (!petaKawasans.value.length) {
+        return;
+    }
 
-    const satellite = L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        {
-            maxZoom: 19,
-            attribution: "Tiles &copy; Esri",
-        },
-    );
+    const index = selectedIndex.value;
 
-    L.control
-        .layers({ Peta: streets, Satelit: satellite }, undefined, {
-            position: "topright",
-        })
-        .addTo(map);
+    if (index === -1 || index >= petaKawasans.value.length - 1) {
+        selectedId.value = petaKawasans.value[0]?.id ?? null;
 
-    map.on("click", () => map?.scrollWheelZoom.enable());
-    map.on("mouseout", () => map?.scrollWheelZoom.disable());
+        return;
+    }
 
-    points.value.forEach((item) => {
-        // Batas kawasan (GeoJSON), jika ada
-        if (item.batas_kawasan) {
-            try {
-                const layer = L!
-                    .geoJSON(item.batas_kawasan as any, {
-                        style: () => boundaryStyle(false),
-                    })
-                    .addTo(map!);
+    selectedId.value = petaKawasans.value[index + 1]?.id ?? null;
+};
 
-                boundaries.set(item.id, layer);
-            } catch {
-                // GeoJSON tidak valid: abaikan, marker tetap tampil
-            }
-        }
+/*
+|--------------------------------------------------------------------------
+| INITIAL SELECTION
+|--------------------------------------------------------------------------
+*/
 
-        const marker = L!
-            .marker([item.latitude, item.longitude], {
-                icon: createIcon(false),
-                title: item.judul,
-                alt: item.judul,
-                keyboard: true,
-            })
-            .addTo(map!);
+const initializeSelection = (): void => {
+    if (!petaKawasans.value.length) {
+        selectedId.value = null;
+        return;
+    }
 
-        marker.bindTooltip(item.judul, {
-            direction: "top",
-            offset: [0, -34],
-        });
-
-        marker.on("click", () => selectKawasan(item));
-
-        markers.set(item.id, marker);
-    });
-
-    // Tampilan awal
-    const target = props.selectedSlug
-        ? points.value.find((item) => item.slug === props.selectedSlug)
-        : null;
-
-    if (points.value.length === 1) {
-        const only = points.value[0];
-
-        map.setView([only.latitude, only.longitude], 14);
-        selectKawasan(only, false);
-    } else {
-        map.fitBounds(
-            L.latLngBounds(
-                points.value.map(
-                    (item) =>
-                        [item.latitude, item.longitude] as [number, number],
-                ),
-            ),
-            { padding: [48, 48] },
+    if (props.selectedSlug) {
+        const target = petaKawasans.value.find(
+            (item) => item.slug === props.selectedSlug,
         );
+
+        if (target) {
+            selectedId.value = target.id;
+            return;
+        }
     }
 
-    if (target) {
-        selectKawasan(target);
-    }
-
-    isMapReady.value = true;
-
-    await nextTick();
-    map.invalidateSize();
+    selectedId.value = petaKawasans.value[0]?.id ?? null;
 };
 
-/* ============================================================
-   REVEAL / FADE IN
-============================================================= */
+/*
+|--------------------------------------------------------------------------
+| REVEAL
+|--------------------------------------------------------------------------
+*/
 
 let revealObserver: IntersectionObserver | null = null;
+let prefersReducedMotion = false;
 
-const setupReveal = () => {
+const setupReveal = (): void => {
     const elements = document.querySelectorAll<HTMLElement>("[data-reveal]");
 
     if (prefersReducedMotion) {
-        elements.forEach((element) => element.classList.add("is-visible"));
+        elements.forEach((element) => {
+            element.classList.add("is-visible");
+        });
+
         return;
     }
 
@@ -339,42 +274,64 @@ const setupReveal = () => {
                 revealObserver?.unobserve(entry.target);
             });
         },
-        { threshold: 0.08, rootMargin: "0px 0px -40px 0px" },
+        {
+            threshold: 0.08,
+            rootMargin: "0px 0px -40px 0px",
+        },
     );
 
-    elements.forEach((element) => revealObserver?.observe(element));
+    elements.forEach((element) => {
+        revealObserver?.observe(element);
+    });
 };
+
+/*
+|--------------------------------------------------------------------------
+| KEYBOARD
+|--------------------------------------------------------------------------
+*/
+
+const handleKeydown = (event: KeyboardEvent): void => {
+    if (event.key === "Escape" && isImagePreviewOpen.value) {
+        closeImagePreview();
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
+| MOUNT
+|--------------------------------------------------------------------------
+*/
 
 onMounted(() => {
     prefersReducedMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
     ).matches;
 
+    initializeSelection();
     setupReveal();
 
-    initMap().catch(() => {
-        mapError.value = true;
-    });
+    window.addEventListener("keydown", handleKeydown);
 });
 
 onBeforeUnmount(() => {
     revealObserver?.disconnect();
 
-    map?.remove();
-    map = null;
+    window.removeEventListener("keydown", handleKeydown);
 
-    markers.clear();
-    boundaries.clear();
+    document.body.style.overflow = "";
 });
 </script>
 
 <template>
     <Head>
-        <title>Peta Kawasan — Kawasan Industri Tanjung Buton</title>
+        <title>
+            {{ trans("peta_kawasan.meta_title") }}
+        </title>
 
         <meta
             name="description"
-            content="Peta lokasi Kawasan Industri Tanjung Buton (KITB) lengkap dengan titik koordinat dan batas kawasan."
+            :content="trans('peta_kawasan.meta_description')"
         />
 
         <meta name="robots" content="index, follow" />
@@ -384,33 +341,41 @@ onBeforeUnmount(() => {
             href="https://tanjungbuton-industrial.co.id/kawasan/peta-kawasan"
         />
 
-        <meta property="og:title" content="Peta Kawasan | KITB" />
+        <meta property="og:title" :content="trans('peta_kawasan.meta_title')" />
+
         <meta
             property="og:description"
-            content="Peta lokasi Kawasan Industri Tanjung Buton (KITB)."
+            :content="trans('peta_kawasan.meta_description')"
         />
+
         <meta
             property="og:url"
             content="https://tanjungbuton-industrial.co.id/kawasan/peta-kawasan"
         />
+
         <meta property="og:type" content="website" />
     </Head>
 
     <main
         class="relative min-h-screen overflow-hidden bg-slate-50/50 dark:bg-slate-950"
     >
+        <!-- Decorative background -->
         <div
             aria-hidden="true"
             class="pointer-events-none absolute -left-32 top-24 h-80 w-80 rounded-full bg-blue-200/30 blur-3xl dark:bg-blue-900/20"
         />
 
+        <div
+            aria-hidden="true"
+            class="pointer-events-none absolute -right-32 top-[45%] h-96 w-96 rounded-full bg-slate-200/40 blur-3xl dark:bg-slate-800/30"
+        />
+
         <div class="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <!-- Breadcrumb -->
-
             <nav
                 data-reveal
                 style="--d: 0ms"
-                aria-label="Breadcrumb"
+                :aria-label="trans('peta_kawasan.breadcrumb_current')"
                 class="mb-6 flex flex-wrap items-center gap-2 text-sm"
             >
                 <Link
@@ -418,7 +383,10 @@ onBeforeUnmount(() => {
                     class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                 >
                     <Home class="size-4 shrink-0" aria-hidden="true" />
-                    <span>Beranda</span>
+
+                    <span>
+                        {{ trans("peta_kawasan.breadcrumb_home") }}
+                    </span>
                 </Link>
 
                 <ChevronRight
@@ -431,7 +399,10 @@ onBeforeUnmount(() => {
                     class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                 >
                     <Landmark class="size-4 shrink-0" aria-hidden="true" />
-                    <span>Profil Kawasan</span>
+
+                    <span>
+                        {{ trans("peta_kawasan.breadcrumb_kawasan") }}
+                    </span>
                 </Link>
 
                 <ChevronRight
@@ -443,43 +414,43 @@ onBeforeUnmount(() => {
                     aria-current="page"
                     class="inline-flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200"
                 >
-                    <MapPin
+                    <Map
                         class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
                         aria-hidden="true"
                     />
-                    <span>Peta Kawasan</span>
+
+                    <span>
+                        {{ trans("peta_kawasan.breadcrumb_current") }}
+                    </span>
                 </span>
             </nav>
 
             <!-- Heading -->
-
             <section data-reveal style="--d: 80ms" class="mb-8 max-w-3xl">
                 <div
                     class="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400"
                 >
-                    <MapPin class="size-4" aria-hidden="true" />
-                    Peta Interaktif
+                    <Map class="size-4" aria-hidden="true" />
+
+                    {{ trans("peta_kawasan.eyebrow") }}
                 </div>
 
                 <h1
                     class="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white"
                 >
-                    Peta Kawasan
+                    {{ trans("peta_kawasan.title") }}
                 </h1>
 
                 <p
                     class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                 >
-                    Temukan lokasi kawasan industri melalui peta interaktif.
-                    Pilih kawasan pada daftar atau klik penanda di peta untuk
-                    melihat informasinya.
+                    {{ trans("peta_kawasan.description") }}
                 </p>
             </section>
 
             <!-- Empty state -->
-
             <section
-                v-if="!points.length"
+                v-if="!petaKawasans.length"
                 data-reveal
                 style="--d: 140ms"
                 class="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12 dark:border-slate-800 dark:bg-slate-900"
@@ -487,352 +458,360 @@ onBeforeUnmount(() => {
                 <div
                     class="mx-auto flex size-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
                 >
-                    <MapPin class="size-8" aria-hidden="true" />
+                    <Map class="size-8" aria-hidden="true" />
                 </div>
 
                 <h2
                     class="mt-5 text-xl font-bold text-slate-900 dark:text-white"
                 >
-                    Data peta belum tersedia
+                    {{ trans("peta_kawasan.empty_title") }}
                 </h2>
 
                 <p
                     class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                 >
-                    Titik koordinat kawasan belum tersedia atau sedang
-                    diperbarui. Silakan kembali lagi nanti.
+                    {{ trans("peta_kawasan.empty_description") }}
                 </p>
 
                 <Link
                     href="/kawasan/profil-kawasan"
-                    class="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    class="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
                 >
                     <Landmark class="size-4" aria-hidden="true" />
-                    Lihat Profil Kawasan
+
+                    {{ trans("peta_kawasan.back_profile") }}
                 </Link>
             </section>
 
-            <!-- Map + list -->
-
+            <!-- Content -->
             <section
                 v-else
                 data-reveal
                 style="--d: 140ms"
-                class="grid gap-6 lg:grid-cols-[360px_1fr]"
+                class="grid gap-6 lg:grid-cols-[340px_1fr]"
             >
-                <!-- Daftar kawasan -->
-
+                <!-- List -->
                 <aside
-                    v-if="!isListReady"
-                    aria-label="Memuat daftar kawasan"
-                    aria-busy="true"
+                    :aria-label="trans('peta_kawasan.map_label')"
                     class="order-2 rounded-3xl border border-slate-200/80 bg-white p-3 shadow-sm lg:order-1 dark:border-slate-800 dark:bg-slate-900"
                 >
                     <div
-                        class="skeleton-shimmer mx-3 mb-3 mt-2 h-3 w-20 rounded bg-slate-200 dark:bg-slate-800"
-                    />
-
-                    <div class="space-y-2">
-                        <div
-                            v-for="index in 3"
-                            :key="index"
-                            class="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
-                        >
-                            <div
-                                class="skeleton-shimmer h-4 w-2/3 rounded bg-slate-200 dark:bg-slate-800"
-                            />
-
-                            <div
-                                class="skeleton-shimmer mt-3 h-3 w-full rounded bg-slate-200 dark:bg-slate-800"
-                            />
-
-                            <div
-                                class="skeleton-shimmer mt-2 h-3 w-1/2 rounded bg-slate-200 dark:bg-slate-800"
-                            />
-                        </div>
-                    </div>
-                </aside>
-
-                <aside
-                    v-else
-                    aria-label="Daftar kawasan"
-                    class="fade-in order-2 max-h-[640px] overflow-y-auto rounded-3xl border border-slate-200/80 bg-white p-3 shadow-sm lg:order-1 dark:border-slate-800 dark:bg-slate-900"
-                >
-                    <p
-                        class="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500"
+                        class="flex items-center justify-between px-3 pb-3 pt-1"
                     >
-                        {{ points.length }} Kawasan
-                    </p>
+                        <p
+                            class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500"
+                        >
+                            {{ trans("peta_kawasan.map_label") }}
+                        </p>
+
+                        <span
+                            class="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:bg-blue-950/40 dark:text-blue-400"
+                        >
+                            {{ petaKawasans.length }}
+                        </span>
+                    </div>
 
                     <ul class="space-y-2">
-                        <li v-for="item in points" :key="item.id">
+                        <li v-for="item in petaKawasans" :key="item.id">
                             <button
                                 type="button"
                                 :aria-pressed="selectedId === item.id"
-                                class="w-full rounded-2xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :aria-label="
+                                    trans('peta_kawasan.aria_open', {
+                                        name: getLocalizedValue(item, 'nama'),
+                                    })
+                                "
+                                class="group w-full rounded-2xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 :class="
                                     selectedId === item.id
                                         ? 'border-blue-200 bg-blue-50/70 dark:border-blue-900/60 dark:bg-blue-950/30'
                                         : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/60'
                                 "
-                                @click="selectKawasan(item)"
+                                @click="selectPeta(item)"
                             >
                                 <span
                                     class="flex items-start justify-between gap-3"
                                 >
-                                    <span>
+                                    <span class="min-w-0">
                                         <span
                                             class="block text-sm font-bold text-slate-900 dark:text-white"
                                         >
-                                            {{ item.judul }}
+                                            {{
+                                                getLocalizedValue(item, "nama")
+                                            }}
                                         </span>
 
                                         <span
-                                            v-if="item.lokasi"
-                                            class="mt-1 line-clamp-2 block text-xs leading-5 text-slate-500 dark:text-slate-400"
+                                            v-if="
+                                                getLocalizedValue(
+                                                    item,
+                                                    'deskripsi',
+                                                )
+                                            "
+                                            class="mt-1 block line-clamp-2 text-xs leading-5 text-slate-500 dark:text-slate-400"
                                         >
-                                            {{ item.lokasi }}
+                                            {{
+                                                getLocalizedValue(
+                                                    item,
+                                                    "deskripsi",
+                                                )
+                                            }}
                                         </span>
                                     </span>
 
-                                    <MapPin
-                                        class="mt-0.5 size-4 shrink-0"
+                                    <Map
+                                        class="mt-0.5 size-4 shrink-0 transition"
                                         :class="
                                             selectedId === item.id
                                                 ? 'text-blue-600 dark:text-blue-400'
-                                                : 'text-slate-400'
+                                                : 'text-slate-400 group-hover:text-blue-500'
                                         "
                                         aria-hidden="true"
                                     />
                                 </span>
                             </button>
-
-                            <!-- Detail kawasan terpilih -->
-
-                            <div
-                                v-if="selectedId === item.id"
-                                class="mx-1 mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
-                            >
-                                <dl class="space-y-3 text-sm">
-                                    <div
-                                        v-if="formatLuas(item.luas_kawasan)"
-                                        class="flex items-center gap-3"
-                                    >
-                                        <Maximize2
-                                            class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
-                                            aria-hidden="true"
-                                        />
-                                        <div>
-                                            <dt
-                                                class="text-xs text-slate-500 dark:text-slate-400"
-                                            >
-                                                Luas Kawasan
-                                            </dt>
-                                            <dd
-                                                class="font-semibold text-slate-900 dark:text-white"
-                                            >
-                                                {{
-                                                    formatLuas(
-                                                        item.luas_kawasan,
-                                                    )
-                                                }}
-                                                Ha
-                                            </dd>
-                                        </div>
-                                    </div>
-
-                                    <div
-                                        v-if="item.tahun_berdiri"
-                                        class="flex items-center gap-3"
-                                    >
-                                        <CalendarDays
-                                            class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
-                                            aria-hidden="true"
-                                        />
-                                        <div>
-                                            <dt
-                                                class="text-xs text-slate-500 dark:text-slate-400"
-                                            >
-                                                Tahun Berdiri
-                                            </dt>
-                                            <dd
-                                                class="font-semibold text-slate-900 dark:text-white"
-                                            >
-                                                {{ item.tahun_berdiri }}
-                                            </dd>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex items-center gap-3">
-                                        <MapPin
-                                            class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
-                                            aria-hidden="true"
-                                        />
-                                        <div>
-                                            <dt
-                                                class="text-xs text-slate-500 dark:text-slate-400"
-                                            >
-                                                Koordinat
-                                            </dt>
-                                            <dd
-                                                class="font-mono text-xs font-semibold text-slate-900 dark:text-white"
-                                            >
-                                                {{ formatCoordinate(item) }}
-                                            </dd>
-                                        </div>
-                                    </div>
-                                </dl>
-
-                                <div class="mt-4 flex flex-wrap gap-2">
-                                    <a
-                                        :href="directionsUrl(item)"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
-                                    >
-                                        <Navigation
-                                            class="size-4"
-                                            aria-hidden="true"
-                                        />
-                                        Petunjuk Arah
-                                        <span class="sr-only">
-                                            (buka di tab baru)
-                                        </span>
-                                    </a>
-
-                                    <Link
-                                        href="/kawasan/profil-kawasan"
-                                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-offset-slate-900"
-                                    >
-                                        Profil
-                                        <ChevronRight
-                                            class="size-4"
-                                            aria-hidden="true"
-                                        />
-                                    </Link>
-                                </div>
-                            </div>
                         </li>
                     </ul>
+
+                    <!-- Navigation -->
+                    <div
+                        v-if="petaKawasans.length > 1"
+                        class="mt-3 grid grid-cols-2 gap-2"
+                    >
+                        <button
+                            type="button"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                            @click="selectPrevious"
+                        >
+                            <ChevronLeft class="size-4" aria-hidden="true" />
+
+                            {{ trans("peta_kawasan.previous") }}
+                        </button>
+
+                        <button
+                            type="button"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            @click="selectNext"
+                        >
+                            {{ trans("peta_kawasan.next") }}
+
+                            <ChevronRight class="size-4" aria-hidden="true" />
+                        </button>
+                    </div>
                 </aside>
 
-                <!-- Peta -->
-
-                <div
-                    class="relative isolate z-0 order-1 overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-100 shadow-sm lg:order-2 dark:border-slate-800 dark:bg-slate-800"
+                <!-- Main map/image -->
+                <article
+                    v-if="selected"
+                    class="order-1 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm lg:order-2 dark:border-slate-800 dark:bg-slate-900"
                 >
-                    <div
-                        ref="mapElement"
-                        class="h-[420px] w-full sm:h-[520px] lg:h-[640px]"
-                        role="application"
-                        aria-label="Peta lokasi kawasan industri"
-                    />
+                    <!-- Image -->
+                    <div class="relative bg-slate-100 dark:bg-slate-800">
+                        <template v-if="getImageUrl(selected.gambar)">
+                            <img
+                                :src="getImageUrl(selected.gambar) ?? ''"
+                                :alt="getLocalizedValue(selected, 'nama')"
+                                class="block h-[360px] w-full object-contain sm:h-[500px] lg:h-[620px]"
+                                loading="eager"
+                            />
 
-                    <Transition
-                        leave-active-class="transition-opacity duration-500"
-                        leave-from-class="opacity-100"
-                        leave-to-class="opacity-0"
-                    >
-                        <div
-                            v-if="!isMapReady"
-                            role="status"
-                            class="absolute inset-0 z-[500] overflow-hidden bg-slate-100 dark:bg-slate-800"
-                        >
-                            <template v-if="!mapError">
-                                <div
-                                    class="skeleton-shimmer absolute inset-0 bg-slate-200 dark:bg-slate-800"
-                                />
-
-                                <div
-                                    class="absolute inset-0 flex flex-col items-center justify-center gap-3"
-                                >
-                                    <div
-                                        class="flex size-14 animate-pulse items-center justify-center rounded-2xl bg-white/80 text-blue-500 shadow-sm dark:bg-slate-900/80 dark:text-blue-400"
-                                    >
-                                        <MapPin
-                                            class="size-7"
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-
-                                    <p
-                                        class="text-sm font-medium text-slate-500 dark:text-slate-400"
-                                    >
-                                        Memuat peta…
-                                    </p>
-                                </div>
-                            </template>
-
-                            <div
-                                v-else
-                                class="flex h-full flex-col items-center justify-center gap-2 p-6 text-center"
+                            <button
+                                type="button"
+                                class="absolute right-4 top-4 inline-flex items-center gap-2 rounded-xl bg-slate-950/75 px-3 py-2.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-white"
+                                @click="openImagePreview"
                             >
-                                <MapPin
-                                    class="size-8 text-slate-400"
+                                <Expand class="size-4" aria-hidden="true" />
+
+                                {{ trans("peta_kawasan.fullscreen") }}
+                            </button>
+                        </template>
+
+                        <div
+                            v-else
+                            class="flex h-[360px] flex-col items-center justify-center px-6 text-center sm:h-[500px] lg:h-[620px]"
+                        >
+                            <div
+                                class="flex size-16 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400"
+                            >
+                                <Map class="size-8" aria-hidden="true" />
+                            </div>
+
+                            <h2
+                                class="mt-5 text-lg font-bold text-slate-900 dark:text-white"
+                            >
+                                {{ trans("peta_kawasan.image_unavailable") }}
+                            </h2>
+
+                            <p
+                                class="mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
+                            >
+                                {{
+                                    trans(
+                                        "peta_kawasan.image_unavailable_description",
+                                    )
+                                }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Information -->
+                    <div class="p-5 sm:p-6 lg:p-7">
+                        <div
+                            class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+                        >
+                            <div class="min-w-0">
+                                <div
+                                    class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400"
+                                >
+                                    <Map class="size-4" aria-hidden="true" />
+
+                                    {{ trans("peta_kawasan.selected_label") }}
+                                </div>
+
+                                <h2
+                                    class="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
+                                >
+                                    {{ getLocalizedValue(selected, "nama") }}
+                                </h2>
+
+                                <p
+                                    v-if="
+                                        getLocalizedValue(selected, 'deskripsi')
+                                    "
+                                    class="mt-3 max-w-3xl text-sm leading-7 text-slate-500 dark:text-slate-400"
+                                >
+                                    {{
+                                        getLocalizedValue(selected, "deskripsi")
+                                    }}
+                                </p>
+                            </div>
+
+                            <span
+                                class="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                            >
+                                <span
+                                    class="size-1.5 rounded-full bg-current"
                                     aria-hidden="true"
                                 />
 
-                                <p
-                                    class="text-sm font-semibold text-slate-700 dark:text-slate-200"
-                                >
-                                    Peta gagal dimuat
-                                </p>
-
-                                <p
-                                    class="text-xs text-slate-500 dark:text-slate-400"
-                                >
-                                    Periksa koneksi internet Anda, lalu muat
-                                    ulang halaman.
-                                </p>
-                            </div>
+                                {{ trans("peta_kawasan.available") }}
+                            </span>
                         </div>
-                    </Transition>
+
+                        <!-- Language indicator -->
+                        <div class="mt-5 flex flex-wrap items-center gap-2">
+                            <span
+                                class="text-xs font-medium text-slate-400 dark:text-slate-500"
+                            >
+                                {{ trans("peta_kawasan.language") }}:
+                            </span>
+
+                            <span
+                                class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            >
+                                {{ language }}
+                            </span>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <!-- Bottom CTA -->
+            <section
+                v-if="petaKawasans.length"
+                data-reveal
+                style="--d: 220ms"
+                class="mt-8 overflow-hidden rounded-3xl border border-blue-100 bg-blue-50/70 p-6 sm:p-8 dark:border-blue-900/40 dark:bg-blue-950/20"
+            >
+                <div
+                    class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div>
+                        <div
+                            class="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400"
+                        >
+                            <Landmark class="size-4" aria-hidden="true" />
+
+                            {{ trans("peta_kawasan.cta_eyebrow") }}
+                        </div>
+
+                        <h2
+                            class="mt-2 text-xl font-bold text-slate-900 dark:text-white"
+                        >
+                            {{ trans("peta_kawasan.cta_title") }}
+                        </h2>
+
+                        <p
+                            class="mt-1 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400"
+                        >
+                            {{ trans("peta_kawasan.cta_description") }}
+                        </p>
+                    </div>
+
+                    <Link
+                        href="/kawasan/profil-kawasan"
+                        class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950"
+                    >
+                        {{ trans("peta_kawasan.back_profile") }}
+
+                        <ChevronRight class="size-4" aria-hidden="true" />
+                    </Link>
                 </div>
             </section>
         </div>
+
+        <!-- Fullscreen image modal -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="isImagePreviewOpen && previewImage"
+                class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/95 p-4 backdrop-blur-sm sm:p-8"
+                role="dialog"
+                aria-modal="true"
+                :aria-label="trans('peta_kawasan.image_preview')"
+                @click.self="closeImagePreview"
+            >
+                <button
+                    type="button"
+                    class="absolute right-4 top-4 z-10 inline-flex size-11 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"
+                    :aria-label="trans('peta_kawasan.close')"
+                    @click="closeImagePreview"
+                >
+                    <X class="size-6" aria-hidden="true" />
+                </button>
+
+                <figure
+                    class="flex max-h-full max-w-full flex-col items-center"
+                >
+                    <img
+                        :src="previewImage"
+                        :alt="
+                            selected
+                                ? getLocalizedValue(selected, 'nama')
+                                : trans('peta_kawasan.title')
+                        "
+                        class="max-h-[88vh] max-w-full rounded-2xl object-contain shadow-2xl"
+                    />
+
+                    <figcaption
+                        v-if="selected"
+                        class="mt-4 text-center text-sm font-semibold text-white"
+                    >
+                        {{ getLocalizedValue(selected, "nama") }}
+                    </figcaption>
+                </figure>
+            </div>
+        </Transition>
     </main>
 </template>
 
-<!-- Tidak scoped: elemen penanda dibuat oleh Leaflet, bukan oleh Vue -->
-<style>
-.kitb-pin-wrapper {
-    background: transparent;
-    border: 0;
-}
-
-.kitb-pin {
-    display: block;
-    width: 38px;
-    height: 38px;
-    color: #475569;
-    filter: drop-shadow(0 4px 6px rgb(15 23 42 / 0.35));
-    transition:
-        transform 200ms ease,
-        color 200ms ease;
-    transform-origin: 50% 90%;
-}
-
-.kitb-pin.is-active {
-    color: #2563eb;
-    transform: scale(1.2);
-}
-
-.leaflet-container {
-    font-family: inherit;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .kitb-pin {
-        transition: none;
-    }
-}
-</style>
-
 <style scoped>
-/* ============================================================
-   REVEAL
-============================================================= */
-
 [data-reveal] {
     opacity: 0;
     transform: translateY(16px);
@@ -847,68 +826,11 @@ onBeforeUnmount(() => {
     transform: translateY(0);
 }
 
-/* ============================================================
-   FADE IN (daftar kawasan setelah skeleton)
-============================================================= */
-
-.fade-in {
-    animation: fade-in 450ms ease both;
-}
-
-@keyframes fade-in {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
     [data-reveal] {
         opacity: 1;
         transform: none;
         transition: none;
-    }
-
-    .fade-in {
-        animation: none;
-    }
-}
-
-/* ============================================================
-   SKELETON SHIMMER
-============================================================= */
-
-.skeleton-shimmer {
-    position: relative;
-    overflow: hidden;
-}
-
-.skeleton-shimmer::after {
-    position: absolute;
-    inset: 0;
-    content: "";
-    transform: translateX(-100%);
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.55),
-        transparent
-    );
-    animation: skeleton-shimmer 1.35s infinite;
-}
-
-@keyframes skeleton-shimmer {
-    100% {
-        transform: translateX(100%);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .skeleton-shimmer::after {
-        animation: none;
     }
 }
 </style>

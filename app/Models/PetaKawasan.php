@@ -11,9 +11,20 @@ class PetaKawasan extends Model
     protected $table = 'peta_kawasan';
 
     protected $fillable = [
+        // Bahasa Indonesia
         'nama',
-        'slug',
         'deskripsi',
+
+        // English
+        'nama_en',
+        'deskripsi_en',
+
+        // Chinese
+        'nama_zh',
+        'deskripsi_zh',
+
+        // General
+        'slug',
         'gambar',
         'urutan',
         'aktif',
@@ -24,6 +35,9 @@ class PetaKawasan extends Model
         'aktif' => 'boolean',
     ];
 
+    /**
+     * Scope untuk mengurutkan data peta kawasan.
+     */
     public function scopeOrdered(Builder $query): Builder
     {
         return $query
@@ -31,6 +45,9 @@ class PetaKawasan extends Model
             ->orderBy('id');
     }
 
+    /**
+     * Generate slug unik berdasarkan nama.
+     */
     public static function generateUniqueSlug(
         string $nama,
         ?int $ignoreId = null

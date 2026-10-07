@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import {
     ArrowDown,
     ArrowUp,
     Building2,
+    Check,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
     Eye,
     FileText,
+    Globe,
     Image as ImageIcon,
     Pencil,
     Plus,
@@ -21,6 +23,11 @@ import {
     X,
 } from "lucide-vue-next";
 import AppLayout from "@/layouts/AppLayout.vue";
+import {
+    currentLanguage,
+    localizedValue,
+    type LanguageCode,
+} from "@/composables/useLocale";
 
 defineOptions({
     layout: AppLayout,
@@ -34,9 +41,17 @@ defineOptions({
 
 interface Fasilitas {
     id: number;
+
     nama: string;
+    nama_en: string | null;
+    nama_zh: string | null;
+
     slug: string;
+
     deskripsi: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
     gambar: string | null;
     urutan: number;
     aktif: boolean;
@@ -73,8 +88,12 @@ interface FasilitasPagination {
 
 interface FormErrors {
     nama?: string;
+    nama_en?: string;
+    nama_zh?: string;
     slug?: string;
     deskripsi?: string;
+    deskripsi_en?: string;
+    deskripsi_zh?: string;
     gambar?: string;
     urutan?: string;
     aktif?: string;
@@ -95,6 +114,43 @@ const props = defineProps<{
 }>();
 
 const BASE_URL = "/admin/kawasan/fasilitas";
+
+/**
+ * |--------------------------------------------------------------------------
+ * | Language
+ * |--------------------------------------------------------------------------
+ *
+ * currentLanguage (useLocale) = bahasa tampilan tabel.
+ * activeLanguage / detailLanguage = tab bahasa lokal di modal form / detail,
+ * supaya mengedit tidak mengubah bahasa tampilan global.
+ */
+
+const languageTabs: { code: LanguageCode; flag: string; label: string }[] = [
+    { code: "id", flag: "🇮🇩", label: "Indonesia" },
+    { code: "en", flag: "🇬🇧", label: "English" },
+    { code: "zh", flag: "🇨🇳", label: "中文" },
+];
+
+const activeLanguage = ref<LanguageCode>("id");
+const detailLanguage = ref<LanguageCode>("id");
+
+const languageLabel = computed(
+    () =>
+        languageTabs.find((tab) => tab.code === activeLanguage.value)?.label ??
+        "Indonesia",
+);
+
+const fieldKey = (field: "nama" | "deskripsi", lang: LanguageCode): string =>
+    lang === "id" ? field : `${field}_${lang}`;
+
+const hasTranslation = (item: Fasilitas, lang: LanguageCode): boolean => {
+    const record = item as unknown as Record<string, unknown>;
+
+    return (
+        String(record[fieldKey("nama", lang)] ?? "").trim() !== "" ||
+        String(record[fieldKey("deskripsi", lang)] ?? "").trim() !== ""
+    );
+};
 
 /**
  * |--------------------------------------------------------------------------
@@ -145,15 +201,21 @@ const selectedFasilitas = ref<Fasilitas | null>(null);
  * |--------------------------------------------------------------------------
  */
 
-const form = ref({
+const emptyForm = () => ({
     nama: "",
+    nama_en: "",
+    nama_zh: "",
     slug: "",
     deskripsi: "",
+    deskripsi_en: "",
+    deskripsi_zh: "",
     gambar: null as File | null,
     urutan: "",
     aktif: true,
     remove_gambar: false,
 });
+
+const form = ref(emptyForm());
 
 const existingImage = ref<string | null>(null);
 const previewUrl = ref<string | null>(null);
@@ -165,10 +227,30 @@ const processingMoveId = ref<number | null>(null);
 
 const errors = ref<FormErrors>({});
 
+const hasLanguageError = (lang: LanguageCode): boolean => {
+    const record = errors.value as Record<string, string | undefined>;
+
+    return Boolean(
+        record[fieldKey("nama", lang)] || record[fieldKey("deskripsi", lang)],
+    );
+};
+
+const focusFirstErrorLanguage = (): void => {
+    const firstWithError = languageTabs.find((tab) =>
+        hasLanguageError(tab.code),
+    );
+
+    if (firstWithError) {
+        activeLanguage.value = firstWithError.code;
+    }
+};
+
 /**
  * |--------------------------------------------------------------------------
  * | Slug (preview saja, backend/model yang menentukan slug final)
  * |--------------------------------------------------------------------------
+ *
+ * Slug selalu dibuat dari nama Bahasa Indonesia.
  */
 
 const isHydratingForm = ref(false);
@@ -311,6 +393,28 @@ const getRowNumber = (index: number): number =>
     (getCurrentPage() - 1) * getPerPage() + index + 1;
 
 /**
+ * Nama/deskripsi sesuai bahasa tampilan (useLocale), fallback ke Indonesia.
+ */
+const displayName = (item: Fasilitas): string =>
+    localizedValue(item as unknown as Record<string, unknown>, "nama");
+
+const displayDescription = (item: Fasilitas): string =>
+    localizedValue(item as unknown as Record<string, unknown>, "deskripsi");
+
+/**
+ * Nama/deskripsi untuk tab bahasa tertentu (tanpa fallback) di modal detail.
+ */
+const getDetailValue = (
+    item: Fasilitas,
+    field: "nama" | "deskripsi",
+): string => {
+    const record = item as unknown as Record<string, unknown>;
+    const value = record[fieldKey(field, detailLanguage.value)];
+
+    return toStringValue(value as string | null | undefined);
+};
+
+/**
  * Posisi global (lintas halaman) untuk menonaktifkan tombol naik/turun.
  * Controller menukar urutan dengan tetangga terdekat, sehingga hanya
  * item pertama (paling atas) dan terakhir (paling bawah) yang tidak bisa pindah.
@@ -399,18 +503,11 @@ const navButtonClass = (url: string | null): string =>
 const resetForm = (): void => {
     isHydratingForm.value = true;
 
-    form.value = {
-        nama: "",
-        slug: "",
-        deskripsi: "",
-        gambar: null,
-        urutan: "",
-        aktif: true,
-        remove_gambar: false,
-    };
+    form.value = emptyForm();
 
     existingImage.value = null;
     errors.value = {};
+    activeLanguage.value = "id";
 
     if (previewUrl.value) {
         URL.revokeObjectURL(previewUrl.value);
@@ -463,13 +560,18 @@ const openEdit = (item: Fasilitas): void => {
     }
 
     errors.value = {};
+    activeLanguage.value = "id";
 
     isHydratingForm.value = true;
 
     form.value = {
         nama: toStringValue(item.nama),
+        nama_en: toStringValue(item.nama_en),
+        nama_zh: toStringValue(item.nama_zh),
         slug: toStringValue(item.slug),
         deskripsi: toStringValue(item.deskripsi),
+        deskripsi_en: toStringValue(item.deskripsi_en),
+        deskripsi_zh: toStringValue(item.deskripsi_zh),
         gambar: null,
         urutan: toStringValue(item.urutan),
         aktif: Boolean(item.aktif),
@@ -583,8 +685,9 @@ const removeExistingImage = (): void => {
  * | Submit
  * |--------------------------------------------------------------------------
  *
- * Slug tidak dikirim. Controller hanya menerima:
- * nama, deskripsi, gambar, urutan, aktif, remove_gambar (edit).
+ * Slug tidak dikirim. Controller menerima:
+ * nama, nama_en, nama_zh, deskripsi, deskripsi_en, deskripsi_zh,
+ * gambar, urutan, aktif, remove_gambar (edit).
  */
 
 const submit = (): void => {
@@ -595,11 +698,18 @@ const submit = (): void => {
     errors.value = {};
 
     const nama = toStringValue(form.value.nama);
+    const namaEn = toStringValue(form.value.nama_en);
+    const namaZh = toStringValue(form.value.nama_zh);
+
     const deskripsi = toStringValue(form.value.deskripsi);
+    const deskripsiEn = toStringValue(form.value.deskripsi_en);
+    const deskripsiZh = toStringValue(form.value.deskripsi_zh);
+
     const urutan = toStringValue(form.value.urutan);
 
     if (!nama) {
-        errors.value.nama = "Nama fasilitas wajib diisi.";
+        errors.value.nama = "Nama fasilitas (Indonesia) wajib diisi.";
+        activeLanguage.value = "id";
 
         return;
     }
@@ -607,6 +717,7 @@ const submit = (): void => {
     if (!slugify(nama)) {
         errors.value.nama =
             "Nama harus mengandung huruf atau angka agar slug dapat dibuat.";
+        activeLanguage.value = "id";
 
         return;
     }
@@ -617,7 +728,11 @@ const submit = (): void => {
     const formData = new FormData();
 
     formData.append("nama", nama);
+    formData.append("nama_en", namaEn);
+    formData.append("nama_zh", namaZh);
     formData.append("deskripsi", deskripsi);
+    formData.append("deskripsi_en", deskripsiEn);
+    formData.append("deskripsi_zh", deskripsiZh);
     formData.append("urutan", urutan || "0");
     formData.append("aktif", form.value.aktif ? "1" : "0");
 
@@ -651,6 +766,8 @@ const submit = (): void => {
         onError: (serverErrors) => {
             errors.value = serverErrors as FormErrors;
 
+            focusFirstErrorLanguage();
+
             console.error("Gagal menyimpan fasilitas:", serverErrors);
         },
 
@@ -672,6 +789,7 @@ const submit = (): void => {
 
 const openDetail = (item: Fasilitas): void => {
     selectedFasilitas.value = item;
+    detailLanguage.value = "id";
 
     showFormModal.value = false;
     showDeleteModal.value = false;
@@ -841,21 +959,21 @@ onBeforeUnmount(() => {
             ></div>
 
             <div
-                class="blob-shape-slow absolute left-[30%] -top-40 h-72 w-72 rounded-full bg-gradient-to-br from-indigo-300/25 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/15 dark:via-blue-500/10 dark:to-transparent"
+                class="blob-shape-slow absolute -top-40 left-[30%] h-72 w-72 rounded-full bg-gradient-to-br from-indigo-300/25 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/15 dark:via-blue-500/10 dark:to-transparent"
             ></div>
 
             <div
                 class="blob-shape absolute -bottom-40 right-[20%] h-72 w-72 rounded-full bg-gradient-to-br from-cyan-300/20 via-blue-300/10 to-transparent blur-3xl dark:from-cyan-500/10 dark:via-blue-500/10 dark:to-transparent"
             ></div>
 
-            <div class="absolute inset-0 opacity-40 dark:opacity-20">
+            <div class="absolute inset-0 opacity-40 dark:opacity-15">
                 <div
                     class="h-full w-full bg-[linear-gradient(to_right,#64748b12_1px,transparent_1px),linear-gradient(to_bottom,#64748b12_1px,transparent_1px)] bg-[size:32px_32px]"
                 ></div>
             </div>
 
             <div
-                class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent via-slate-50/40 to-slate-50/90 dark:via-slate-950/40 dark:to-[#07111f]/95"
+                class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent via-slate-50/40 to-slate-50/90 dark:via-slate-950/40 dark:to-slate-950/90"
             ></div>
         </div>
 
@@ -866,13 +984,9 @@ onBeforeUnmount(() => {
         <div
             class="relative z-10 mx-auto w-full max-w-[1600px] p-4 sm:p-5 lg:p-6 xl:p-8"
         >
-            <!-- =====================================================
-                 SKELETON
-            ====================================================== -->
+            <!-- SKELETON -->
 
             <div v-if="isPageLoading" class="animate-pulse">
-                <!-- HEADER SKELETON -->
-
                 <div
                     class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
@@ -893,50 +1007,22 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div
-                        class="h-11 w-full rounded-xl bg-slate-200 sm:w-40 dark:bg-slate-800"
+                        class="h-10 w-full rounded-xl bg-slate-200 sm:w-40 dark:bg-slate-800"
                     ></div>
                 </div>
-
-                <!-- SEARCH SKELETON -->
 
                 <div
-                    class="mb-5 rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm backdrop-blur-xl sm:p-5 dark:border-slate-800 dark:bg-slate-900/90"
+                    class="mb-5 rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/20"
                 >
                     <div
-                        class="h-11 w-full rounded-xl bg-slate-200 dark:bg-slate-800"
+                        class="h-10 w-full rounded-xl bg-slate-200 dark:bg-slate-800"
                     ></div>
                 </div>
-
-                <!-- TABLE SKELETON -->
 
                 <div
                     class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/20"
                 >
-                    <div
-                        class="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
-                    >
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="size-10 rounded-xl bg-slate-200 dark:bg-slate-800"
-                            ></div>
-
-                            <div class="space-y-2">
-                                <div
-                                    class="h-4 w-32 rounded bg-slate-200 dark:bg-slate-800"
-                                ></div>
-
-                                <div
-                                    class="h-3 w-56 rounded bg-slate-200 dark:bg-slate-800"
-                                ></div>
-                            </div>
-                        </div>
-
-                        <div
-                            class="h-4 w-20 rounded bg-slate-200 dark:bg-slate-800"
-                        ></div>
-                    </div>
-
-                    <div class="overflow-x-auto overscroll-x-contain">
+                    <div class="overflow-x-auto">
                         <table class="w-full min-w-[1200px] text-left text-sm">
                             <thead
                                 class="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-800/50"
@@ -986,10 +1072,6 @@ onBeforeUnmount(() => {
                                                 <div
                                                     class="h-3 w-32 rounded bg-slate-200 dark:bg-slate-800"
                                                 ></div>
-
-                                                <div
-                                                    class="h-3 w-20 rounded bg-slate-200 dark:bg-slate-800"
-                                                ></div>
                                             </div>
                                         </div>
                                     </td>
@@ -1010,9 +1092,7 @@ onBeforeUnmount(() => {
                 </div>
             </div>
 
-            <!-- =====================================================
-                 ACTUAL CONTENT
-            ====================================================== -->
+            <!-- ACTUAL CONTENT -->
 
             <template v-else>
                 <!-- HEADER -->
@@ -1020,7 +1100,7 @@ onBeforeUnmount(() => {
                 <div
                     class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <div class="flex min-w-0 items-start gap-3 sm:items-center">
+                    <div class="flex min-w-0 items-center gap-3">
                         <div
                             class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-600/10 text-blue-600 shadow-sm dark:bg-blue-400/10 dark:text-blue-400"
                         >
@@ -1029,13 +1109,13 @@ onBeforeUnmount(() => {
 
                         <div class="min-w-0">
                             <h1
-                                class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white"
+                                class="truncate text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl"
                             >
                                 Fasilitas
                             </h1>
 
                             <p
-                                class="mt-0.5 text-sm leading-5 text-slate-500 dark:text-slate-400"
+                                class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
                             >
                                 Kelola informasi fasilitas kawasan perusahaan.
                             </p>
@@ -1044,7 +1124,7 @@ onBeforeUnmount(() => {
 
                     <button
                         type="button"
-                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 active:scale-[0.99] sm:w-auto"
+                        class="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 active:scale-[0.98] sm:w-auto"
                         @click="openCreate"
                     >
                         <Plus class="size-4" />
@@ -1055,18 +1135,18 @@ onBeforeUnmount(() => {
                 <!-- SEARCH -->
 
                 <div
-                    class="mb-5 rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-slate-200/30 backdrop-blur-xl sm:p-5 dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/20"
+                    class="mb-5 rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/20 sm:p-5"
                 >
                     <div class="relative">
                         <Search
-                            class="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
                         />
 
                         <input
                             v-model="search"
                             type="search"
-                            placeholder="Cari nama atau deskripsi fasilitas..."
-                            class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-11 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                            placeholder="Cari nama atau deskripsi fasilitas (ID / EN / 中文)..."
+                            class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
                             @input="submitSearch"
                         />
 
@@ -1075,7 +1155,7 @@ onBeforeUnmount(() => {
                             type="button"
                             title="Hapus pencarian"
                             aria-label="Hapus pencarian"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-200 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 dark:hover:bg-slate-700"
                             @click="clearSearch"
                         >
                             <X class="size-4" />
@@ -1088,10 +1168,8 @@ onBeforeUnmount(() => {
                 <div
                     class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/20"
                 >
-                    <!-- TABLE HEADER -->
-
                     <div
-                        class="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5 md:flex-row md:items-center md:justify-between dark:border-slate-800"
+                        class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 dark:border-slate-800"
                     >
                         <div class="flex min-w-0 items-center gap-3">
                             <div
@@ -1108,7 +1186,7 @@ onBeforeUnmount(() => {
                                 </h2>
 
                                 <p
-                                    class="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400"
+                                    class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
                                 >
                                     Informasi fasilitas yang tersedia di
                                     kawasan.
@@ -1116,11 +1194,42 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <span
-                            class="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                        >
-                            {{ getTotal() }} data
-                        </span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- LANGUAGE VIEW (useLocale) -->
+
+                            <div
+                                class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800"
+                                role="group"
+                                aria-label="Bahasa tampilan tabel"
+                            >
+                                <Globe
+                                    class="ml-1.5 size-3.5 text-slate-400"
+                                    aria-hidden="true"
+                                />
+
+                                <button
+                                    v-for="tab in languageTabs"
+                                    :key="tab.code"
+                                    type="button"
+                                    :aria-pressed="currentLanguage === tab.code"
+                                    class="rounded-lg px-2.5 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                    :class="
+                                        currentLanguage === tab.code
+                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                    "
+                                    @click="currentLanguage = tab.code"
+                                >
+                                    {{ tab.code.toUpperCase() }}
+                                </button>
+                            </div>
+
+                            <span
+                                class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            >
+                                {{ getTotal() }} data
+                            </span>
+                        </div>
                     </div>
 
                     <!-- DATA -->
@@ -1135,37 +1244,37 @@ onBeforeUnmount(() => {
                                 >
                                     <tr>
                                         <th
-                                            class="w-16 px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                            class="w-16 whitespace-nowrap px-6 py-4 text-center font-semibold text-slate-700 dark:text-slate-200"
                                         >
                                             No.
                                         </th>
 
                                         <th
-                                            class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                            class="whitespace-nowrap px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
                                         >
                                             Fasilitas
                                         </th>
 
                                         <th
-                                            class="w-[420px] px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                            class="w-[420px] px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
                                         >
                                             Deskripsi
                                         </th>
 
                                         <th
-                                            class="w-40 px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                            class="w-40 whitespace-nowrap px-6 py-4 text-center font-semibold text-slate-700 dark:text-slate-200"
                                         >
                                             Urutan
                                         </th>
 
                                         <th
-                                            class="w-32 px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                            class="w-32 whitespace-nowrap px-6 py-4 text-center font-semibold text-slate-700 dark:text-slate-200"
                                         >
                                             Status
                                         </th>
 
                                         <th
-                                            class="w-48 px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                            class="w-48 whitespace-nowrap px-6 py-4 text-right font-semibold text-slate-700 dark:text-slate-200"
                                         >
                                             Aksi
                                         </th>
@@ -1179,7 +1288,7 @@ onBeforeUnmount(() => {
                                         v-for="(item, index) in props.fasilitas
                                             ?.data ?? []"
                                         :key="item.id"
-                                        class="group transition-colors duration-200 hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
+                                        class="transition-colors duration-200 hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
                                     >
                                         <!-- NO -->
 
@@ -1198,7 +1307,7 @@ onBeforeUnmount(() => {
                                                 class="flex items-center gap-3"
                                             >
                                                 <div
-                                                    class="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+                                                    class="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
                                                 >
                                                     <img
                                                         v-if="
@@ -1211,9 +1320,9 @@ onBeforeUnmount(() => {
                                                                 item.gambar,
                                                             )!
                                                         "
-                                                        :alt="item.nama"
+                                                        :alt="displayName(item)"
                                                         loading="lazy"
-                                                        class="size-full object-cover transition duration-300 group-hover:scale-105"
+                                                        class="size-full object-cover"
                                                     />
 
                                                     <ImageIcon
@@ -1224,22 +1333,52 @@ onBeforeUnmount(() => {
 
                                                 <div class="min-w-0">
                                                     <p
-                                                        class="truncate font-semibold text-slate-800 dark:text-slate-100"
+                                                        class="max-w-[260px] truncate font-semibold text-slate-800 dark:text-slate-100"
                                                     >
-                                                        {{ item.nama }}
+                                                        {{ displayName(item) }}
                                                     </p>
 
                                                     <p
-                                                        class="mt-0.5 truncate text-xs text-blue-600 dark:text-blue-400"
+                                                        class="mt-0.5 max-w-[260px] truncate text-xs text-blue-600 dark:text-blue-400"
                                                     >
                                                         /{{ item.slug }}
                                                     </p>
 
-                                                    <p
-                                                        class="mt-1 text-xs text-slate-400 dark:text-slate-500"
+                                                    <div
+                                                        class="mt-1 flex items-center gap-1.5"
                                                     >
-                                                        ID #{{ item.id }}
-                                                    </p>
+                                                        <span
+                                                            class="text-xs text-slate-400 dark:text-slate-500"
+                                                        >
+                                                            ID #{{ item.id }}
+                                                        </span>
+
+                                                        <span
+                                                            v-for="tab in languageTabs"
+                                                            :key="tab.code"
+                                                            :title="
+                                                                hasTranslation(
+                                                                    item,
+                                                                    tab.code,
+                                                                )
+                                                                    ? `${tab.label}: terisi`
+                                                                    : `${tab.label}: belum diisi`
+                                                            "
+                                                            class="rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                                                            :class="
+                                                                hasTranslation(
+                                                                    item,
+                                                                    tab.code,
+                                                                )
+                                                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+                                                            "
+                                                        >
+                                                            {{
+                                                                tab.code.toUpperCase()
+                                                            }}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -1248,11 +1387,13 @@ onBeforeUnmount(() => {
 
                                         <td class="px-6 py-4">
                                             <p
-                                                class="line-clamp-3 text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                                class="line-clamp-3 max-w-[420px] text-sm leading-6 text-slate-600 dark:text-slate-300"
                                             >
                                                 {{
                                                     truncate(
-                                                        item.deskripsi,
+                                                        displayDescription(
+                                                            item,
+                                                        ),
                                                         150,
                                                     )
                                                 }}
@@ -1268,13 +1409,13 @@ onBeforeUnmount(() => {
                                                 <button
                                                     type="button"
                                                     title="Pindah ke atas"
-                                                    aria-label="Pindah fasilitas ke atas"
+                                                    aria-label="Pindah ke atas"
                                                     :disabled="
                                                         processingMoveId !==
                                                             null ||
                                                         isFirstItem(index)
                                                     "
-                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-30 dark:text-slate-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                                                    class="rounded-lg p-1.5 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-30 dark:text-slate-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                                                     @click="
                                                         moveFasilitas(
                                                             item,
@@ -1294,13 +1435,13 @@ onBeforeUnmount(() => {
                                                 <button
                                                     type="button"
                                                     title="Pindah ke bawah"
-                                                    aria-label="Pindah fasilitas ke bawah"
+                                                    aria-label="Pindah ke bawah"
                                                     :disabled="
                                                         processingMoveId !==
                                                             null ||
                                                         isLastItem(index)
                                                     "
-                                                    class="rounded-lg p-2 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-30 dark:text-slate-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                                                    class="rounded-lg p-1.5 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-30 dark:text-slate-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                                                     @click="
                                                         moveFasilitas(
                                                             item,
@@ -1363,7 +1504,7 @@ onBeforeUnmount(() => {
                                                 <button
                                                     type="button"
                                                     title="Lihat detail"
-                                                    aria-label="Lihat detail fasilitas"
+                                                    aria-label="Lihat detail"
                                                     class="rounded-lg p-2 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
                                                     @click="openDetail(item)"
                                                 >
@@ -1400,100 +1541,109 @@ onBeforeUnmount(() => {
 
                         <div
                             v-if="getLastPage() > 1"
-                            class="flex flex-col gap-4 border-t border-slate-200 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between dark:border-slate-800"
+                            class="flex flex-col gap-4 border-t border-slate-200 px-4 py-4 sm:px-6 dark:border-slate-800"
                         >
-                            <p
-                                class="text-sm text-slate-500 dark:text-slate-400"
-                            >
-                                Menampilkan
-                                <span
-                                    class="font-medium text-slate-700 dark:text-slate-200"
-                                >
-                                    {{ getFrom() }}
-                                </span>
-                                -
-                                <span
-                                    class="font-medium text-slate-700 dark:text-slate-200"
-                                >
-                                    {{ getTo() }}
-                                </span>
-                                dari
-                                <span
-                                    class="font-medium text-slate-700 dark:text-slate-200"
-                                >
-                                    {{ getTotal() }}
-                                </span>
-                                fasilitas
-                            </p>
-
                             <div
-                                class="flex w-full flex-wrap items-center gap-1 sm:w-auto"
+                                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                             >
-                                <button
-                                    type="button"
-                                    title="Halaman pertama"
-                                    aria-label="Halaman pertama"
-                                    :disabled="!firstPageUrl()"
-                                    class="rounded-lg p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                                    :class="navButtonClass(firstPageUrl())"
-                                    @click="goToPage(firstPageUrl())"
+                                <p
+                                    class="text-center text-sm text-slate-500 sm:text-left dark:text-slate-400"
                                 >
-                                    <ChevronsLeft class="size-4" />
-                                </button>
+                                    Menampilkan
+                                    <span
+                                        class="font-medium text-slate-700 dark:text-slate-200"
+                                    >
+                                        {{ getFrom() }}
+                                    </span>
+                                    -
+                                    <span
+                                        class="font-medium text-slate-700 dark:text-slate-200"
+                                    >
+                                        {{ getTo() }}
+                                    </span>
+                                    dari
+                                    <span
+                                        class="font-medium text-slate-700 dark:text-slate-200"
+                                    >
+                                        {{ getTotal() }}
+                                    </span>
+                                    fasilitas
+                                </p>
 
-                                <button
-                                    type="button"
-                                    title="Halaman sebelumnya"
-                                    aria-label="Halaman sebelumnya"
-                                    :disabled="!previousPageUrl()"
-                                    class="rounded-lg p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                                    :class="navButtonClass(previousPageUrl())"
-                                    @click="goToPage(previousPageUrl())"
+                                <div
+                                    class="flex flex-wrap items-center justify-center gap-1 sm:justify-end"
                                 >
-                                    <ChevronLeft class="size-4" />
-                                </button>
+                                    <button
+                                        type="button"
+                                        title="Halaman pertama"
+                                        aria-label="Halaman pertama"
+                                        :disabled="!firstPageUrl()"
+                                        class="rounded-lg p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                        :class="navButtonClass(firstPageUrl())"
+                                        @click="goToPage(firstPageUrl())"
+                                    >
+                                        <ChevronsLeft class="size-4" />
+                                    </button>
 
-                                <button
-                                    v-for="(
-                                        link, index
-                                    ) in getPaginationLinks().slice(1, -1)"
-                                    :key="`${link.label}-${index}`"
-                                    type="button"
-                                    :disabled="!link.url || link.active"
-                                    class="min-w-9 rounded-lg px-3 py-2 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                                    :class="
-                                        link.active
-                                            ? 'bg-blue-600 text-white shadow-sm'
-                                            : navButtonClass(link.url)
-                                    "
-                                    @click="goToPage(link.url)"
-                                >
-                                    {{ paginationPageLabel(link.label) || "…" }}
-                                </button>
+                                    <button
+                                        type="button"
+                                        title="Halaman sebelumnya"
+                                        aria-label="Halaman sebelumnya"
+                                        :disabled="!previousPageUrl()"
+                                        class="rounded-lg p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                        :class="
+                                            navButtonClass(previousPageUrl())
+                                        "
+                                        @click="goToPage(previousPageUrl())"
+                                    >
+                                        <ChevronLeft class="size-4" />
+                                    </button>
 
-                                <button
-                                    type="button"
-                                    title="Halaman berikutnya"
-                                    aria-label="Halaman berikutnya"
-                                    :disabled="!nextPageUrl()"
-                                    class="rounded-lg p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                                    :class="navButtonClass(nextPageUrl())"
-                                    @click="goToPage(nextPageUrl())"
-                                >
-                                    <ChevronRight class="size-4" />
-                                </button>
+                                    <button
+                                        v-for="(
+                                            link, index
+                                        ) in getPaginationLinks().slice(1, -1)"
+                                        :key="`${link.label}-${index}`"
+                                        type="button"
+                                        :disabled="!link.url || link.active"
+                                        class="min-w-9 rounded-lg px-3 py-2 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                        :class="
+                                            link.active
+                                                ? 'bg-blue-600 text-white shadow-sm'
+                                                : navButtonClass(link.url)
+                                        "
+                                        @click="goToPage(link.url)"
+                                    >
+                                        {{
+                                            paginationPageLabel(link.label) ||
+                                            "…"
+                                        }}
+                                    </button>
 
-                                <button
-                                    type="button"
-                                    title="Halaman terakhir"
-                                    aria-label="Halaman terakhir"
-                                    :disabled="!lastPageUrl()"
-                                    class="rounded-lg p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                                    :class="navButtonClass(lastPageUrl())"
-                                    @click="goToPage(lastPageUrl())"
-                                >
-                                    <ChevronsRight class="size-4" />
-                                </button>
+                                    <button
+                                        type="button"
+                                        title="Halaman berikutnya"
+                                        aria-label="Halaman berikutnya"
+                                        :disabled="!nextPageUrl()"
+                                        class="rounded-lg p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                        :class="navButtonClass(nextPageUrl())"
+                                        @click="goToPage(nextPageUrl())"
+                                    >
+                                        <ChevronRight class="size-4" />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        title="Halaman terakhir"
+                                        aria-label="Halaman terakhir"
+                                        :disabled="!lastPageUrl()"
+                                        class="rounded-lg p-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                        :class="navButtonClass(lastPageUrl())"
+                                        @click="goToPage(lastPageUrl())"
+                                    >
+                                        <ChevronsRight class="size-4" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1530,7 +1680,7 @@ onBeforeUnmount(() => {
                         <button
                             v-if="!search"
                             type="button"
-                            class="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 sm:w-auto"
+                            class="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                             @click="openCreate"
                         >
                             <Plus class="size-4" />
@@ -1540,7 +1690,7 @@ onBeforeUnmount(() => {
                         <button
                             v-else
                             type="button"
-                            class="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                            class="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                             @click="clearSearch"
                         >
                             <X class="size-4" />
@@ -1558,20 +1708,18 @@ onBeforeUnmount(() => {
         <Transition name="modal">
             <div
                 v-if="showFormModal"
-                class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-3 backdrop-blur-sm sm:p-4"
+                class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 backdrop-blur-sm sm:p-4"
                 @click.self="closeForm"
             >
                 <div
-                    class="my-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-2xl shadow-slate-900/10 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/40"
+                    class="my-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
-                    <!-- MODAL HEADER -->
-
                     <div
                         class="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div class="min-w-0">
                             <h2
-                                class="text-lg font-semibold text-slate-900 dark:text-white"
+                                class="text-base font-semibold text-slate-900 sm:text-lg dark:text-white"
                             >
                                 {{
                                     modalMode === "create"
@@ -1581,7 +1729,7 @@ onBeforeUnmount(() => {
                             </h2>
 
                             <p
-                                class="mt-0.5 text-sm leading-5 text-slate-500 dark:text-slate-400"
+                                class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
                             >
                                 {{
                                     modalMode === "create"
@@ -1593,9 +1741,9 @@ onBeforeUnmount(() => {
 
                         <button
                             type="button"
-                            aria-label="Tutup modal"
                             :disabled="processing"
-                            class="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                            aria-label="Tutup modal"
+                            class="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
                             @click="closeForm"
                         >
                             <X class="size-5" />
@@ -1603,40 +1751,256 @@ onBeforeUnmount(() => {
                     </div>
 
                     <form
-                        class="max-h-[calc(100vh-7rem)] overflow-y-auto sm:max-h-[calc(100vh-8rem)]"
+                        class="max-h-[calc(100dvh-8rem)] overflow-y-auto"
+                        novalidate
                         @submit.prevent="submit"
                     >
                         <div class="grid gap-5 p-4 sm:p-6 md:grid-cols-2">
-                            <!-- NAMA -->
+                            <!-- LANGUAGE TABS -->
 
                             <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                <div
+                                    class="rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 dark:border-slate-700 dark:bg-slate-800/50"
                                 >
-                                    Nama Fasilitas
-                                    <span class="text-red-500">*</span>
-                                </label>
+                                    <div
+                                        class="grid grid-cols-3 gap-1"
+                                        role="tablist"
+                                    >
+                                        <button
+                                            v-for="tab in languageTabs"
+                                            :key="tab.code"
+                                            type="button"
+                                            role="tab"
+                                            :aria-selected="
+                                                activeLanguage === tab.code
+                                            "
+                                            class="relative rounded-xl px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                            :class="
+                                                activeLanguage === tab.code
+                                                    ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                                                    : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200'
+                                            "
+                                            @click="activeLanguage = tab.code"
+                                        >
+                                            {{ tab.flag }} {{ tab.label }}
 
-                                <input
-                                    v-model="form.nama"
-                                    type="text"
-                                    maxlength="150"
-                                    required
-                                    placeholder="Contoh: Jalan Utama Kawasan"
-                                    class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                    :class="{
-                                        'border-red-400 focus:border-red-500':
-                                            errors.nama,
-                                    }"
-                                />
-
-                                <p
-                                    v-if="errors.nama"
-                                    class="mt-1.5 text-xs text-red-500"
-                                >
-                                    {{ errors.nama }}
-                                </p>
+                                            <span
+                                                v-if="
+                                                    hasLanguageError(tab.code)
+                                                "
+                                                class="absolute right-2 top-2 size-2 rounded-full bg-red-500"
+                                                aria-label="Ada kesalahan pada bahasa ini"
+                                            ></span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- LANGUAGE NOTICE -->
+
+                            <div class="md:col-span-2">
+                                <div
+                                    class="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/20"
+                                >
+                                    <div
+                                        class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+                                    >
+                                        <Check class="size-4" />
+                                    </div>
+
+                                    <div>
+                                        <p
+                                            class="text-sm font-semibold text-blue-800 dark:text-blue-300"
+                                        >
+                                            {{ languageLabel }}
+                                        </p>
+
+                                        <p
+                                            class="mt-0.5 text-xs leading-5 text-blue-600/80 dark:text-blue-400/80"
+                                        >
+                                            Isi nama dan deskripsi untuk bahasa
+                                            yang sedang dipilih. Jika bahasa
+                                            lain dikosongkan, tampilan akan
+                                            memakai Bahasa Indonesia.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ================= INDONESIA ================= -->
+
+                            <template v-if="activeLanguage === 'id'">
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Nama Fasilitas
+                                        <span class="text-red-500">*</span>
+                                    </label>
+
+                                    <input
+                                        v-model="form.nama"
+                                        type="text"
+                                        maxlength="150"
+                                        placeholder="Contoh: Jalan Utama Kawasan"
+                                        class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.nama,
+                                        }"
+                                    />
+
+                                    <p
+                                        v-if="errors.nama"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.nama }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Deskripsi
+                                    </label>
+
+                                    <textarea
+                                        v-model="form.deskripsi"
+                                        rows="6"
+                                        maxlength="10000"
+                                        placeholder="Tuliskan deskripsi lengkap mengenai fasilitas..."
+                                        class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.deskripsi,
+                                        }"
+                                    ></textarea>
+
+                                    <p
+                                        v-if="errors.deskripsi"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.deskripsi }}
+                                    </p>
+                                </div>
+                            </template>
+
+                            <!-- ================= ENGLISH ================= -->
+
+                            <template v-else-if="activeLanguage === 'en'">
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Facility Name
+                                    </label>
+
+                                    <input
+                                        v-model="form.nama_en"
+                                        type="text"
+                                        maxlength="150"
+                                        placeholder="Example: Main Estate Road"
+                                        class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.nama_en,
+                                        }"
+                                    />
+
+                                    <p
+                                        v-if="errors.nama_en"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.nama_en }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        Description
+                                    </label>
+
+                                    <textarea
+                                        v-model="form.deskripsi_en"
+                                        rows="6"
+                                        maxlength="10000"
+                                        placeholder="Write a complete description of the facility..."
+                                        class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.deskripsi_en,
+                                        }"
+                                    ></textarea>
+
+                                    <p
+                                        v-if="errors.deskripsi_en"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.deskripsi_en }}
+                                    </p>
+                                </div>
+                            </template>
+
+                            <!-- ================= CHINESE ================= -->
+
+                            <template v-else>
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        设施名称
+                                    </label>
+
+                                    <input
+                                        v-model="form.nama_zh"
+                                        type="text"
+                                        maxlength="150"
+                                        placeholder="例如：园区主干道"
+                                        class="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.nama_zh,
+                                        }"
+                                    />
+
+                                    <p
+                                        v-if="errors.nama_zh"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.nama_zh }}
+                                    </p>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label
+                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    >
+                                        描述
+                                    </label>
+
+                                    <textarea
+                                        v-model="form.deskripsi_zh"
+                                        rows="6"
+                                        maxlength="10000"
+                                        placeholder="请填写设施的完整描述..."
+                                        class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        :class="{
+                                            'border-red-400 focus:border-red-500':
+                                                errors.deskripsi_zh,
+                                        }"
+                                    ></textarea>
+
+                                    <p
+                                        v-if="errors.deskripsi_zh"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ errors.deskripsi_zh }}
+                                    </p>
+                                </div>
+                            </template>
 
                             <!-- SLUG -->
 
@@ -1676,10 +2040,10 @@ onBeforeUnmount(() => {
                                     ></span>
 
                                     <span>
-                                        Slug dibuat otomatis oleh sistem
-                                        berdasarkan nama fasilitas dan tidak
-                                        dapat diubah secara manual. Slug final
-                                        dapat berbeda jika sudah digunakan.
+                                        Slug dibuat otomatis oleh sistem dari
+                                        nama Bahasa Indonesia dan tidak dapat
+                                        diubah secara manual. Slug final dapat
+                                        berbeda jika sudah digunakan.
                                     </span>
                                 </p>
 
@@ -1710,7 +2074,9 @@ onBeforeUnmount(() => {
                                     "
                                     @click="form.aktif = !form.aktif"
                                 >
-                                    <span class="flex items-center gap-2">
+                                    <span
+                                        class="flex min-w-0 items-center gap-2"
+                                    >
                                         <ToggleRight
                                             v-if="form.aktif"
                                             class="size-5 shrink-0"
@@ -1721,15 +2087,17 @@ onBeforeUnmount(() => {
                                             class="size-5 shrink-0"
                                         />
 
-                                        {{
-                                            form.aktif
-                                                ? "Fasilitas Aktif"
-                                                : "Fasilitas Nonaktif"
-                                        }}
+                                        <span class="truncate">
+                                            {{
+                                                form.aktif
+                                                    ? "Fasilitas Aktif"
+                                                    : "Fasilitas Nonaktif"
+                                            }}
+                                        </span>
                                     </span>
 
                                     <span
-                                        class="hidden text-xs opacity-70 sm:inline"
+                                        class="hidden shrink-0 text-xs opacity-70 sm:inline"
                                     >
                                         Klik untuk ubah
                                     </span>
@@ -1759,7 +2127,7 @@ onBeforeUnmount(() => {
                                 />
 
                                 <p
-                                    class="mt-1.5 text-xs leading-5 text-slate-400 dark:text-slate-500"
+                                    class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"
                                 >
                                     Kosongkan atau gunakan 0 untuk mengikuti
                                     urutan otomatis.
@@ -1770,35 +2138,6 @@ onBeforeUnmount(() => {
                                     class="mt-1.5 text-xs text-red-500"
                                 >
                                     {{ errors.urutan }}
-                                </p>
-                            </div>
-
-                            <!-- DESKRIPSI -->
-
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Deskripsi
-                                </label>
-
-                                <textarea
-                                    v-model="form.deskripsi"
-                                    rows="6"
-                                    maxlength="10000"
-                                    placeholder="Tuliskan deskripsi lengkap mengenai fasilitas..."
-                                    class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                    :class="{
-                                        'border-red-400 focus:border-red-500':
-                                            errors.deskripsi,
-                                    }"
-                                ></textarea>
-
-                                <p
-                                    v-if="errors.deskripsi"
-                                    class="mt-1.5 text-xs text-red-500"
-                                >
-                                    {{ errors.deskripsi }}
                                 </p>
                             </div>
 
@@ -1814,14 +2153,12 @@ onBeforeUnmount(() => {
                                 <div
                                     class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-3 sm:p-4 dark:border-slate-700 dark:bg-slate-800/50"
                                 >
-                                    <!-- PREVIEW -->
-
                                     <div
                                         v-if="previewUrl || existingImage"
                                         class="mb-4"
                                     >
                                         <div
-                                            class="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                                            class="relative overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
                                         >
                                             <img
                                                 :src="
@@ -1829,7 +2166,7 @@ onBeforeUnmount(() => {
                                                     getImageUrl(existingImage)!
                                                 "
                                                 alt="Preview gambar"
-                                                class="max-h-56 w-full object-cover sm:max-h-72"
+                                                class="max-h-64 w-full object-cover"
                                             />
 
                                             <div
@@ -1840,7 +2177,7 @@ onBeforeUnmount(() => {
                                                     type="button"
                                                     title="Hapus gambar baru"
                                                     aria-label="Hapus gambar baru"
-                                                    class="rounded-lg bg-red-600 p-2 text-white shadow-lg transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
+                                                    class="rounded-lg bg-red-600 p-2 text-white shadow-lg transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
                                                     @click="removeSelectedImage"
                                                 >
                                                     <Trash2 class="size-4" />
@@ -1851,7 +2188,7 @@ onBeforeUnmount(() => {
                                                     type="button"
                                                     title="Hapus gambar"
                                                     aria-label="Hapus gambar"
-                                                    class="rounded-lg bg-red-600 p-2 text-white shadow-lg transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60"
+                                                    class="rounded-lg bg-red-600 p-2 text-white shadow-lg transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
                                                     @click="removeExistingImage"
                                                 >
                                                     <Trash2 class="size-4" />
@@ -1866,13 +2203,13 @@ onBeforeUnmount(() => {
                                             !previewUrl &&
                                             !existingImage
                                         "
-                                        class="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs leading-5 text-red-500 dark:bg-red-950/20 dark:text-red-400"
+                                        class="mb-3 text-xs text-red-500"
                                     >
                                         Gambar lama akan dihapus saat disimpan.
                                     </p>
 
                                     <label
-                                        class="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50/50 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-600 dark:hover:bg-blue-950/20"
+                                        class="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-blue-600 dark:hover:bg-blue-950/20 sm:px-5 sm:py-8"
                                     >
                                         <ImageIcon
                                             class="size-8 text-slate-400"
@@ -1885,7 +2222,7 @@ onBeforeUnmount(() => {
                                         </span>
 
                                         <span
-                                            class="mt-1 max-w-sm text-xs leading-5 text-slate-400 dark:text-slate-500"
+                                            class="mt-1 text-xs text-slate-400 dark:text-slate-500"
                                         >
                                             JPG, JPEG, PNG, WEBP — maksimal 2 MB
                                         </span>
@@ -1953,26 +2290,24 @@ onBeforeUnmount(() => {
         <Transition name="modal">
             <div
                 v-if="showDetailModal && selectedFasilitas"
-                class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-3 backdrop-blur-sm sm:p-4"
+                class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 backdrop-blur-sm sm:p-4"
                 @click.self="closeDetail"
             >
                 <div
-                    class="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-2xl shadow-slate-900/10 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/40"
+                    class="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
                 >
-                    <!-- HEADER -->
-
                     <div
                         class="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6 dark:border-slate-800"
                     >
                         <div class="min-w-0">
                             <h2
-                                class="text-lg font-semibold text-slate-900 dark:text-white"
+                                class="text-base font-semibold text-slate-900 sm:text-lg dark:text-white"
                             >
                                 Detail Fasilitas
                             </h2>
 
                             <p
-                                class="mt-0.5 text-sm leading-5 text-slate-500 dark:text-slate-400"
+                                class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
                             >
                                 Informasi lengkap fasilitas kawasan.
                             </p>
@@ -1981,31 +2316,29 @@ onBeforeUnmount(() => {
                         <button
                             type="button"
                             aria-label="Tutup detail"
-                            class="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                            class="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 dark:hover:bg-slate-800"
                             @click="closeDetail"
                         >
                             <X class="size-5" />
                         </button>
                     </div>
 
-                    <!-- BODY -->
-
                     <div
-                        class="max-h-[calc(100vh-8rem)] overflow-y-auto p-4 sm:p-6"
+                        class="max-h-[calc(100dvh-10rem)] overflow-y-auto p-4 sm:p-6"
                     >
                         <div
-                            class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+                            class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
                         >
                             <img
                                 v-if="getImageUrl(selectedFasilitas.gambar)"
                                 :src="getImageUrl(selectedFasilitas.gambar)!"
-                                :alt="selectedFasilitas.nama"
+                                :alt="displayName(selectedFasilitas)"
                                 class="max-h-80 w-full object-cover"
                             />
 
                             <div
                                 v-else
-                                class="flex h-52 items-center justify-center sm:h-56"
+                                class="flex h-56 items-center justify-center"
                             >
                                 <div class="text-center">
                                     <ImageIcon
@@ -2019,12 +2352,41 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <div class="mt-5">
+                        <!-- LANGUAGE TABS -->
+
+                        <div
+                            class="mt-5 inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800"
+                            role="tablist"
+                        >
+                            <button
+                                v-for="tab in languageTabs"
+                                :key="tab.code"
+                                type="button"
+                                role="tab"
+                                :aria-selected="detailLanguage === tab.code"
+                                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                                :class="
+                                    detailLanguage === tab.code
+                                        ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                "
+                                @click="detailLanguage = tab.code"
+                            >
+                                {{ tab.flag }} {{ tab.label }}
+                            </button>
+                        </div>
+
+                        <div class="mt-4">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h3
-                                    class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white"
+                                    class="text-xl font-semibold text-slate-900 dark:text-white"
                                 >
-                                    {{ selectedFasilitas.nama }}
+                                    {{
+                                        getDetailValue(
+                                            selectedFasilitas,
+                                            "nama",
+                                        ) || "-"
+                                    }}
                                 </h3>
 
                                 <span
@@ -2046,7 +2408,7 @@ onBeforeUnmount(() => {
 
                         <div class="mt-5 grid gap-3 sm:grid-cols-2">
                             <div
-                                class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/50"
+                                class="rounded-xl border border-slate-200 bg-white/70 p-4 dark:border-slate-700 dark:bg-slate-900/50"
                             >
                                 <div class="flex items-center gap-2">
                                     <FileText class="size-4 text-blue-500" />
@@ -2066,7 +2428,7 @@ onBeforeUnmount(() => {
                             </div>
 
                             <div
-                                class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/50"
+                                class="rounded-xl border border-slate-200 bg-white/70 p-4 dark:border-slate-700 dark:bg-slate-900/50"
                             >
                                 <div class="flex items-center gap-2">
                                     <ArrowUp class="size-4 text-blue-500" />
@@ -2098,16 +2460,19 @@ onBeforeUnmount(() => {
                             </div>
 
                             <div
-                                class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
+                                class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
                             >
                                 <p class="whitespace-pre-line">
-                                    {{ selectedFasilitas.deskripsi || "-" }}
+                                    {{
+                                        getDetailValue(
+                                            selectedFasilitas,
+                                            "deskripsi",
+                                        ) || "-"
+                                    }}
                                 </p>
                             </div>
                         </div>
                     </div>
-
-                    <!-- FOOTER -->
 
                     <div
                         class="flex flex-col-reverse gap-3 border-t border-slate-200 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 dark:border-slate-800"
@@ -2140,11 +2505,11 @@ onBeforeUnmount(() => {
         <Transition name="modal">
             <div
                 v-if="showDeleteModal && selectedFasilitas"
-                class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-3 backdrop-blur-sm sm:p-4"
+                class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 backdrop-blur-sm sm:p-4"
                 @click.self="closeDelete"
             >
                 <div
-                    class="my-auto w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-5 shadow-2xl shadow-slate-900/10 sm:p-6 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40"
+                    class="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:p-6"
                 >
                     <div
                         class="mx-auto flex size-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
@@ -2168,7 +2533,8 @@ onBeforeUnmount(() => {
                             >
                                 {{ selectedFasilitas.nama }}
                             </span>
-                            ? Data yang sudah dihapus tidak dapat dikembalikan.
+                            ? Seluruh terjemahan (ID, EN, 中文) akan ikut
+                            terhapus dan tidak dapat dikembalikan.
                         </p>
                     </div>
 

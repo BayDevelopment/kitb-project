@@ -14,6 +14,9 @@ use Throwable;
 
 class PetaKawasanController extends Controller
 {
+    /**
+     * Display a listing of peta kawasan.
+     */
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
@@ -23,7 +26,11 @@ class PetaKawasanController extends Controller
                 $query->where(function ($query) use ($search): void {
                     $query
                         ->where('nama', 'like', "%{$search}%")
-                        ->orWhere('deskripsi', 'like', "%{$search}%");
+                        ->orWhere('deskripsi', 'like', "%{$search}%")
+                        ->orWhere('nama_en', 'like', "%{$search}%")
+                        ->orWhere('deskripsi_en', 'like', "%{$search}%")
+                        ->orWhere('nama_zh', 'like', "%{$search}%")
+                        ->orWhere('deskripsi_zh', 'like', "%{$search}%");
                 });
             })
             ->ordered()
@@ -38,9 +45,13 @@ class PetaKawasanController extends Controller
         ]);
     }
 
+    /**
+     * Store a newly created peta kawasan.
+     */
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            // Bahasa Indonesia
             'nama' => [
                 'required',
                 'string',
@@ -50,6 +61,30 @@ class PetaKawasanController extends Controller
                 'nullable',
                 'string',
             ],
+
+            // English
+            'nama_en' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+            ],
+
+            // Chinese
+            'nama_zh' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            // General
             'gambar' => [
                 'nullable',
                 'image',
@@ -73,6 +108,23 @@ class PetaKawasanController extends Controller
             ? trim($validated['deskripsi'])
             : null;
 
+        $validated['nama_en'] = isset($validated['nama_en'])
+            ? trim($validated['nama_en'])
+            : null;
+
+        $validated['deskripsi_en'] = isset($validated['deskripsi_en'])
+            ? trim($validated['deskripsi_en'])
+            : null;
+
+        $validated['nama_zh'] = isset($validated['nama_zh'])
+            ? trim($validated['nama_zh'])
+            : null;
+
+        $validated['deskripsi_zh'] = isset($validated['deskripsi_zh'])
+            ? trim($validated['deskripsi_zh'])
+            : null;
+
+        // Slug selalu berdasarkan nama Bahasa Indonesia.
         $validated['slug'] = PetaKawasan::generateUniqueSlug(
             $validated['nama']
         );
@@ -117,11 +169,15 @@ class PetaKawasanController extends Controller
             ]);
     }
 
+    /**
+     * Update the specified peta kawasan.
+     */
     public function update(
         Request $request,
         PetaKawasan $petaKawasan
     ): RedirectResponse {
         $validated = $request->validate([
+            // Bahasa Indonesia
             'nama' => [
                 'required',
                 'string',
@@ -131,6 +187,30 @@ class PetaKawasanController extends Controller
                 'nullable',
                 'string',
             ],
+
+            // English
+            'nama_en' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+            ],
+
+            // Chinese
+            'nama_zh' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            // General
             'gambar' => [
                 'nullable',
                 'image',
@@ -158,6 +238,23 @@ class PetaKawasanController extends Controller
             ? trim($validated['deskripsi'])
             : null;
 
+        $validated['nama_en'] = isset($validated['nama_en'])
+            ? trim($validated['nama_en'])
+            : null;
+
+        $validated['deskripsi_en'] = isset($validated['deskripsi_en'])
+            ? trim($validated['deskripsi_en'])
+            : null;
+
+        $validated['nama_zh'] = isset($validated['nama_zh'])
+            ? trim($validated['nama_zh'])
+            : null;
+
+        $validated['deskripsi_zh'] = isset($validated['deskripsi_zh'])
+            ? trim($validated['deskripsi_zh'])
+            : null;
+
+        // Regenerate slug jika nama Indonesia berubah.
         if ($petaKawasan->nama !== $validated['nama']) {
             $validated['slug'] = PetaKawasan::generateUniqueSlug(
                 $validated['nama'],
@@ -170,7 +267,7 @@ class PetaKawasanController extends Controller
 
         /*
          * Vue mengirim remove_gambar.
-         * Jangan gunakan hapus_gambar lagi.
+         * Jangan gunakan hapus_gambar.
          */
         $removeGambar = $request->boolean('remove_gambar');
 
@@ -212,7 +309,8 @@ class PetaKawasanController extends Controller
         }
 
         /*
-         * Hapus file lama hanya setelah database berhasil diperbarui.
+         * Hapus file lama hanya setelah database
+         * berhasil diperbarui.
          */
         if (
             $gambarLama !== null &&
@@ -232,6 +330,9 @@ class PetaKawasanController extends Controller
             ]);
     }
 
+    /**
+     * Remove the specified peta kawasan.
+     */
     public function destroy(PetaKawasan $petaKawasan): RedirectResponse
     {
         $gambar = $petaKawasan->gambar;
@@ -243,11 +344,10 @@ class PetaKawasanController extends Controller
         } catch (Throwable $e) {
             report($e);
 
-            return back()
-                ->with('toast', [
-                    'type' => 'error',
-                    'message' => 'Peta kawasan gagal dihapus.',
-                ]);
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Peta kawasan gagal dihapus.',
+            ]);
         }
 
         if ($gambar !== null) {
@@ -262,6 +362,9 @@ class PetaKawasanController extends Controller
             ]);
     }
 
+    /**
+     * Toggle active status.
+     */
     public function toggleAktif(
         PetaKawasan $petaKawasan
     ): RedirectResponse {
@@ -286,18 +389,27 @@ class PetaKawasanController extends Controller
         ]);
     }
 
+    /**
+     * Move peta kawasan up.
+     */
     public function moveUp(
         PetaKawasan $petaKawasan
     ): RedirectResponse {
         return $this->move($petaKawasan, 'up');
     }
 
+    /**
+     * Move peta kawasan down.
+     */
     public function moveDown(
         PetaKawasan $petaKawasan
     ): RedirectResponse {
         return $this->move($petaKawasan, 'down');
     }
 
+    /**
+     * Change ordering.
+     */
     private function move(
         PetaKawasan $petaKawasan,
         string $direction
@@ -331,12 +443,14 @@ class PetaKawasanController extends Controller
                     'urutan' => $temporaryOrder,
                 ]);
 
+                $neighborOrder = $neighbor->urutan;
+
                 $neighbor->update([
                     'urutan' => $currentOrder,
                 ]);
 
                 $petaKawasan->update([
-                    'urutan' => $neighbor->getOriginal('urutan'),
+                    'urutan' => $neighborOrder,
                 ]);
             });
         } catch (Throwable $e) {

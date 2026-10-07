@@ -328,10 +328,10 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
-|--------------------------------------------------------------------------
-| 6. PROFIL KAWASAN
-|--------------------------------------------------------------------------
-*/
+            |--------------------------------------------------------------------------
+            | 6. PROFIL KAWASAN
+            |--------------------------------------------------------------------------
+            */
 
             DB::table('profil_kawasans')->updateOrInsert(
                 ['slug' => 'profil-kawasan-industri-tanjung-buton'],
@@ -568,39 +568,71 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | 10. FASILITAS
-            |--------------------------------------------------------------------------
-            */
+ |--------------------------------------------------------------------------
+ | 10. FASILITAS
+ |--------------------------------------------------------------------------
+ */
+
             $fasilitas = [
                 [
                     'nama' => 'Gedung Pengelola Kawasan',
+                    'nama_en' => 'Industrial Estate Management Building',
+                    'nama_zh' => '园区管理大楼',
+
                     'slug' => 'gedung-pengelola-kawasan',
+
                     'deskripsi' => 'Pusat administrasi dan pelayanan pengelolaan kawasan industri.',
+                    'deskripsi_en' => 'The central facility for industrial estate administration and management services.',
+                    'deskripsi_zh' => '工业园区行政管理及服务中心。',
+
                     'gambar' => null,
                     'urutan' => 1,
                     'aktif' => true,
                 ],
+
                 [
                     'nama' => 'Area Komersial',
+                    'nama_en' => 'Commercial Area',
+                    'nama_zh' => '商业区',
+
                     'slug' => 'area-komersial',
+
                     'deskripsi' => 'Area komersial yang mendukung kebutuhan tenant dan pekerja kawasan.',
+                    'deskripsi_en' => 'A commercial area that supports the needs of tenants and workers within the industrial estate.',
+                    'deskripsi_zh' => '为园区租户及员工提供配套服务的商业区域。',
+
                     'gambar' => null,
                     'urutan' => 2,
                     'aktif' => true,
                 ],
+
                 [
                     'nama' => 'Fasilitas Kesehatan',
+                    'nama_en' => 'Healthcare Facilities',
+                    'nama_zh' => '医疗设施',
+
                     'slug' => 'fasilitas-kesehatan',
+
                     'deskripsi' => 'Fasilitas pelayanan kesehatan untuk mendukung aktivitas kawasan.',
+                    'deskripsi_en' => 'Healthcare facilities provided to support activities within the industrial estate.',
+                    'deskripsi_zh' => '为园区运营及日常活动提供支持的医疗服务设施。',
+
                     'gambar' => null,
                     'urutan' => 3,
                     'aktif' => true,
                 ],
+
                 [
                     'nama' => 'Fasilitas Keamanan',
+                    'nama_en' => 'Security Facilities',
+                    'nama_zh' => '安保设施',
+
                     'slug' => 'fasilitas-keamanan',
+
                     'deskripsi' => 'Fasilitas keamanan dan pengawasan kawasan selama 24 jam.',
+                    'deskripsi_en' => 'Security and surveillance facilities providing 24-hour protection throughout the industrial estate.',
+                    'deskripsi_zh' => '为园区提供全天候24小时安全保障及监控服务的设施。',
+
                     'gambar' => null,
                     'urutan' => 4,
                     'aktif' => true,
@@ -612,10 +644,17 @@ class DatabaseSeeder extends Seeder
                     ['slug' => $item['slug']],
                     [
                         'nama' => $item['nama'],
+                        'nama_en' => $item['nama_en'],
+                        'nama_zh' => $item['nama_zh'],
+
                         'deskripsi' => $item['deskripsi'],
+                        'deskripsi_en' => $item['deskripsi_en'],
+                        'deskripsi_zh' => $item['deskripsi_zh'],
+
                         'gambar' => $item['gambar'],
                         'urutan' => $item['urutan'],
                         'aktif' => $item['aktif'],
+
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]
@@ -623,23 +662,39 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | 11. PETA KAWASAN
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 11. PETA KAWASAN
+|--------------------------------------------------------------------------
+*/
+
             $petaKawasan = [
                 [
                     'nama' => 'Peta Kawasan Industri Tanjung Buton',
+                    'nama_en' => 'Tanjung Buton Industrial Estate Map',
+                    'nama_zh' => '丹戎布通工业区地图',
+
                     'slug' => 'peta-kawasan-industri-tanjung-buton',
+
                     'deskripsi' => 'Peta umum kawasan industri beserta area pengembangan dan fasilitas pendukung.',
+                    'deskripsi_en' => 'General map of the industrial estate, including development areas and supporting facilities.',
+                    'deskripsi_zh' => '工业区总体地图，包括开发区域及配套设施。',
+
                     'gambar' => null,
                     'urutan' => 1,
                     'aktif' => true,
                 ],
+
                 [
                     'nama' => 'Peta Infrastruktur Kawasan',
+                    'nama_en' => 'Industrial Estate Infrastructure Map',
+                    'nama_zh' => '工业区基础设施地图',
+
                     'slug' => 'peta-infrastruktur-kawasan',
+
                     'deskripsi' => 'Peta jaringan infrastruktur utama yang tersedia di dalam kawasan.',
+                    'deskripsi_en' => 'Map of the main infrastructure networks available within the industrial estate.',
+                    'deskripsi_zh' => '工业区内主要基础设施网络地图。',
+
                     'gambar' => null,
                     'urutan' => 2,
                     'aktif' => true,
@@ -651,16 +706,22 @@ class DatabaseSeeder extends Seeder
                     ['slug' => $item['slug']],
                     [
                         'nama' => $item['nama'],
+                        'nama_en' => $item['nama_en'],
+                        'nama_zh' => $item['nama_zh'],
+
                         'deskripsi' => $item['deskripsi'],
+                        'deskripsi_en' => $item['deskripsi_en'],
+                        'deskripsi_zh' => $item['deskripsi_zh'],
+
                         'gambar' => $item['gambar'],
                         'urutan' => $item['urutan'],
                         'aktif' => $item['aktif'],
+
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]
                 );
             }
-
             /*
             |--------------------------------------------------------------------------
             | 12. RUTE

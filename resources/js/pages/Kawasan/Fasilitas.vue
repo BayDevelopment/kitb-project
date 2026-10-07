@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
-
 import { Head, Link } from "@inertiajs/vue3";
-
+import { trans } from "laravel-vue-i18n";
 import {
     Building2,
     ChevronRight,
@@ -12,6 +11,7 @@ import {
     X,
 } from "lucide-vue-next";
 
+import { localizedValue } from "@/composables/useLocale";
 import PublicLayout from "@/layouts/PublicLayout.vue";
 
 defineOptions({
@@ -19,14 +19,26 @@ defineOptions({
 });
 
 /* =========================================================
-   Props
-   ========================================================= */
+ * Props
+ * ========================================================= */
 
 interface Fasilitas {
     id: number;
+
+    // Bahasa Indonesia
     nama: string;
-    slug: string;
     deskripsi: string | null;
+
+    // Bahasa Inggris
+    nama_en: string | null;
+    deskripsi_en: string | null;
+
+    // Bahasa Mandarin
+    nama_zh: string | null;
+    deskripsi_zh: string | null;
+
+    // Data lainnya
+    slug: string;
     gambar: string | null;
     urutan: number;
     aktif: boolean;
@@ -37,38 +49,37 @@ const props = defineProps<{
 }>();
 
 /* =========================================================
-   Data
-   ========================================================= */
+ * Data
+ * ========================================================= */
 
 const fasilitas = computed<Fasilitas[]>(() => {
     return Array.isArray(props.fasilitas) ? props.fasilitas : [];
 });
 
 /* =========================================================
-   Skeleton
-   ========================================================= */
+ * Skeleton
+ * ========================================================= */
 
-// Jika data kosong, langsung tampilkan empty state tanpa skeleton
-// Teleport hanya dirender di client agar tidak terjadi hydration mismatch (SSR)
 const isMounted = ref(false);
-
 const isLoading = ref(fasilitas.value.length > 0);
 
 let skeletonTimer: ReturnType<typeof setTimeout> | null = null;
 
 const finishLoading = () => {
+    if (skeletonTimer) {
+        clearTimeout(skeletonTimer);
+    }
+
     skeletonTimer = setTimeout(async () => {
         isLoading.value = false;
 
-        // Elemen grid / empty state baru dirender setelah skeleton hilang,
-        // jadi observer reveal harus dipasang ulang di sini.
         await setupRevealObserver();
     }, 450);
 };
 
 /* =========================================================
-   Reveal animation
-   ========================================================= */
+ * Reveal animation
+ * ========================================================= */
 
 const prefersReducedMotion =
     typeof window !== "undefined" &&
@@ -119,8 +130,8 @@ const setupRevealObserver = async () => {
 };
 
 /* =========================================================
-   Accessibility helpers (focus trap)
-   ========================================================= */
+ * Accessibility helpers
+ * ========================================================= */
 
 const focusableSelector = [
     "a[href]",
@@ -171,7 +182,6 @@ const trapFocus = (event: KeyboardEvent, container: HTMLElement | null) => {
     const last = focusableElements[focusableElements.length - 1];
     const active = document.activeElement;
 
-    // Jika fokus berada di luar container, tarik kembali ke dalam
     if (!container.contains(active)) {
         event.preventDefault();
         first.focus();
@@ -191,14 +201,15 @@ const trapFocus = (event: KeyboardEvent, container: HTMLElement | null) => {
 };
 
 /* =========================================================
-   Modal Show
-   ========================================================= */
+ * Detail Modal
+ * ========================================================= */
 
 const selectedFasilitas = ref<Fasilitas | null>(null);
 const isModalOpen = ref(false);
 
 const modalRef = ref<HTMLElement | null>(null);
 const modalCloseButtonRef = ref<HTMLButtonElement | null>(null);
+
 const previouslyFocusedElement = ref<HTMLElement | null>(null);
 
 let clearSelectedTimer: ReturnType<typeof setTimeout> | null = null;
@@ -233,7 +244,6 @@ const closeModal = () => {
 
     document.body.style.overflow = "";
 
-    // Tunggu transisi leave selesai sebelum mengosongkan data
     clearSelectedTimer = setTimeout(() => {
         selectedFasilitas.value = null;
         clearSelectedTimer = null;
@@ -246,13 +256,14 @@ const closeModal = () => {
 };
 
 /* =========================================================
-   Full image preview
-   ========================================================= */
+ * Full Image Preview
+ * ========================================================= */
 
 const isImagePreviewOpen = ref(false);
 
 const imagePreviewRef = ref<HTMLElement | null>(null);
 const imagePreviewCloseButtonRef = ref<HTMLButtonElement | null>(null);
+
 const previouslyFocusedImageElement = ref<HTMLElement | null>(null);
 
 const imagePreviewTitleId = "fasilitas-image-preview-title";
@@ -284,11 +295,11 @@ const closeImagePreview = () => {
 };
 
 /* =========================================================
-   Keyboard (satu handler agar Escape hanya menutup lapisan teratas)
-   ========================================================= */
+ * Keyboard
+ * ========================================================= */
 
 const handleGlobalKeydown = (event: KeyboardEvent) => {
-    // Lapisan paling atas: pratinjau gambar
+    // Image preview berada di lapisan paling atas.
     if (isImagePreviewOpen.value) {
         if (event.key === "Escape") {
             event.preventDefault();
@@ -312,8 +323,8 @@ const handleGlobalKeydown = (event: KeyboardEvent) => {
 };
 
 /* =========================================================
-   Helpers
-   ========================================================= */
+ * Helpers
+ * ========================================================= */
 
 const getImageUrl = (gambar: string | null): string | null => {
     if (!gambar) {
@@ -335,6 +346,26 @@ const getImageUrl = (gambar: string | null): string | null => {
     return `/storage/${gambar}`;
 };
 
+/**
+ * Mengambil value berdasarkan bahasa aktif.
+ *
+ * ID -> nama / deskripsi
+ * EN -> nama_en / deskripsi_en
+ * ZH -> nama_zh / deskripsi_zh
+ *
+ * localizedValue melakukan fallback ke bahasa Indonesia
+ * apabila terjemahan EN / ZH kosong.
+ *
+ * Adapter cast dilakukan hanya di sini karena localizedValue
+ * menggunakan Record<string, unknown>.
+ */
+const getLocalizedValue = (
+    item: Fasilitas,
+    field: "nama" | "deskripsi",
+): string => {
+    return localizedValue(item as unknown as Record<string, unknown>, field);
+};
+
 const stripHtml = (text: string): string => {
     return text
         .replace(/<[^>]*>/g, " ")
@@ -344,13 +375,13 @@ const stripHtml = (text: string): string => {
 
 const truncateText = (text: string | null, maxLength = 180): string => {
     if (!text) {
-        return "Informasi fasilitas kawasan industri KITB.";
+        return trans("facilities.description_fallback");
     }
 
     const clean = stripHtml(text);
 
     if (!clean) {
-        return "Informasi fasilitas kawasan industri KITB.";
+        return trans("facilities.description_fallback");
     }
 
     if (clean.length <= maxLength) {
@@ -360,6 +391,10 @@ const truncateText = (text: string | null, maxLength = 180): string => {
     return `${clean.slice(0, maxLength).trim()}…`;
 };
 
+/* =========================================================
+ * Selected Data
+ * ========================================================= */
+
 const selectedImage = computed(() => {
     return selectedFasilitas.value
         ? getImageUrl(selectedFasilitas.value.gambar)
@@ -367,11 +402,25 @@ const selectedImage = computed(() => {
 });
 
 const selectedDescription = computed(() => {
-    const text = selectedFasilitas.value?.deskripsi
-        ? stripHtml(selectedFasilitas.value.deskripsi)
-        : "";
+    const item = selectedFasilitas.value;
 
-    return text || "Informasi mengenai fasilitas ini belum tersedia.";
+    if (!item) {
+        return trans("facilities.description_fallback");
+    }
+
+    const text = stripHtml(getLocalizedValue(item, "deskripsi"));
+
+    return text || trans("facilities.description_fallback");
+});
+
+const selectedLocalizedName = computed(() => {
+    const item = selectedFasilitas.value;
+
+    if (!item) {
+        return trans("facilities.fallback_name");
+    }
+
+    return getLocalizedValue(item, "nama") || trans("facilities.fallback_name");
 });
 
 const selectedNumber = computed(() => {
@@ -383,8 +432,8 @@ const selectedNumber = computed(() => {
 });
 
 /* =========================================================
-   Lifecycle
-   ========================================================= */
+ * Lifecycle
+ * ========================================================= */
 
 onMounted(async () => {
     isMounted.value = true;
@@ -403,24 +452,27 @@ onBeforeUnmount(() => {
 
     if (skeletonTimer) {
         clearTimeout(skeletonTimer);
+        skeletonTimer = null;
     }
 
     if (clearSelectedTimer) {
         clearTimeout(clearSelectedTimer);
+        clearSelectedTimer = null;
     }
 
     document.removeEventListener("keydown", handleGlobalKeydown);
+
     document.body.style.overflow = "";
 });
 </script>
 
 <template>
     <Head>
-        <title>Fasilitas | KITB</title>
+        <title>{{ trans("facilities.meta_title") }}</title>
 
         <meta
             name="description"
-            content="Informasi fasilitas pendukung Kawasan Industri Tanjung Buton (KITB)."
+            :content="trans('facilities.meta_description')"
         />
 
         <meta name="robots" content="index, follow" />
@@ -430,11 +482,11 @@ onBeforeUnmount(() => {
             href="https://tanjungbuton-industrial.co.id/kawasan/fasilitas"
         />
 
-        <meta property="og:title" content="Fasilitas | KITB" />
+        <meta property="og:title" :content="trans('facilities.meta_title')" />
 
         <meta
             property="og:description"
-            content="Informasi fasilitas pendukung Kawasan Industri Tanjung Buton (KITB)."
+            :content="trans('facilities.meta_description')"
         />
 
         <meta
@@ -448,10 +500,7 @@ onBeforeUnmount(() => {
     <main
         class="relative min-h-screen overflow-hidden bg-slate-50/50 text-slate-900 dark:bg-slate-950 dark:text-slate-100"
     >
-        <!-- =====================================================
-             Decorative Background
-        ====================================================== -->
-
+        <!-- Decorative Background -->
         <div
             aria-hidden="true"
             class="pointer-events-none absolute inset-0 overflow-hidden"
@@ -476,13 +525,10 @@ onBeforeUnmount(() => {
         <div
             class="relative mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12"
         >
-            <!-- =================================================
-                 Breadcrumb
-            ================================================== -->
-
+            <!-- Breadcrumb -->
             <div data-reveal class="reveal mb-6" style="--d: 0ms">
                 <nav
-                    aria-label="Breadcrumb"
+                    :aria-label="trans('navigation.breadcrumb')"
                     class="flex flex-wrap items-center gap-2 text-sm"
                 >
                     <Link
@@ -490,7 +536,10 @@ onBeforeUnmount(() => {
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
                         <Home class="size-4 shrink-0" aria-hidden="true" />
-                        <span>Beranda</span>
+
+                        <span>
+                            {{ trans("navigation.home") }}
+                        </span>
                     </Link>
 
                     <ChevronRight
@@ -503,7 +552,10 @@ onBeforeUnmount(() => {
                         class="inline-flex items-center gap-1.5 font-medium text-slate-500 transition hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     >
                         <Building2 class="size-4 shrink-0" aria-hidden="true" />
-                        <span>Kawasan Industri</span>
+
+                        <span>
+                            {{ trans("navigation.industrial_area") }}
+                        </span>
                     </Link>
 
                     <ChevronRight
@@ -520,15 +572,14 @@ onBeforeUnmount(() => {
                             aria-hidden="true"
                         />
 
-                        <span>Fasilitas</span>
+                        <span>
+                            {{ trans("navigation.facilities") }}
+                        </span>
                     </span>
                 </nav>
             </div>
 
-            <!-- =================================================
-                 Hero
-            ================================================== -->
-
+            <!-- Hero -->
             <section
                 data-reveal
                 class="reveal mb-10 max-w-3xl"
@@ -541,34 +592,30 @@ onBeforeUnmount(() => {
                         class="size-1.5 rounded-full bg-blue-600 dark:bg-blue-400"
                     />
 
-                    Fasilitas Kawasan
+                    {{ trans("facilities.hero_badge") }}
                 </div>
 
                 <h1
                     class="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl dark:text-white"
                 >
-                    Fasilitas
+                    {{ trans("facilities.hero_title") }}
+
                     <span class="block text-blue-600 dark:text-blue-400">
-                        Kawasan Industri Tanjung Buton
+                        {{ trans("facilities.hero_title_highlight") }}
                     </span>
                 </h1>
 
                 <p
                     class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base dark:text-slate-400"
                 >
-                    Kenali berbagai fasilitas pendukung yang tersedia untuk
-                    menunjang aktivitas industri, operasional, dan kebutuhan
-                    para pelaku usaha di kawasan industri KITB.
+                    {{ trans("facilities.hero_description") }}
                 </p>
             </section>
 
-            <!-- =================================================
-                 Skeleton
-            ================================================== -->
-
+            <!-- Skeleton -->
             <section
                 v-if="isLoading"
-                aria-label="Memuat fasilitas"
+                :aria-label="trans('facilities.loading')"
                 aria-busy="true"
                 class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
             >
@@ -607,10 +654,7 @@ onBeforeUnmount(() => {
                 </div>
             </section>
 
-            <!-- =================================================
-                 Empty State
-            ================================================== -->
-
+            <!-- Empty State -->
             <section
                 v-else-if="!fasilitas.length"
                 data-reveal
@@ -627,14 +671,13 @@ onBeforeUnmount(() => {
                     <h2
                         class="mt-5 text-xl font-bold text-slate-900 dark:text-white"
                     >
-                        Belum Ada Data Fasilitas
+                        {{ trans("facilities.empty_title") }}
                     </h2>
 
                     <p
                         class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
                     >
-                        Informasi fasilitas kawasan belum tersedia atau sedang
-                        diperbarui. Silakan kembali lagi nanti.
+                        {{ trans("facilities.empty_description") }}
                     </p>
 
                     <Link
@@ -642,15 +685,13 @@ onBeforeUnmount(() => {
                         class="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700"
                     >
                         <Building2 class="size-4" aria-hidden="true" />
-                        Profil Kawasan
+
+                        {{ trans("facilities.area_profile") }}
                     </Link>
                 </div>
             </section>
 
-            <!-- =================================================
-                 Facility Grid
-            ================================================== -->
-
+            <!-- Facility Grid -->
             <section v-else data-reveal class="reveal" style="--d: 140ms">
                 <div
                     class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
@@ -663,13 +704,17 @@ onBeforeUnmount(() => {
                                 class="size-2 rounded-full bg-blue-600 dark:bg-blue-400"
                             />
 
-                            Fasilitas Tersedia
+                            {{ trans("facilities.available") }}
                         </div>
 
                         <p
                             class="mt-1 text-sm text-slate-500 dark:text-slate-400"
                         >
-                            {{ fasilitas.length }} fasilitas pendukung kawasan
+                            {{
+                                trans("facilities.count", {
+                                    count: String(fasilitas.length),
+                                })
+                            }}
                         </p>
                     </div>
                 </div>
@@ -685,14 +730,13 @@ onBeforeUnmount(() => {
                         }"
                     >
                         <!-- Image -->
-
                         <div
                             class="relative aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800"
                         >
                             <img
                                 v-if="getImageUrl(item.gambar)"
                                 :src="getImageUrl(item.gambar) ?? ''"
-                                :alt="item.nama"
+                                :alt="getLocalizedValue(item, 'nama')"
                                 loading="lazy"
                                 class="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                             />
@@ -718,7 +762,7 @@ onBeforeUnmount(() => {
                             <div
                                 class="absolute left-4 top-4 rounded-full border border-white/20 bg-slate-950/45 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md"
                             >
-                                Fasilitas
+                                {{ trans("facilities.badge") }}
                             </div>
 
                             <div
@@ -731,18 +775,21 @@ onBeforeUnmount(() => {
                         </div>
 
                         <!-- Content -->
-
                         <div class="p-6">
                             <h2
                                 class="text-lg font-bold tracking-tight text-slate-900 transition-colors group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-400"
                             >
-                                {{ item.nama }}
+                                {{ getLocalizedValue(item, "nama") }}
                             </h2>
 
                             <p
                                 class="mt-3 line-clamp-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                             >
-                                {{ truncateText(item.deskripsi) }}
+                                {{
+                                    truncateText(
+                                        getLocalizedValue(item, "deskripsi"),
+                                    )
+                                }}
                             </p>
 
                             <div
@@ -751,16 +798,23 @@ onBeforeUnmount(() => {
                                 <span
                                     class="text-xs font-medium text-slate-400 dark:text-slate-500"
                                 >
-                                    Fasilitas KITB
+                                    {{ trans("facilities.card_label") }}
                                 </span>
 
                                 <button
                                     type="button"
-                                    :aria-label="`Lihat detail ${item.nama}`"
+                                    :aria-label="
+                                        trans('facilities.view_detail_aria', {
+                                            name: getLocalizedValue(
+                                                item,
+                                                'nama',
+                                            ),
+                                        })
+                                    "
                                     class="inline-flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:-translate-y-0.5 hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white dark:focus:ring-offset-slate-900"
                                     @click="openModal(item)"
                                 >
-                                    Lihat Detail
+                                    {{ trans("facilities.view_detail") }}
 
                                     <ChevronRight
                                         class="size-4 transition-transform group-hover:translate-x-0.5"
@@ -773,10 +827,7 @@ onBeforeUnmount(() => {
                 </div>
             </section>
 
-            <!-- =================================================
-                 CTA
-            ================================================== -->
-
+            <!-- CTA -->
             <section
                 v-if="!isLoading && fasilitas.length"
                 data-reveal
@@ -802,20 +853,19 @@ onBeforeUnmount(() => {
                         >
                             <span class="size-1.5 rounded-full bg-blue-400" />
 
-                            Eksplorasi Kawasan
+                            {{ trans("facilities.cta_badge") }}
                         </div>
 
                         <h2
                             class="mt-3 text-2xl font-bold tracking-tight sm:text-3xl"
                         >
-                            Kenali lebih jauh kawasan industri KITB
+                            {{ trans("facilities.cta_title") }}
                         </h2>
 
                         <p
                             class="mt-3 text-sm leading-6 text-slate-300 sm:text-base"
                         >
-                            Lihat profil kawasan, infrastruktur, serta informasi
-                            lokasi dan peta kawasan secara lebih lengkap.
+                            {{ trans("facilities.cta_description") }}
                         </p>
                     </div>
 
@@ -825,14 +875,16 @@ onBeforeUnmount(() => {
                             class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:-translate-y-0.5 hover:bg-slate-100"
                         >
                             <Building2 class="size-4" aria-hidden="true" />
-                            Profil Kawasan
+
+                            {{ trans("facilities.area_profile") }}
                         </Link>
 
                         <Link
                             href="/kawasan/infrastruktur"
                             class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/15"
                         >
-                            Infrastruktur
+                            {{ trans("facilities.infrastructure") }}
+
                             <ChevronRight class="size-4" aria-hidden="true" />
                         </Link>
                     </div>
@@ -840,10 +892,7 @@ onBeforeUnmount(() => {
             </section>
         </div>
 
-        <!-- =====================================================
-             Detail Modal
-        ====================================================== -->
-
+        <!-- Detail Modal -->
         <Teleport v-if="isMounted" to="body">
             <Transition
                 enter-active-class="transition duration-200 ease-out"
@@ -868,19 +917,17 @@ onBeforeUnmount(() => {
                         :aria-describedby="modalDescriptionId"
                         tabindex="-1"
                     >
-                        <!-- Modal top accent -->
-
+                        <!-- Accent -->
                         <div
                             aria-hidden="true"
                             class="absolute inset-x-0 top-0 z-20 h-1 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-500"
                         />
 
                         <!-- Close -->
-
                         <button
                             ref="modalCloseButtonRef"
                             type="button"
-                            aria-label="Tutup detail fasilitas"
+                            :aria-label="trans('facilities.close_detail')"
                             class="absolute right-4 top-4 z-30 flex size-11 items-center justify-center rounded-xl border border-white/20 bg-slate-950/50 text-white backdrop-blur-md transition hover:bg-slate-950/70 focus:outline-none focus:ring-2 focus:ring-white/70 sm:right-6 sm:top-6"
                             @click="closeModal"
                         >
@@ -891,14 +938,17 @@ onBeforeUnmount(() => {
                             class="grid max-h-[90vh] overflow-y-auto lg:grid-cols-12 lg:overflow-hidden"
                         >
                             <!-- Modal Image -->
-
                             <div
                                 class="relative min-h-[260px] bg-slate-100 lg:col-span-6 lg:min-h-[580px] dark:bg-slate-800"
                             >
                                 <img
                                     v-if="selectedImage"
                                     :src="selectedImage"
-                                    :alt="`Foto ${selectedFasilitas.nama}`"
+                                    :alt="
+                                        trans('facilities.photo_alt', {
+                                            name: selectedLocalizedName,
+                                        })
+                                    "
                                     class="h-full min-h-[260px] w-full object-cover lg:min-h-[580px]"
                                 />
 
@@ -927,7 +977,7 @@ onBeforeUnmount(() => {
                                         <p
                                             class="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200"
                                         >
-                                            Fasilitas KITB
+                                            {{ trans("facilities.card_label") }}
                                         </p>
 
                                         <p
@@ -947,13 +997,13 @@ onBeforeUnmount(() => {
                                             class="size-4"
                                             aria-hidden="true"
                                         />
-                                        Perbesar
+
+                                        {{ trans("facilities.enlarge") }}
                                     </button>
                                 </div>
                             </div>
 
                             <!-- Modal Content -->
-
                             <div
                                 class="flex flex-col p-6 sm:p-8 lg:col-span-6 lg:p-10"
                             >
@@ -965,14 +1015,14 @@ onBeforeUnmount(() => {
                                             class="size-1.5 rounded-full bg-blue-600 dark:bg-blue-400"
                                         />
 
-                                        Fasilitas Kawasan
+                                        {{ trans("facilities.hero_badge") }}
                                     </div>
 
                                     <h2
                                         :id="modalTitleId"
                                         class="mt-5 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl dark:text-white"
                                     >
-                                        {{ selectedFasilitas.nama }}
+                                        {{ selectedLocalizedName }}
                                     </h2>
 
                                     <div
@@ -983,7 +1033,11 @@ onBeforeUnmount(() => {
                                         <p
                                             class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500"
                                         >
-                                            Deskripsi
+                                            {{
+                                                trans(
+                                                    "facilities.description_label",
+                                                )
+                                            }}
                                         </p>
 
                                         <p
@@ -1005,13 +1059,21 @@ onBeforeUnmount(() => {
                                             <p
                                                 class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500"
                                             >
-                                                Kawasan
+                                                {{
+                                                    trans(
+                                                        "facilities.area_label",
+                                                    )
+                                                }}
                                             </p>
 
                                             <p
                                                 class="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-300"
                                             >
-                                                Kawasan Industri Tanjung Buton
+                                                {{
+                                                    trans(
+                                                        "facilities.area_name",
+                                                    )
+                                                }}
                                             </p>
                                         </div>
 
@@ -1020,7 +1082,10 @@ onBeforeUnmount(() => {
                                             class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-white dark:text-slate-900 dark:hover:bg-blue-50"
                                             @click="closeModal"
                                         >
-                                            Tutup Detail
+                                            {{
+                                                trans("facilities.close_detail")
+                                            }}
+
                                             <X
                                                 class="size-4"
                                                 aria-hidden="true"
@@ -1035,10 +1100,7 @@ onBeforeUnmount(() => {
             </Transition>
         </Teleport>
 
-        <!-- =====================================================
-             Full Image Preview
-        ====================================================== -->
-
+        <!-- Full Image Preview -->
         <Teleport v-if="isMounted" to="body">
             <Transition
                 enter-active-class="transition duration-200 ease-out"
@@ -1059,14 +1121,14 @@ onBeforeUnmount(() => {
                     @mousedown.self="closeImagePreview"
                 >
                     <h2 :id="imagePreviewTitleId" class="sr-only">
-                        Pratinjau gambar
-                        {{ selectedFasilitas?.nama ?? "fasilitas" }}
+                        {{ trans("facilities.image_preview") }}
+                        {{ selectedLocalizedName }}
                     </h2>
 
                     <button
                         ref="imagePreviewCloseButtonRef"
                         type="button"
-                        aria-label="Tutup pratinjau gambar"
+                        :aria-label="trans('facilities.close_image_preview')"
                         class="absolute right-4 top-4 z-10 flex size-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70 sm:right-7 sm:top-7"
                         @click="closeImagePreview"
                     >
@@ -1078,7 +1140,11 @@ onBeforeUnmount(() => {
                     >
                         <img
                             :src="selectedImage"
-                            :alt="`Pratinjau ${selectedFasilitas?.nama ?? 'fasilitas KITB'}`"
+                            :alt="
+                                trans('facilities.image_preview_alt', {
+                                    name: selectedLocalizedName,
+                                })
+                            "
                             class="max-h-[90vh] max-w-full object-contain"
                         />
                     </div>

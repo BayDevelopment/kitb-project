@@ -11,15 +11,22 @@ return new class extends Migration
         Schema::create('peta_kawasan', function (Blueprint $table): void {
             $table->id();
 
+            // Bahasa Indonesia
             $table->string('nama');
-            $table->string('slug')->unique();
-
             $table->text('deskripsi')->nullable();
 
+            // English
+            $table->string('nama_en')->nullable();
+            $table->text('deskripsi_en')->nullable();
+
+            // Chinese
+            $table->string('nama_zh')->nullable();
+            $table->text('deskripsi_zh')->nullable();
+
+            // General
+            $table->string('slug')->unique();
             $table->string('gambar')->nullable();
-
             $table->unsignedInteger('urutan')->default(0);
-
             $table->boolean('aktif')->default(true);
 
             $table->timestamps();
