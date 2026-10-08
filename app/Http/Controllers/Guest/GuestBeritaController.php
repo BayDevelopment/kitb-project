@@ -20,14 +20,34 @@ class GuestBeritaController extends Controller
             ->when(
                 $request->filled('search'),
                 function ($query) use ($request) {
-                    $search = $request->string('search')->trim();
+                    // Escape karakter wildcard LIKE agar "%" dan "_" dicari apa adanya.
+                    $keyword = addcslashes(
+                        $request->string('search')->trim()->toString(),
+                        '%_\\'
+                    );
 
-                    $query->where(function ($query) use ($search) {
+                    $like = "%{$keyword}%";
+
+                    $query->where(function ($query) use ($like) {
                         $query
-                            ->where('judul', 'like', "%{$search}%")
-                            ->orWhere('excerpt', 'like', "%{$search}%")
-                            ->orWhere('kategori', 'like', "%{$search}%")
-                            ->orWhere('penulis', 'like', "%{$search}%");
+                            // Bahasa Indonesia
+                            ->where('judul_id', 'like', $like)
+                            ->orWhere('excerpt_id', 'like', $like)
+                            ->orWhere('konten_id', 'like', $like)
+
+                            // English
+                            ->orWhere('judul_en', 'like', $like)
+                            ->orWhere('excerpt_en', 'like', $like)
+                            ->orWhere('konten_en', 'like', $like)
+
+                            // 中文
+                            ->orWhere('judul_zh', 'like', $like)
+                            ->orWhere('excerpt_zh', 'like', $like)
+                            ->orWhere('konten_zh', 'like', $like)
+
+                            // Informasi umum
+                            ->orWhere('kategori', 'like', $like)
+                            ->orWhere('penulis', 'like', $like);
                     });
                 }
             )
@@ -35,7 +55,7 @@ class GuestBeritaController extends Controller
                 $request->filled('kategori'),
                 fn($query) => $query->where(
                     'kategori',
-                    $request->string('kategori')->trim()
+                    $request->string('kategori')->trim()->toString()
                 )
             )
             ->orderByDesc('is_featured')
@@ -54,30 +74,80 @@ class GuestBeritaController extends Controller
             ->pluck('kategori')
             ->values();
 
-        return Inertia::render('Berita/Index', [   // sebelumnya 'Galeri/Index'
-            'beritas'   => $beritas,
+        return Inertia::render('Berita/Index', [
+            'beritas' => $beritas,
             'kategoris' => $kategoris,
-            'filters'   => [
-                'search'   => $request->string('search')->toString(),
+            'filters' => [
+                'search' => $request->string('search')->toString(),
                 'kategori' => $request->string('kategori')->toString(),
             ],
         ]);
     }
 
     /**
-     * Detail berita (dipakai tombol "Baca Berita Lengkap").
+     * Menampilkan detail berita.
+     *
+     * Route harus memakai slug:
+     *   Route::get('/berita/{berita:slug}', [GuestBeritaController::class, 'show']);
      */
-    public function show(Berita $berita): Response
+    public function show(Request $request, Berita $berita): Response
     {
         abort_unless(
-            Berita::query()->published()->whereKey($berita->getKey())->exists(),
+            Berita::query()
+                ->published()
+                ->whereKey($berita->getKey())
+                ->exists(),
             404
         );
 
-        $berita->increment('views');
+        // Hitung views sekali per sesi, tanpa mengubah updated_at.
+        $sessionKey = "berita_viewed_{$berita->getKey()}";
+
+        if (! $request->session()->has($sessionKey)) {
+            Berita::query()
+                ->whereKey($berita->getKey())
+                ->toBase()
+                ->increment('views');
+
+            $berita->setAttribute('views', $berita->views + 1);
+
+            $request->session()->put($sessionKey, true);
+        }
 
         return Inertia::render('Berita/Show', [
             'berita' => $berita,
+            'terkait' => $this->relatedNews($berita),
         ]);
+    }
+
+    /**
+     * Berita terkait: kategori yang sama dulu, sisanya diisi berita terbaru.
+     */
+    private function relatedNews(Berita $berita, int $limit = 3)
+    {
+        $terkait = Berita::query()
+            ->published()
+            ->whereKeyNot($berita->getKey())
+            ->when(
+                $berita->kategori,
+                fn($query, $kategori) => $query->where('kategori', $kategori)
+            )
+            ->orderByDesc('published_at')
+            ->limit($limit)
+            ->get();
+
+        if ($terkait->count() < $limit) {
+            $tambahan = Berita::query()
+                ->published()
+                ->whereKeyNot($berita->getKey())
+                ->whereNotIn('id', $terkait->pluck('id'))
+                ->orderByDesc('published_at')
+                ->limit($limit - $terkait->count())
+                ->get();
+
+            $terkait = $terkait->concat($tambahan)->values();
+        }
+
+        return $terkait;
     }
 }

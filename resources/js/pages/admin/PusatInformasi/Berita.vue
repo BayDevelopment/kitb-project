@@ -32,10 +32,16 @@ defineOptions({
 
 interface Berita {
     id: number;
-    judul: string;
+    judul_id: string;
+    excerpt_id: string | null;
+    konten_id: string;
+    judul_en: string | null;
+    excerpt_en: string | null;
+    konten_en: string | null;
+    judul_zh: string | null;
+    excerpt_zh: string | null;
+    konten_zh: string | null;
     slug: string;
-    excerpt: string | null;
-    konten: string;
     gambar: string | null;
     kategori: string | null;
     penulis: string | null;
@@ -177,6 +183,19 @@ const showModal = ref(false);
 const showDetail = ref(false);
 const showDelete = ref(false);
 
+type LanguageCode = "id" | "en" | "zh";
+
+const activeLanguage = ref<LanguageCode>("id");
+const detailLanguage = ref<LanguageCode>("id");
+
+const setLanguage = (code: string) => {
+    activeLanguage.value = code as LanguageCode;
+};
+
+const setDetailLanguage = (code: string) => {
+    detailLanguage.value = code as LanguageCode;
+};
+
 const modalMode = ref<"create" | "edit">("create");
 
 const selectedBerita = ref<Berita | null>(null);
@@ -188,10 +207,16 @@ const selectedBerita = ref<Berita | null>(null);
 */
 
 const emptyForm = () => ({
-    judul: "",
+    judul_id: "",
+    excerpt_id: "",
+    konten_id: "",
+    judul_en: "",
+    excerpt_en: "",
+    konten_en: "",
+    judul_zh: "",
+    excerpt_zh: "",
+    konten_zh: "",
     slug: "",
-    excerpt: "",
-    konten: "",
     kategori: "",
     penulis: "",
     status: "draft" as "draft" | "published" | "archived",
@@ -292,7 +317,7 @@ const plainText = (value: string) => {
 };
 
 const hasKonten = computed(() => {
-    return plainText(form.value.konten) !== "";
+    return plainText(form.value.konten_id) !== "";
 });
 
 /*
@@ -421,6 +446,7 @@ const resetFormState = () => {
 };
 
 const openCreate = () => {
+    activeLanguage.value = "id";
     revokeGambarPreview();
 
     form.value = emptyForm();
@@ -436,15 +462,22 @@ const openCreate = () => {
 };
 
 const openEdit = (berita: Berita) => {
+    activeLanguage.value = "id";
     revokeGambarPreview();
 
     selectedBerita.value = berita;
 
     form.value = {
-        judul: berita.judul,
+        judul_id: berita.judul_id || "",
+        excerpt_id: berita.excerpt_id || "",
+        konten_id: toHtml(berita.konten_id),
+        judul_en: berita.judul_en || "",
+        excerpt_en: berita.excerpt_en || "",
+        konten_en: toHtml(berita.konten_en),
+        judul_zh: berita.judul_zh || "",
+        excerpt_zh: berita.excerpt_zh || "",
+        konten_zh: toHtml(berita.konten_zh),
         slug: berita.slug,
-        excerpt: berita.excerpt || "",
-        konten: toHtml(berita.konten),
         kategori: berita.kategori || "",
         penulis: berita.penulis || "",
         status: berita.status,
@@ -470,6 +503,7 @@ const closeModal = () => {
 };
 
 const openDetail = (berita: Berita) => {
+    detailLanguage.value = "id";
     selectedBerita.value = berita;
 
     showModal.value = false;
@@ -553,23 +587,19 @@ const submitForm = () => {
         return;
     }
 
-    const judul = form.value.judul.trim();
-    const konten = form.value.konten.trim();
+    const judulId = form.value.judul_id.trim();
+    const kontenId = form.value.konten_id.trim();
 
-    if (!judul) {
-        toast.error("Judul berita wajib diisi.");
+    if (!judulId) {
+        toast.error("Judul berita Bahasa Indonesia wajib diisi.");
         return;
     }
 
-    if (!plainText(konten)) {
-        toast.error("Konten berita wajib diisi.");
+    if (!plainText(kontenId)) {
+        toast.error("Konten berita Bahasa Indonesia wajib diisi.");
         return;
     }
 
-    /*
-     * Hanya berita published yang boleh memiliki
-     * published_at dan is_featured.
-     */
     if (form.value.status !== "published") {
         form.value.published_at = "";
         form.value.is_featured = false;
@@ -577,16 +607,20 @@ const submitForm = () => {
 
     const data = new FormData();
 
-    data.append("judul", judul);
+    data.append("judul_id", judulId);
+    data.append("excerpt_id", form.value.excerpt_id.trim());
+    data.append("konten_id", kontenId);
 
-    data.append("excerpt", form.value.excerpt.trim());
+    data.append("judul_en", form.value.judul_en.trim());
+    data.append("excerpt_en", form.value.excerpt_en.trim());
+    data.append("konten_en", form.value.konten_en.trim());
 
-    data.append("konten", konten);
+    data.append("judul_zh", form.value.judul_zh.trim());
+    data.append("excerpt_zh", form.value.excerpt_zh.trim());
+    data.append("konten_zh", form.value.konten_zh.trim());
 
     data.append("kategori", form.value.kategori.trim());
-
     data.append("penulis", form.value.penulis.trim());
-
     data.append("status", form.value.status);
 
     if (form.value.published_at) {
@@ -983,7 +1017,7 @@ onBeforeUnmount(() => {
                                                 :src="
                                                     getImageUrl(berita.gambar)!
                                                 "
-                                                :alt="berita.judul"
+                                                :alt="berita.judul_id"
                                                 class="size-full object-cover"
                                             />
 
@@ -997,7 +1031,7 @@ onBeforeUnmount(() => {
                                                 <p
                                                     class="truncate font-semibold text-slate-900 dark:text-white"
                                                 >
-                                                    {{ berita.judul }}
+                                                    {{ berita.judul_id }}
                                                 </p>
 
                                                 <Star
@@ -1010,7 +1044,10 @@ onBeforeUnmount(() => {
                                                 class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400"
                                             >
                                                 {{
-                                                    truncate(berita.excerpt, 90)
+                                                    truncate(
+                                                        berita.excerpt_id,
+                                                        90,
+                                                    )
                                                 }}
                                             </p>
                                         </div>
@@ -1319,32 +1356,192 @@ onBeforeUnmount(() => {
                         @submit.prevent="submitForm"
                     >
                         <div class="grid gap-5 md:grid-cols-2">
-                            <!-- JUDUL -->
+                            <!-- BAHASA -->
                             <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                <div
+                                    class="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 dark:border-slate-700 dark:bg-slate-800/50"
                                 >
-                                    Judul Berita
-                                    <span class="text-red-500"> * </span>
-                                </label>
+                                    <button
+                                        v-for="language in [
+                                            {
+                                                code: 'id',
+                                                label: 'Bahasa Indonesia',
+                                                flag: '🇮🇩',
+                                            },
+                                            {
+                                                code: 'en',
+                                                label: 'English',
+                                                flag: '🇬🇧',
+                                            },
+                                            {
+                                                code: 'zh',
+                                                label: '中文',
+                                                flag: '🇨🇳',
+                                            },
+                                        ]"
+                                        :key="language.code"
+                                        type="button"
+                                        class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all"
+                                        :class="
+                                            activeLanguage === language.code
+                                                ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-blue-400 dark:ring-slate-700'
+                                                : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-900/60 dark:hover:text-slate-200'
+                                        "
+                                        @click="setLanguage(language.code)"
+                                    >
+                                        <span class="mr-1.5">{{
+                                            language.flag
+                                        }}</span>
+                                        {{ language.label }}
+                                    </button>
+                                </div>
 
-                                <input
-                                    v-model="form.judul"
-                                    type="text"
-                                    required
-                                    maxlength="255"
-                                    placeholder="Contoh: KITB Dorong Pertumbuhan Investasi di Riau"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                />
+                                <!-- INDONESIA -->
+                                <div
+                                    v-if="activeLanguage === 'id'"
+                                    class="space-y-5"
+                                >
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Judul Berita
+                                            <span class="text-red-500"> *</span>
+                                        </label>
+                                        <input
+                                            v-model="form.judul_id"
+                                            type="text"
+                                            required
+                                            maxlength="255"
+                                            placeholder="Contoh: KITB Dorong Pertumbuhan Investasi di Riau"
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Ringkasan
+                                        </label>
+                                        <textarea
+                                            v-model="form.excerpt_id"
+                                            rows="3"
+                                            placeholder="Tuliskan ringkasan singkat berita dalam Bahasa Indonesia..."
+                                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        ></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Konten Berita
+                                            <span class="text-red-500"> *</span>
+                                        </label>
+                                        <RichTextEditor
+                                            v-model="form.konten_id"
+                                        />
+                                    </div>
+                                </div>
+
+                                <!-- ENGLISH -->
+                                <div
+                                    v-else-if="activeLanguage === 'en'"
+                                    class="space-y-5"
+                                >
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            News Title
+                                        </label>
+                                        <input
+                                            v-model="form.judul_en"
+                                            type="text"
+                                            maxlength="255"
+                                            placeholder="Example: KITB Drives Investment Growth in Riau"
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            Excerpt
+                                        </label>
+                                        <textarea
+                                            v-model="form.excerpt_en"
+                                            rows="3"
+                                            placeholder="Write a short news summary in English..."
+                                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        ></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            News Content
+                                        </label>
+                                        <RichTextEditor
+                                            v-model="form.konten_en"
+                                        />
+                                    </div>
+                                </div>
+
+                                <!-- CHINESE -->
+                                <div v-else class="space-y-5">
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            新闻标题
+                                        </label>
+                                        <input
+                                            v-model="form.judul_zh"
+                                            type="text"
+                                            maxlength="255"
+                                            placeholder="例如：KITB 推动廖内省投资增长"
+                                            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            摘要
+                                        </label>
+                                        <textarea
+                                            v-model="form.excerpt_zh"
+                                            rows="3"
+                                            placeholder="请输入中文新闻摘要..."
+                                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                        ></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        >
+                                            新闻内容
+                                        </label>
+                                        <RichTextEditor
+                                            v-model="form.konten_zh"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
+                            <!-- SLUG -->
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Slug
                                 </label>
-
                                 <div class="relative">
                                     <input
                                         :value="form.slug"
@@ -1353,17 +1550,15 @@ onBeforeUnmount(() => {
                                         disabled
                                         class="h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 pr-24 text-sm text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400"
                                     />
-
                                     <span
                                         class="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-slate-200 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-700 dark:text-slate-400"
                                     >
                                         Otomatis
                                     </span>
                                 </div>
-
                                 <p class="mt-1.5 text-xs text-slate-400">
                                     Slug dibuat otomatis berdasarkan judul
-                                    berita.
+                                    Bahasa Indonesia.
                                 </p>
                             </div>
 
@@ -1374,7 +1569,6 @@ onBeforeUnmount(() => {
                                 >
                                     Kategori
                                 </label>
-
                                 <input
                                     v-model="form.kategori"
                                     type="text"
@@ -1383,7 +1577,6 @@ onBeforeUnmount(() => {
                                     placeholder="Contoh: Investasi"
                                     class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
                                 />
-
                                 <datalist id="kategori-options">
                                     <option
                                         v-for="item in categories"
@@ -1400,7 +1593,6 @@ onBeforeUnmount(() => {
                                 >
                                     Penulis
                                 </label>
-
                                 <input
                                     v-model="form.penulis"
                                     type="text"
@@ -1416,17 +1608,14 @@ onBeforeUnmount(() => {
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Status
-                                    <span class="text-red-500"> * </span>
+                                    <span class="text-red-500"> *</span>
                                 </label>
-
                                 <select
                                     v-model="form.status"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 >
                                     <option value="draft">Draft</option>
-
                                     <option value="published">Published</option>
-
                                     <option value="archived">Archived</option>
                                 </select>
                             </div>
@@ -1438,52 +1627,16 @@ onBeforeUnmount(() => {
                                 >
                                     Waktu Publikasi
                                 </label>
-
                                 <input
                                     v-model="form.published_at"
                                     type="datetime-local"
                                     :disabled="form.status !== 'published'"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 />
-
                                 <p class="mt-1.5 text-xs text-slate-400">
                                     Digunakan ketika berita dipublikasikan.
                                 </p>
                             </div>
-
-                            <!-- EXCERPT -->
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Ringkasan
-                                </label>
-
-                                <textarea
-                                    v-model="form.excerpt"
-                                    rows="3"
-                                    placeholder="Tuliskan ringkasan singkat berita..."
-                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                ></textarea>
-                            </div>
-
-                            <!-- KONTEN -->
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Konten Berita
-                                    <span class="text-red-500"> * </span>
-                                </label>
-
-                                <RichTextEditor v-model="form.konten" />
-
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Blok teks lalu klik tombol di atas untuk
-                                    tebal, miring, judul, atau daftar.
-                                </p>
-                            </div>
-
                             <!-- IMAGE -->
                             <div class="md:col-span-2">
                                 <label
@@ -1645,7 +1798,7 @@ onBeforeUnmount(() => {
                                 type="submit"
                                 :disabled="
                                     processingForm ||
-                                    !form.judul.trim() ||
+                                    !form.judul_id.trim() ||
                                     !hasKonten
                                 "
                                 class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
@@ -1717,7 +1870,7 @@ onBeforeUnmount(() => {
                         >
                             <img
                                 :src="getImageUrl(selectedBerita.gambar)!"
-                                :alt="selectedBerita.judul"
+                                :alt="selectedBerita.judul_id"
                                 class="max-h-80 w-full object-cover"
                             />
                         </div>
@@ -1758,66 +1911,151 @@ onBeforeUnmount(() => {
                                 </span>
                             </div>
 
-                            <h3
-                                class="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
-                            >
-                                {{ selectedBerita.judul }}
-                            </h3>
-
-                            <div
-                                class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500 dark:text-slate-400"
-                            >
-                                <span>
-                                    Penulis:
-
-                                    <strong
-                                        class="font-medium text-slate-700 dark:text-slate-200"
+                            <div class="mt-5">
+                                <div
+                                    class="mb-4 flex flex-wrap gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800"
+                                >
+                                    <button
+                                        v-for="language in [
+                                            { code: 'id', label: 'Indonesia' },
+                                            { code: 'en', label: 'English' },
+                                            { code: 'zh', label: '中文' },
+                                        ]"
+                                        :key="language.code"
+                                        type="button"
+                                        class="rounded-lg px-3 py-2 text-xs font-medium transition"
+                                        :class="
+                                            detailLanguage === language.code
+                                                ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                                        "
+                                        @click="
+                                            setDetailLanguage(language.code)
+                                        "
                                     >
-                                        {{ selectedBerita.penulis || "-" }}
-                                    </strong>
-                                </span>
+                                        {{ language.label }}
+                                    </button>
+                                </div>
 
-                                <span class="flex items-center gap-1.5">
-                                    <Calendar class="size-4" />
+                                <template v-if="detailLanguage === 'id'">
+                                    <h3
+                                        class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
+                                    >
+                                        {{ selectedBerita.judul_id }}
+                                    </h3>
+                                    <div
+                                        v-if="selectedBerita.excerpt_id"
+                                        class="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20"
+                                    >
+                                        <p
+                                            class="text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                        >
+                                            {{ selectedBerita.excerpt_id }}
+                                        </p>
+                                    </div>
+                                    <div class="mt-5">
+                                        <p
+                                            class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                        >
+                                            Konten Berita
+                                        </p>
+                                        <div
+                                            class="rich-content mt-3 text-sm text-slate-600 dark:text-slate-300"
+                                            v-html="
+                                                safeHtml(
+                                                    selectedBerita.konten_id,
+                                                )
+                                            "
+                                        ></div>
+                                    </div>
+                                </template>
 
-                                    {{
-                                        formatDate(selectedBerita.published_at)
-                                    }}
-                                </span>
+                                <template v-else-if="detailLanguage === 'en'">
+                                    <h3
+                                        class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
+                                    >
+                                        {{
+                                            selectedBerita.judul_en ||
+                                            "English version belum tersedia."
+                                        }}
+                                    </h3>
+                                    <div
+                                        v-if="selectedBerita.excerpt_en"
+                                        class="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20"
+                                    >
+                                        <p
+                                            class="text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                        >
+                                            {{ selectedBerita.excerpt_en }}
+                                        </p>
+                                    </div>
+                                    <div class="mt-5">
+                                        <p
+                                            class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                        >
+                                            News Content
+                                        </p>
+                                        <div
+                                            v-if="selectedBerita.konten_en"
+                                            class="rich-content mt-3 text-sm text-slate-600 dark:text-slate-300"
+                                            v-html="
+                                                safeHtml(
+                                                    selectedBerita.konten_en,
+                                                )
+                                            "
+                                        ></div>
+                                        <p
+                                            v-else
+                                            class="mt-3 text-sm text-slate-400"
+                                        >
+                                            English version belum tersedia.
+                                        </p>
+                                    </div>
+                                </template>
 
-                                <span class="flex items-center gap-1.5">
-                                    <Eye class="size-4" />
-
-                                    {{ selectedBerita.views }}
-                                    views
-                                </span>
+                                <template v-else>
+                                    <h3
+                                        class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
+                                    >
+                                        {{
+                                            selectedBerita.judul_zh ||
+                                            "中文版本尚未提供。"
+                                        }}
+                                    </h3>
+                                    <div
+                                        v-if="selectedBerita.excerpt_zh"
+                                        class="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20"
+                                    >
+                                        <p
+                                            class="text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                        >
+                                            {{ selectedBerita.excerpt_zh }}
+                                        </p>
+                                    </div>
+                                    <div class="mt-5">
+                                        <p
+                                            class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                                        >
+                                            新闻内容
+                                        </p>
+                                        <div
+                                            v-if="selectedBerita.konten_zh"
+                                            class="rich-content mt-3 text-sm text-slate-600 dark:text-slate-300"
+                                            v-html="
+                                                safeHtml(
+                                                    selectedBerita.konten_zh,
+                                                )
+                                            "
+                                        ></div>
+                                        <p
+                                            v-else
+                                            class="mt-3 text-sm text-slate-400"
+                                        >
+                                            中文版本尚未提供。
+                                        </p>
+                                    </div>
+                                </template>
                             </div>
-                        </div>
-
-                        <!-- EXCERPT -->
-                        <div
-                            v-if="selectedBerita.excerpt"
-                            class="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20"
-                        >
-                            <p
-                                class="text-sm leading-6 text-slate-600 dark:text-slate-300"
-                            >
-                                {{ selectedBerita.excerpt }}
-                            </p>
-                        </div>
-
-                        <!-- CONTENT -->
-                        <div>
-                            <p
-                                class="text-xs font-semibold uppercase tracking-wide text-slate-400"
-                            >
-                                Konten Berita
-                            </p>
-
-                            <div
-                                class="rich-content mt-3 text-sm text-slate-600 dark:text-slate-300"
-                                v-html="safeHtml(selectedBerita.konten)"
-                            ></div>
                         </div>
                     </div>
                 </div>
@@ -1857,7 +2095,7 @@ onBeforeUnmount(() => {
                             <span
                                 class="font-semibold text-slate-700 dark:text-slate-200"
                             >
-                                {{ selectedBerita.judul }}
+                                {{ selectedBerita.judul_id }}
                             </span>
 
                             ? Data yang sudah dihapus tidak dapat dikembalikan.

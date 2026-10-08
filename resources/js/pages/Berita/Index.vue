@@ -7,13 +7,14 @@ import {
     ref,
     watch,
 } from "vue";
+
 import { Head, Link, router } from "@inertiajs/vue3";
+
 import {
     ArrowRight,
     CalendarDays,
     ChevronLeft,
     ChevronRight,
-    ChevronRight as ChevronRightSmall,
     Eye,
     FileText,
     Home,
@@ -23,26 +24,47 @@ import {
     UserRound,
     X,
 } from "lucide-vue-next";
+
 import PublicLayout from "@/layouts/PublicLayout.vue";
+
+import {
+    currentLanguage,
+    localizedValue,
+    type LanguageCode,
+} from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
 });
 
-/* =========================================================
- * Types
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface Berita {
     id: number;
-    judul: string;
+
+    // Bahasa Indonesia
+    judul_id: string;
+    excerpt_id: string | null;
+    konten_id: string | null;
+
+    // English
+    judul_en: string | null;
+    excerpt_en: string | null;
+    konten_en: string | null;
+
+    // Chinese
+    judul_zh: string | null;
+    excerpt_zh: string | null;
+    konten_zh: string | null;
+
+    // Common data
     slug: string;
-    excerpt: string | null;
-    konten: string | null;
     gambar: string | null;
     kategori: string | null;
     penulis: string | null;
-    status: string;
+    status: "draft" | "published" | "archived";
     published_at: string | null;
     is_featured: boolean;
     views: number;
@@ -83,9 +105,226 @@ interface Props {
 
 const props = defineProps<Props>();
 
-/* =========================================================
- * State
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Language
+// ---------------------------------------------------------------------------
+
+const languageOptions: Array<{
+    code: LanguageCode;
+    label: string;
+    short: string;
+    flag: string;
+}> = [
+    { code: "id", label: "Bahasa Indonesia", short: "ID", flag: "🇮🇩" },
+    { code: "en", label: "English", short: "EN", flag: "🇬🇧" },
+    { code: "zh", label: "中文", short: "中文", flag: "🇨🇳" },
+];
+
+// ---------------------------------------------------------------------------
+// Database localization adapter
+//
+// localizedValue() reads:   judul / judul_en / judul_zh
+// Database columns:         judul_id / judul_en / judul_zh
+// Indonesian is used as the base (fallback) field.
+// ---------------------------------------------------------------------------
+
+const localizedBeritaValue = (
+    berita: Berita,
+    field: "judul" | "excerpt" | "konten",
+): string => {
+    const source: Record<string, unknown> = {
+        ...berita,
+        judul: berita.judul_id,
+        excerpt: berita.excerpt_id,
+        konten: berita.konten_id,
+    };
+
+    return localizedValue(source, field);
+};
+
+// ---------------------------------------------------------------------------
+// UI translation
+// ---------------------------------------------------------------------------
+
+const ui = computed(() => {
+    const translations = {
+        id: {
+            home: "Beranda",
+            informationCenter: "Pusat Informasi",
+            news: "Berita",
+            description:
+                "Informasi terbaru mengenai kegiatan, perkembangan, investasi, dan aktivitas PT Kawasan Industri Tanjung Buton.",
+
+            searchLabel: "Cari berita",
+            searchPlaceholder: "Cari judul, kategori, atau isi berita...",
+
+            categoryFilter: "Filter kategori berita",
+            allCategories: "Semua Kategori",
+            reset: "Reset",
+
+            language: "Bahasa",
+            newsCount: "berita",
+
+            loading: "Memuat berita...",
+
+            emptyTitle: "Belum Ada Berita",
+            emptyDescription:
+                "Belum ada berita yang dapat ditampilkan saat ini. Silakan kembali lagi untuk mendapatkan informasi terbaru dari KITB.",
+
+            notFoundTitle: "Berita Tidak Ditemukan",
+            notFoundDescription:
+                "Tidak ada berita yang sesuai dengan pencarian atau kategori yang dipilih.",
+
+            showAll: "Tampilkan Semua Berita",
+
+            featured: "Berita Unggulan",
+            readMore: "Baca Selengkapnya",
+
+            previous: "Sebelumnya",
+            next: "Berikutnya",
+
+            previousAria: "Halaman sebelumnya",
+            nextAria: "Halaman berikutnya",
+
+            paginationAria: "Pagination berita",
+            newsListAria: "Daftar berita",
+            searchSectionAria: "Pencarian berita",
+            loadingAria: "Memuat berita",
+
+            readAria: (title: string) => `Baca ${title}`,
+            detailAria: (title: string) => `Lihat detail berita ${title}`,
+
+            close: "Tutup",
+            fullArticle: "Baca Berita Selengkapnya",
+
+            summary: "Ringkasan",
+            content: "Isi Berita",
+
+            views: "dilihat",
+
+            modalCloseAria: "Tutup detail berita",
+        },
+
+        en: {
+            home: "Home",
+            informationCenter: "Information Center",
+            news: "News",
+            description:
+                "Latest information about the activities, developments, investments, and operations of PT Kawasan Industri Tanjung Buton.",
+
+            searchLabel: "Search news",
+            searchPlaceholder: "Search title, category, or news content...",
+
+            categoryFilter: "Filter news category",
+            allCategories: "All Categories",
+            reset: "Reset",
+
+            language: "Language",
+            newsCount: "news",
+
+            loading: "Loading news...",
+
+            emptyTitle: "No News Available",
+            emptyDescription:
+                "There is no news available at the moment. Please come back for the latest information from KITB.",
+
+            notFoundTitle: "News Not Found",
+            notFoundDescription:
+                "No news matches the selected search or category.",
+
+            showAll: "Show All News",
+
+            featured: "Featured News",
+            readMore: "Read More",
+
+            previous: "Previous",
+            next: "Next",
+
+            previousAria: "Previous page",
+            nextAria: "Next page",
+
+            paginationAria: "News pagination",
+            newsListAria: "News list",
+            searchSectionAria: "News search",
+            loadingAria: "Loading news",
+
+            readAria: (title: string) => `Read ${title}`,
+            detailAria: (title: string) => `View news details ${title}`,
+
+            close: "Close",
+            fullArticle: "Read Full Article",
+
+            summary: "Summary",
+            content: "News Content",
+
+            views: "views",
+
+            modalCloseAria: "Close news details",
+        },
+
+        zh: {
+            home: "首页",
+            informationCenter: "信息中心",
+            news: "新闻",
+            description:
+                "PT Kawasan Industri Tanjung Buton 的最新活动、发展、投资及运营信息。",
+
+            searchLabel: "搜索新闻",
+            searchPlaceholder: "搜索标题、分类或新闻内容...",
+
+            categoryFilter: "筛选新闻分类",
+            allCategories: "全部分类",
+            reset: "重置",
+
+            language: "语言",
+            newsCount: "条新闻",
+
+            loading: "正在加载新闻...",
+
+            emptyTitle: "暂无新闻",
+            emptyDescription:
+                "目前暂无可显示的新闻。请稍后返回查看 KITB 的最新信息。",
+
+            notFoundTitle: "未找到新闻",
+            notFoundDescription: "没有符合搜索条件或所选分类的新闻。",
+
+            showAll: "显示全部新闻",
+
+            featured: "精选新闻",
+            readMore: "阅读更多",
+
+            previous: "上一页",
+            next: "下一页",
+
+            previousAria: "上一页",
+            nextAria: "下一页",
+
+            paginationAria: "新闻分页",
+            newsListAria: "新闻列表",
+            searchSectionAria: "新闻搜索",
+            loadingAria: "正在加载新闻",
+
+            readAria: (title: string) => `阅读 ${title}`,
+            detailAria: (title: string) => `查看新闻详情 ${title}`,
+
+            close: "关闭",
+            fullArticle: "阅读完整新闻",
+
+            summary: "摘要",
+            content: "新闻内容",
+
+            views: "次浏览",
+
+            modalCloseAria: "关闭新闻详情",
+        },
+    } as const;
+
+    return translations[currentLanguage.value];
+});
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
 
 const search = ref(props.filters?.search ?? "");
 const selectedKategori = ref(props.filters?.kategori ?? "");
@@ -96,7 +335,6 @@ const isMounted = ref(false);
 
 const selectedBerita = ref<Berita | null>(null);
 const showModal = ref(false);
-
 const modalPanel = ref<HTMLElement | null>(null);
 const previouslyFocusedElement = ref<HTMLElement | null>(null);
 
@@ -106,17 +344,17 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null;
 let removeStartListener: (() => void) | null = null;
 let removeFinishListener: (() => void) | null = null;
 
-/* =========================================================
- * Motion
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Motion
+// ---------------------------------------------------------------------------
 
 const prefersReducedMotion =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/* =========================================================
- * Image Helper
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Image helper
+// ---------------------------------------------------------------------------
 
 const imageUrl = (berita: Berita): string | null => {
     if (!berita.gambar) {
@@ -147,9 +385,9 @@ const handleImageError = (event: Event) => {
     fallback?.classList.add("flex");
 };
 
-/* =========================================================
- * Date Helper
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Date helper
+// ---------------------------------------------------------------------------
 
 const formatDate = (date: string | null): string => {
     if (!date) {
@@ -162,16 +400,23 @@ const formatDate = (date: string | null): string => {
         return "";
     }
 
-    return new Intl.DateTimeFormat("id-ID", {
+    const locale =
+        currentLanguage.value === "en"
+            ? "en-US"
+            : currentLanguage.value === "zh"
+              ? "zh-CN"
+              : "id-ID";
+
+    return new Intl.DateTimeFormat(locale, {
         day: "2-digit",
         month: "long",
         year: "numeric",
     }).format(parsed);
 };
 
-/* =========================================================
- * Text Helper
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Text helper
+// ---------------------------------------------------------------------------
 
 const stripHtml = (text: string | null): string => {
     if (!text) {
@@ -183,7 +428,7 @@ const stripHtml = (text: string | null): string => {
         .replace(/&nbsp;/gi, " ")
         .replace(/&amp;/gi, "&")
         .replace(/&quot;/gi, '"')
-        .replace(/&#039;/gi, "'")
+        .replace(/&#039;|&#39;/gi, "'")
         .replace(/\s+/g, " ")
         .trim();
 };
@@ -202,9 +447,9 @@ const truncate = (text: string | null, length = 150): string => {
     return `${clean.slice(0, length).trim()}…`;
 };
 
-/* =========================================================
- * Search / Filter
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Search / filter
+// ---------------------------------------------------------------------------
 
 const hasFilters = computed(() => {
     return Boolean(search.value.trim() || selectedKategori.value);
@@ -223,7 +468,6 @@ const applyFilters = () => {
         params.kategori = selectedKategori.value;
     }
 
-    // State loading (isNavigating) diatur oleh event router di onMounted
     router.get("/berita", params, {
         preserveState: true,
         preserveScroll: true,
@@ -248,9 +492,9 @@ const clearFilters = () => {
     applyFilters();
 };
 
-/* =========================================================
- * Data State
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Data state
+// ---------------------------------------------------------------------------
 
 const databaseEmpty = computed(() => {
     return !hasFilters.value && props.beritas.total === 0;
@@ -260,9 +504,9 @@ const filteredEmpty = computed(() => {
     return hasFilters.value && props.beritas.total === 0;
 });
 
-/* =========================================================
- * Modal / Detail
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Modal
+// ---------------------------------------------------------------------------
 
 const openModal = async (berita: Berita) => {
     previouslyFocusedElement.value =
@@ -280,7 +524,7 @@ const openModal = async (berita: Berita) => {
     modalPanel.value?.focus();
 };
 
-const closeModal = () => {
+const closeModal = (restoreFocus = true) => {
     showModal.value = false;
 
     const target = previouslyFocusedElement.value;
@@ -290,7 +534,7 @@ const closeModal = () => {
 
     document.body.classList.remove("overflow-hidden");
 
-    if (target) {
+    if (restoreFocus && target) {
         nextTick(() => {
             target.focus();
         });
@@ -348,14 +592,16 @@ const handleModalKeydown = (event: KeyboardEvent) => {
     }
 };
 
-/* =========================================================
- * Reveal
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Reveal
+// ---------------------------------------------------------------------------
 
 const revealAll = () => {
     document
         .querySelectorAll<HTMLElement>("[data-reveal]:not(.is-visible)")
-        .forEach((element) => element.classList.add("is-visible"));
+        .forEach((element) => {
+            element.classList.add("is-visible");
+        });
 };
 
 const setupRevealObserver = () => {
@@ -374,6 +620,7 @@ const setupRevealObserver = () => {
                 }
 
                 entry.target.classList.add("is-visible");
+
                 revealObserver?.unobserve(entry.target);
             });
         },
@@ -385,12 +632,14 @@ const setupRevealObserver = () => {
 
     document
         .querySelectorAll<HTMLElement>("[data-reveal]:not(.is-visible)")
-        .forEach((element) => revealObserver?.observe(element));
+        .forEach((element) => {
+            revealObserver?.observe(element);
+        });
 };
 
-/* =========================================================
- * Lifecycle
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Lifecycle
+// ---------------------------------------------------------------------------
 
 onMounted(() => {
     isMounted.value = true;
@@ -398,12 +647,10 @@ onMounted(() => {
 
     nextTick(setupRevealObserver);
 
-    // Fallback: konten tidak boleh tetap transparan
     revealFallbackTimer = setTimeout(revealAll, 1500);
 
     document.addEventListener("keydown", handleModalKeydown);
 
-    // Skeleton hanya muncul saat navigasi di halaman /berita
     removeStartListener = router.on("start", (event) => {
         if (event.detail.visit.url.pathname === "/berita") {
             isNavigating.value = true;
@@ -434,34 +681,29 @@ onBeforeUnmount(() => {
     document.body.classList.remove("overflow-hidden");
 });
 
-// Pasang ulang observer setiap data atau state navigasi berubah
 watch(
     () => [props.beritas.data, isNavigating.value],
     () => {
         nextTick(setupRevealObserver);
     },
-    { flush: "post" },
+    {
+        flush: "post",
+    },
 );
 </script>
 
 <template>
     <Head>
-        <title>Berita | KITB</title>
+        <title>{{ ui.news }} | KITB</title>
 
-        <meta
-            name="description"
-            content="Berita dan informasi terbaru PT Kawasan Industri Tanjung Buton."
-        />
+        <meta name="description" :content="ui.description" />
     </Head>
 
     <main
         class="relative min-h-screen overflow-hidden bg-slate-50/50 dark:bg-slate-950"
         :class="{ 'reveal-ready': revealReady }"
     >
-        <!-- =====================================================
-             Decorative Background
-             ===================================================== -->
-
+        <!-- Decorative Background -->
         <div
             aria-hidden="true"
             class="pointer-events-none absolute -left-32 top-24 h-80 w-80 rounded-full bg-blue-200/30 blur-3xl dark:bg-blue-900/20"
@@ -473,10 +715,7 @@ watch(
         />
 
         <div class="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <!-- =================================================
-                 Breadcrumb
-                 ================================================= -->
-
+            <!-- Breadcrumb -->
             <nav
                 aria-label="Breadcrumb"
                 class="mb-7 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400"
@@ -488,10 +727,10 @@ watch(
                 >
                     <Home class="h-3.5 w-3.5" aria-hidden="true" />
 
-                    <span>Beranda</span>
+                    <span>{{ ui.home }}</span>
                 </Link>
 
-                <ChevronRightSmall
+                <ChevronRight
                     class="h-3.5 w-3.5 shrink-0 text-slate-400"
                     aria-hidden="true"
                 />
@@ -502,55 +741,50 @@ watch(
                 >
                     <Newspaper class="h-3.5 w-3.5" aria-hidden="true" />
 
-                    <span>Berita</span>
+                    <span>{{ ui.news }}</span>
                 </span>
             </nav>
 
-            <!-- =================================================
-                 Header
-                 ================================================= -->
-
+            <!-- Header -->
             <header class="mb-8 max-w-3xl" data-reveal style="--d: 80ms">
                 <p
                     class="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400"
                 >
-                    Pusat Informasi
+                    {{ ui.informationCenter }}
                 </p>
 
                 <h1
                     class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-white"
                 >
-                    Berita
+                    {{ ui.news }}
                 </h1>
 
                 <p
                     class="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                 >
-                    Informasi terbaru mengenai kegiatan, perkembangan,
-                    investasi, dan aktivitas PT Kawasan Industri Tanjung Buton.
+                    {{ ui.description }}
                 </p>
             </header>
 
-            <!-- =================================================
-                 Search & Filter
-                 ================================================= -->
-
+            <!-- Search & Filter -->
             <section
                 class="mb-8 rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-800 dark:bg-slate-900"
-                aria-label="Pencarian berita"
+                :aria-label="ui.searchSectionAria"
                 data-reveal
                 style="--d: 140ms"
             >
-                <div class="flex flex-col gap-3 lg:flex-row">
-                    <!-- Search -->
+                <h2 class="sr-only">
+                    {{ ui.searchSectionAria }}
+                </h2>
 
+                <div class="flex flex-col gap-3 lg:flex-row">
                     <div class="relative min-w-0 flex-1">
                         <label for="search-berita" class="sr-only">
-                            Cari berita
+                            {{ ui.searchLabel }}
                         </label>
 
                         <Search
-                            class="pointer-events-none absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400"
+                            class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                             aria-hidden="true"
                         />
 
@@ -559,17 +793,15 @@ watch(
                             v-model="search"
                             type="search"
                             autocomplete="off"
-                            placeholder="Cari judul, kategori, atau isi berita..."
+                            :placeholder="ui.searchPlaceholder"
                             class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
                             @input="handleSearchInput"
                         />
                     </div>
 
-                    <!-- Category -->
-
                     <div class="w-full lg:w-56">
                         <label for="kategori-berita" class="sr-only">
-                            Filter kategori berita
+                            {{ ui.categoryFilter }}
                         </label>
 
                         <select
@@ -578,7 +810,9 @@ watch(
                             class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                             @change="applyFilters"
                         >
-                            <option value="">Semua Kategori</option>
+                            <option value="">
+                                {{ ui.allCategories }}
+                            </option>
 
                             <option
                                 v-for="kategori in props.kategoris"
@@ -590,8 +824,6 @@ watch(
                         </select>
                     </div>
 
-                    <!-- Reset -->
-
                     <button
                         v-if="hasFilters"
                         type="button"
@@ -600,11 +832,9 @@ watch(
                     >
                         <X class="h-4 w-4" aria-hidden="true" />
 
-                        Reset
+                        {{ ui.reset }}
                     </button>
                 </div>
-
-                <!-- Navigation Loading -->
 
                 <div
                     v-if="isNavigating"
@@ -616,20 +846,64 @@ watch(
                         aria-hidden="true"
                     />
 
-                    Memuat berita...
+                    {{ ui.loading }}
                 </div>
             </section>
 
-            <!-- =================================================
-                 Loading Skeleton (hanya saat navigasi)
-                 ================================================= -->
+            <!-- Language -->
+            <section
+                class="mb-8 flex flex-wrap items-center gap-2 rounded-3xl border border-slate-200/80 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                data-reveal
+                style="--d: 180ms"
+            >
+                <h2 class="sr-only">
+                    {{ ui.language }}
+                </h2>
 
+                <span
+                    class="px-2 text-xs font-semibold text-slate-500 dark:text-slate-400"
+                >
+                    {{ ui.language }}:
+                </span>
+
+                <button
+                    v-for="language in languageOptions"
+                    :key="language.code"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition"
+                    :class="
+                        currentLanguage === language.code
+                            ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-800 dark:hover:text-blue-400'
+                    "
+                    :aria-pressed="currentLanguage === language.code"
+                    :title="language.label"
+                    @click="currentLanguage = language.code"
+                >
+                    <span aria-hidden="true">
+                        {{ language.flag }}
+                    </span>
+
+                    {{ language.short }}
+                </button>
+
+                <span class="ml-auto hidden text-xs text-slate-400 sm:inline">
+                    {{ props.beritas.total }}
+                    {{ ui.newsCount }}
+                </span>
+            </section>
+
+            <!-- Loading -->
             <section
                 v-if="isNavigating"
-                aria-label="Memuat berita"
+                :aria-label="ui.loadingAria"
                 aria-busy="true"
                 class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
             >
+                <h2 class="sr-only">
+                    {{ ui.loadingAria }}
+                </h2>
+
                 <article
                     v-for="index in 6"
                     :key="index"
@@ -659,10 +933,7 @@ watch(
                 </article>
             </section>
 
-            <!-- =================================================
-                 Database Empty
-                 ================================================= -->
-
+            <!-- Database Empty -->
             <section
                 v-else-if="databaseEmpty"
                 class="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12 dark:border-slate-800 dark:bg-slate-900"
@@ -677,21 +948,17 @@ watch(
                 <h2
                     class="mt-5 text-lg font-bold text-slate-900 dark:text-white"
                 >
-                    Berita Belum Tersedia
+                    {{ ui.emptyTitle }}
                 </h2>
 
                 <p
                     class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                 >
-                    Belum ada berita yang dapat ditampilkan saat ini. Silakan
-                    kembali lagi untuk mendapatkan informasi terbaru dari KITB.
+                    {{ ui.emptyDescription }}
                 </p>
             </section>
 
-            <!-- =================================================
-                 Filter Empty
-                 ================================================= -->
-
+            <!-- Filter Empty -->
             <section
                 v-else-if="filteredEmpty"
                 class="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12 dark:border-slate-800 dark:bg-slate-900"
@@ -706,14 +973,13 @@ watch(
                 <h2
                     class="mt-5 text-lg font-bold text-slate-900 dark:text-white"
                 >
-                    Berita Tidak Ditemukan
+                    {{ ui.notFoundTitle }}
                 </h2>
 
                 <p
                     class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                 >
-                    Tidak ada berita yang sesuai dengan pencarian atau kategori
-                    yang dipilih.
+                    {{ ui.notFoundDescription }}
                 </p>
 
                 <button
@@ -721,15 +987,16 @@ watch(
                     class="mt-6 inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
                     @click="clearFilters"
                 >
-                    Tampilkan Semua Berita
+                    {{ ui.showAll }}
                 </button>
             </section>
 
-            <!-- =================================================
-                 News Grid
-                 ================================================= -->
+            <!-- News Grid -->
+            <section v-else :aria-label="ui.newsListAria">
+                <h2 class="sr-only">
+                    {{ ui.newsListAria }}
+                </h2>
 
-            <section v-else aria-label="Daftar berita">
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <article
                         v-for="(berita, index) in props.beritas.data"
@@ -741,17 +1008,20 @@ watch(
                         }"
                     >
                         <!-- Image -->
-
                         <button
                             type="button"
                             class="relative block aspect-[16/10] w-full overflow-hidden bg-slate-100 text-left focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/40 dark:bg-slate-800"
-                            :aria-label="`Lihat detail berita ${berita.judul}`"
+                            :aria-label="
+                                ui.detailAria(
+                                    localizedBeritaValue(berita, 'judul'),
+                                )
+                            "
                             @click="openModal(berita)"
                         >
                             <template v-if="imageUrl(berita)">
                                 <img
                                     :src="imageUrl(berita) ?? undefined"
-                                    :alt="berita.judul"
+                                    :alt="localizedBeritaValue(berita, 'judul')"
                                     class="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-105"
                                     loading="lazy"
                                     @error="handleImageError"
@@ -782,23 +1052,17 @@ watch(
                                 </div>
                             </div>
 
-                            <!-- Image Overlay -->
-
                             <div
                                 class="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent opacity-70 transition-opacity duration-300 group-hover:opacity-100"
                                 aria-hidden="true"
                             />
 
-                            <!-- Featured -->
-
                             <span
                                 v-if="berita.is_featured"
                                 class="absolute left-3 top-3 inline-flex items-center rounded-full border border-white/20 bg-blue-600/90 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm backdrop-blur-md sm:left-4 sm:top-4 sm:text-[11px]"
                             >
-                                Pilihan
+                                {{ ui.featured }}
                             </span>
-
-                            <!-- Category -->
 
                             <span
                                 v-if="berita.kategori"
@@ -809,10 +1073,8 @@ watch(
                         </button>
 
                         <!-- Content -->
-
                         <div class="flex flex-1 flex-col p-5">
                             <!-- Meta -->
-
                             <div
                                 class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] font-medium text-slate-400 sm:text-xs dark:text-slate-500"
                             >
@@ -842,30 +1104,37 @@ watch(
                             </div>
 
                             <!-- Title -->
-
                             <button
                                 type="button"
                                 class="mt-3 text-left focus:outline-none"
+                                :aria-label="
+                                    ui.readAria(
+                                        localizedBeritaValue(berita, 'judul'),
+                                    )
+                                "
                                 @click="openModal(berita)"
                             >
-                                <h2
-                                    class="line-clamp-2 text-base font-bold leading-6 text-slate-900 transition-colors group-hover:text-blue-600 focus-visible:text-blue-600 dark:text-white dark:group-hover:text-blue-400 dark:focus-visible:text-blue-400"
+                                <h3
+                                    class="line-clamp-2 text-base font-bold leading-6 text-slate-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400"
                                 >
-                                    {{ berita.judul }}
-                                </h2>
+                                    {{ localizedBeritaValue(berita, "judul") }}
+                                </h3>
                             </button>
 
                             <!-- Excerpt -->
-
                             <p
-                                v-if="berita.excerpt"
+                                v-if="localizedBeritaValue(berita, 'excerpt')"
                                 class="mt-2 line-clamp-3 text-sm leading-6 text-slate-500 dark:text-slate-400"
                             >
-                                {{ truncate(berita.excerpt, 150) }}
+                                {{
+                                    truncate(
+                                        localizedBeritaValue(berita, "excerpt"),
+                                        150,
+                                    )
+                                }}
                             </p>
 
                             <!-- Author -->
-
                             <div
                                 v-if="berita.penulis"
                                 class="mt-4 flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500"
@@ -881,14 +1150,13 @@ watch(
                             </div>
 
                             <!-- Action -->
-
                             <div class="mt-auto pt-5">
                                 <button
                                     type="button"
                                     class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 transition-colors hover:text-blue-700 focus:outline-none focus-visible:rounded-md focus-visible:ring-4 focus-visible:ring-blue-500/20 dark:text-blue-400 dark:hover:text-blue-300"
                                     @click="openModal(berita)"
                                 >
-                                    Baca selengkapnya
+                                    {{ ui.readMore }}
 
                                     <ArrowRight
                                         class="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5"
@@ -900,32 +1168,27 @@ watch(
                     </article>
                 </div>
 
-                <!-- =================================================
-                     Pagination
-                     ================================================= -->
-
+                <!-- Pagination -->
                 <nav
                     v-if="props.beritas.last_page > 1"
                     class="mt-10 flex flex-wrap items-center justify-center gap-2"
-                    aria-label="Pagination berita"
+                    :aria-label="ui.paginationAria"
                     data-reveal
                 >
-                    <!-- Previous -->
-
                     <Link
                         v-if="props.beritas.prev_page_url"
                         :href="props.beritas.prev_page_url"
                         preserve-scroll
                         preserve-state
                         class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-800 dark:hover:text-blue-400"
-                        aria-label="Halaman sebelumnya"
+                        :aria-label="ui.previousAria"
                     >
                         <ChevronLeft class="h-4 w-4" aria-hidden="true" />
 
-                        <span class="hidden sm:inline"> Sebelumnya </span>
+                        <span class="hidden sm:inline">
+                            {{ ui.previous }}
+                        </span>
                     </Link>
-
-                    <!-- Pages -->
 
                     <template
                         v-for="(link, index) in props.beritas.links.slice(
@@ -956,17 +1219,17 @@ watch(
                         />
                     </template>
 
-                    <!-- Next -->
-
                     <Link
                         v-if="props.beritas.next_page_url"
                         :href="props.beritas.next_page_url"
                         preserve-scroll
                         preserve-state
                         class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:text-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-800 dark:hover:text-blue-400"
-                        aria-label="Halaman berikutnya"
+                        :aria-label="ui.nextAria"
                     >
-                        <span class="hidden sm:inline"> Berikutnya </span>
+                        <span class="hidden sm:inline">
+                            {{ ui.next }}
+                        </span>
 
                         <ChevronRight class="h-4 w-4" aria-hidden="true" />
                     </Link>
@@ -974,10 +1237,7 @@ watch(
             </section>
         </div>
 
-        <!-- =====================================================
-             Berita Detail Modal
-             ===================================================== -->
-
+        <!-- Detail Modal -->
         <Teleport v-if="isMounted" to="body">
             <Transition name="modal">
                 <div
@@ -986,16 +1246,12 @@ watch(
                     role="dialog"
                     aria-modal="true"
                     :aria-labelledby="`berita-title-${selectedBerita.id}`"
-                    @click.self="closeModal"
+                    @click.self="closeModal()"
                 >
-                    <!-- Backdrop -->
-
                     <div
                         class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
                         aria-hidden="true"
                     />
-
-                    <!-- Modal -->
 
                     <article
                         ref="modalPanel"
@@ -1003,21 +1259,17 @@ watch(
                         class="relative flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl outline-none dark:bg-slate-900"
                     >
                         <!-- Close -->
-
                         <button
                             type="button"
                             class="absolute right-3 top-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-slate-950/70 text-white backdrop-blur-md transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-500/40"
-                            aria-label="Tutup detail berita"
-                            @click="closeModal"
+                            :aria-label="ui.modalCloseAria"
+                            @click="closeModal()"
                         >
                             <X class="h-5 w-5" aria-hidden="true" />
                         </button>
 
-                        <!-- Content -->
-
                         <div class="flex min-h-0 flex-col lg:flex-row">
                             <!-- Image -->
-
                             <div
                                 class="relative flex min-h-[240px] flex-1 items-center justify-center overflow-hidden bg-slate-950 lg:min-h-[580px]"
                             >
@@ -1027,7 +1279,12 @@ watch(
                                             imageUrl(selectedBerita) ??
                                             undefined
                                         "
-                                        :alt="selectedBerita.judul"
+                                        :alt="
+                                            localizedBeritaValue(
+                                                selectedBerita,
+                                                'judul',
+                                            )
+                                        "
                                         class="max-h-[52vh] w-full object-contain sm:max-h-[58vh] lg:max-h-[78vh]"
                                     />
                                 </template>
@@ -1046,24 +1303,19 @@ watch(
                                     </div>
                                 </div>
 
-                                <!-- Featured Badge -->
-
                                 <span
                                     v-if="selectedBerita.is_featured"
                                     class="absolute left-4 top-4 inline-flex items-center rounded-full border border-white/20 bg-blue-600/90 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg backdrop-blur-md"
                                 >
-                                    Berita Pilihan
+                                    {{ ui.featured }}
                                 </span>
                             </div>
 
                             <!-- Information -->
-
                             <div
                                 class="w-full overflow-y-auto bg-white dark:bg-slate-900 lg:max-w-md"
                             >
                                 <div class="p-5 sm:p-7">
-                                    <!-- Category -->
-
                                     <div v-if="selectedBerita.kategori">
                                         <span
                                             class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
@@ -1072,16 +1324,17 @@ watch(
                                         </span>
                                     </div>
 
-                                    <!-- Title -->
-
                                     <h2
                                         :id="`berita-title-${selectedBerita.id}`"
                                         class="mt-4 text-xl font-bold leading-7 text-slate-900 dark:text-white"
                                     >
-                                        {{ selectedBerita.judul }}
+                                        {{
+                                            localizedBeritaValue(
+                                                selectedBerita,
+                                                "judul",
+                                            )
+                                        }}
                                     </h2>
-
-                                    <!-- Meta -->
 
                                     <div
                                         class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500 dark:text-slate-400"
@@ -1124,23 +1377,27 @@ watch(
                                             />
 
                                             {{ selectedBerita.views }}
-                                            dilihat
+                                            {{ ui.views }}
                                         </span>
                                     </div>
-
-                                    <!-- Divider -->
 
                                     <div
                                         class="my-5 h-px bg-slate-200 dark:bg-slate-800"
                                     />
 
                                     <!-- Excerpt -->
-
-                                    <div v-if="selectedBerita.excerpt">
+                                    <div
+                                        v-if="
+                                            localizedBeritaValue(
+                                                selectedBerita,
+                                                'excerpt',
+                                            )
+                                        "
+                                    >
                                         <p
                                             class="text-xs font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500"
                                         >
-                                            Ringkasan
+                                            {{ ui.summary }}
                                         </p>
 
                                         <p
@@ -1148,16 +1405,23 @@ watch(
                                         >
                                             {{
                                                 stripHtml(
-                                                    selectedBerita.excerpt,
+                                                    localizedBeritaValue(
+                                                        selectedBerita,
+                                                        "excerpt",
+                                                    ),
                                                 )
                                             }}
                                         </p>
                                     </div>
 
                                     <!-- Content Preview -->
-
                                     <div
-                                        v-if="selectedBerita.konten"
+                                        v-if="
+                                            localizedBeritaValue(
+                                                selectedBerita,
+                                                'konten',
+                                            )
+                                        "
                                         class="mt-6 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800"
                                     >
                                         <div
@@ -1168,7 +1432,7 @@ watch(
                                                 aria-hidden="true"
                                             />
 
-                                            Isi Berita
+                                            {{ ui.content }}
                                         </div>
 
                                         <p
@@ -1176,7 +1440,10 @@ watch(
                                         >
                                             {{
                                                 truncate(
-                                                    selectedBerita.konten,
+                                                    localizedBeritaValue(
+                                                        selectedBerita,
+                                                        "konten",
+                                                    ),
                                                     500,
                                                 )
                                             }}
@@ -1184,14 +1451,13 @@ watch(
                                     </div>
 
                                     <!-- Actions -->
-
                                     <div class="mt-7 flex flex-col gap-3">
                                         <Link
                                             :href="`/berita/${selectedBerita.slug}`"
                                             class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
-                                            @click="closeModal"
+                                            @click="closeModal(false)"
                                         >
-                                            Baca Berita Lengkap
+                                            {{ ui.fullArticle }}
 
                                             <ArrowRight
                                                 class="h-4 w-4"
@@ -1202,9 +1468,9 @@ watch(
                                         <button
                                             type="button"
                                             class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                                            @click="closeModal"
+                                            @click="closeModal()"
                                         >
-                                            Tutup
+                                            {{ ui.close }}
 
                                             <X
                                                 class="h-4 w-4"
@@ -1223,9 +1489,7 @@ watch(
 </template>
 
 <style scoped>
-/* =========================================================
- * Skeleton
- * ========================================================= */
+/* Skeleton */
 
 .skeleton-shimmer {
     position: relative;
@@ -1246,7 +1510,7 @@ watch(
     animation: shimmer 1.5s infinite;
 }
 
-.dark .skeleton-shimmer::after {
+:global(.dark) .skeleton-shimmer::after {
     background: linear-gradient(
         90deg,
         transparent,
@@ -1261,11 +1525,7 @@ watch(
     }
 }
 
-/* =========================================================
- * Reveal
- * Hanya aktif setelah komponen mounted (.reveal-ready),
- * sehingga konten tidak pernah terkunci transparan.
- * ========================================================= */
+/* Reveal */
 
 .reveal-ready [data-reveal]:not(.is-visible) {
     opacity: 0;
@@ -1284,9 +1544,7 @@ watch(
     transform: translateY(0);
 }
 
-/* =========================================================
- * Modal
- * ========================================================= */
+/* Modal */
 
 .modal-enter-active,
 .modal-leave-active {
@@ -1311,9 +1569,7 @@ watch(
     transform: translateY(10px) scale(0.98);
 }
 
-/* =========================================================
- * Reduced Motion
- * ========================================================= */
+/* Reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
     [data-reveal],

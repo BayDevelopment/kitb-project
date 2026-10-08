@@ -1153,16 +1153,28 @@ class DatabaseSeeder extends Seeder
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | 15. BERITA
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 15. BERITA
+|--------------------------------------------------------------------------
+*/
             $berita = [
                 [
-                    'judul' => 'KITB Dorong Pengembangan Kawasan Industri Berkelanjutan',
+                    // Bahasa Indonesia
+                    'judul_id' => 'KITB Dorong Pengembangan Kawasan Industri Berkelanjutan',
+                    'excerpt_id' => 'Pengembangan kawasan industri diarahkan untuk menciptakan ekosistem industri yang kompetitif dan berkelanjutan.',
+                    'konten_id' => '<p>PT Kawasan Industri Tanjung Buton terus mendorong pengembangan kawasan industri yang terintegrasi, kompetitif, dan berkelanjutan.</p><p>Pengembangan kawasan dilakukan dengan memperhatikan kebutuhan industri, infrastruktur, lingkungan, dan masyarakat sekitar.</p>',
+
+                    // English
+                    'judul_en' => 'KITB Promotes Sustainable Industrial Estate Development',
+                    'excerpt_en' => 'The development of the industrial estate is aimed at creating a competitive and sustainable industrial ecosystem.',
+                    'konten_en' => '<p>PT Kawasan Industri Tanjung Buton continues to promote the development of an integrated, competitive, and sustainable industrial estate.</p><p>The development takes into account the needs of industries, infrastructure, the environment, and surrounding communities.</p>',
+
+                    // Mandarin
+                    'judul_zh' => 'KITB 推动可持续工业园区发展',
+                    'excerpt_zh' => '工业园区的发展旨在打造具有竞争力和可持续发展的产业生态系统。',
+                    'konten_zh' => '<p>丹绒布顿工业园区（PT Kawasan Industri Tanjung Buton）持续推动一体化、具有竞争力和可持续发展的工业园区建设。</p><p>园区发展充分考虑产业需求、基础设施、环境以及周边社区的需求。</p>',
+
                     'slug' => 'kitb-dorong-pengembangan-kawasan-industri-berkelanjutan',
-                    'excerpt' => 'Pengembangan kawasan industri diarahkan untuk menciptakan ekosistem industri yang kompetitif dan berkelanjutan.',
-                    'konten' => '<p>PT Kawasan Industri Tanjung Buton terus mendorong pengembangan kawasan industri yang terintegrasi, kompetitif, dan berkelanjutan.</p><p>Pengembangan kawasan dilakukan dengan memperhatikan kebutuhan industri, infrastruktur, lingkungan, dan masyarakat sekitar.</p>',
                     'gambar' => null,
                     'kategori' => 'Kawasan',
                     'penulis' => 'Admin KITB',
@@ -1171,11 +1183,24 @@ class DatabaseSeeder extends Seeder
                     'is_featured' => true,
                     'views' => 125,
                 ],
+
                 [
-                    'judul' => 'Peluang Investasi Baru di Kawasan Industri Tanjung Buton',
+                    // Bahasa Indonesia
+                    'judul_id' => 'Peluang Investasi Baru di Kawasan Industri Tanjung Buton',
+                    'excerpt_id' => 'KITB membuka peluang investasi bagi berbagai sektor industri strategis.',
+                    'konten_id' => '<p>Kawasan Industri Tanjung Buton menyediakan berbagai peluang investasi untuk sektor manufaktur, logistik, hilirisasi, dan industri pendukung.</p>',
+
+                    // English
+                    'judul_en' => 'New Investment Opportunities at Tanjung Buton Industrial Estate',
+                    'excerpt_en' => 'KITB offers investment opportunities across various strategic industrial sectors.',
+                    'konten_en' => '<p>Tanjung Buton Industrial Estate provides various investment opportunities in manufacturing, logistics, downstream industries, and supporting industries.</p>',
+
+                    // Mandarin
+                    'judul_zh' => '丹绒布顿工业园区的新投资机会',
+                    'excerpt_zh' => 'KITB 为多个战略产业领域提供投资机会。',
+                    'konten_zh' => '<p>丹绒布顿工业园区为制造业、物流、下游产业以及配套产业提供多种投资机会。</p>',
+
                     'slug' => 'peluang-investasi-baru-di-kawasan-industri-tanjung-buton',
-                    'excerpt' => 'KITB membuka peluang investasi bagi berbagai sektor industri strategis.',
-                    'konten' => '<p>Kawasan Industri Tanjung Buton menyediakan berbagai peluang investasi untuk sektor manufaktur, logistik, hilirisasi, dan industri pendukung.</p>',
                     'gambar' => null,
                     'kategori' => 'Investasi',
                     'penulis' => 'Admin KITB',
@@ -1184,11 +1209,24 @@ class DatabaseSeeder extends Seeder
                     'is_featured' => false,
                     'views' => 86,
                 ],
+
                 [
-                    'judul' => 'Penguatan Infrastruktur Pendukung Kawasan',
+                    // Bahasa Indonesia
+                    'judul_id' => 'Penguatan Infrastruktur Pendukung Kawasan',
+                    'excerpt_id' => 'Pengembangan infrastruktur menjadi bagian penting dalam meningkatkan daya saing kawasan.',
+                    'konten_id' => '<p>Penguatan infrastruktur kawasan menjadi salah satu fokus utama dalam mendukung kebutuhan investor dan tenant.</p>',
+
+                    // English
+                    'judul_en' => 'Strengthening Supporting Infrastructure for the Industrial Estate',
+                    'excerpt_en' => 'Infrastructure development is an important part of improving the competitiveness of the industrial estate.',
+                    'konten_en' => '<p>Strengthening the infrastructure of the industrial estate is one of the main focuses in supporting the needs of investors and tenants.</p>',
+
+                    // Mandarin
+                    'judul_zh' => '加强工业园区配套基础设施',
+                    'excerpt_zh' => '基础设施建设是提高园区竞争力的重要组成部分。',
+                    'konten_zh' => '<p>加强工业园区基础设施建设是满足投资者和租户需求的重要重点之一。</p>',
+
                     'slug' => 'penguatan-infrastruktur-pendukung-kawasan',
-                    'excerpt' => 'Pengembangan infrastruktur menjadi bagian penting dalam meningkatkan daya saing kawasan.',
-                    'konten' => '<p>Penguatan infrastruktur kawasan menjadi salah satu fokus utama dalam mendukung kebutuhan investor dan tenant.</p>',
                     'gambar' => null,
                     'kategori' => 'Infrastruktur',
                     'penulis' => 'Admin KITB',
@@ -1203,9 +1241,22 @@ class DatabaseSeeder extends Seeder
                 DB::table('beritas')->updateOrInsert(
                     ['slug' => $item['slug']],
                     [
-                        'judul' => $item['judul'],
-                        'excerpt' => $item['excerpt'],
-                        'konten' => $item['konten'],
+                        // Bahasa Indonesia
+                        'judul_id' => $item['judul_id'],
+                        'excerpt_id' => $item['excerpt_id'],
+                        'konten_id' => $item['konten_id'],
+
+                        // English
+                        'judul_en' => $item['judul_en'],
+                        'excerpt_en' => $item['excerpt_en'],
+                        'konten_en' => $item['konten_en'],
+
+                        // Mandarin
+                        'judul_zh' => $item['judul_zh'],
+                        'excerpt_zh' => $item['excerpt_zh'],
+                        'konten_zh' => $item['konten_zh'],
+
+                        // Data umum
                         'gambar' => $item['gambar'],
                         'kategori' => $item['kategori'],
                         'penulis' => $item['penulis'],
@@ -1218,7 +1269,6 @@ class DatabaseSeeder extends Seeder
                     ]
                 );
             }
-
             /*
             |--------------------------------------------------------------------------
             | 16. LOWONGAN

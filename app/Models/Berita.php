@@ -14,9 +14,38 @@ class Berita extends Model
     protected $table = 'beritas';
 
     protected $fillable = [
-        'judul',
-        'excerpt',
-        'konten',
+        /*
+        |--------------------------------------------------------------------------
+        | Bahasa Indonesia
+        |--------------------------------------------------------------------------
+        */
+        'judul_id',
+        'excerpt_id',
+        'konten_id',
+
+        /*
+        |--------------------------------------------------------------------------
+        | English
+        |--------------------------------------------------------------------------
+        */
+        'judul_en',
+        'excerpt_en',
+        'konten_en',
+
+        /*
+        |--------------------------------------------------------------------------
+        | 中文 / Chinese
+        |--------------------------------------------------------------------------
+        */
+        'judul_zh',
+        'excerpt_zh',
+        'konten_zh',
+
+        /*
+        |--------------------------------------------------------------------------
+        | Informasi Berita
+        |--------------------------------------------------------------------------
+        */
         'gambar',
         'kategori',
         'penulis',
@@ -45,20 +74,18 @@ class Berita extends Model
     {
         static::creating(function (Berita $berita) {
             $berita->slug = static::generateUniqueSlug(
-                $berita->judul
+                $berita->judul_id
             );
         });
 
         static::updating(function (Berita $berita) {
             /*
-             * Slug hanya dibuat ulang jika judul berubah.
-             *
-             * Tujuannya agar URL berita lama tetap stabil
-             * ketika hanya melakukan perubahan konten.
+             * Slug hanya dibuat ulang jika judul Bahasa Indonesia berubah.
+             * Judul Indonesia digunakan sebagai judul utama untuk URL.
              */
-            if ($berita->isDirty('judul')) {
+            if ($berita->isDirty('judul_id')) {
                 $berita->slug = static::generateUniqueSlug(
-                    $berita->judul,
+                    $berita->judul_id,
                     $berita->id
                 );
             }

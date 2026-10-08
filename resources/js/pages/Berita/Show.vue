@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import {
     ArrowLeft,
@@ -12,26 +12,46 @@ import {
     Newspaper,
     UserRound,
 } from "lucide-vue-next";
+
 import PublicLayout from "@/layouts/PublicLayout.vue";
+import {
+    currentLanguage,
+    localizedValue,
+    type LanguageCode,
+} from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
 });
 
-/* =========================================================
- * Types
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface Berita {
     id: number;
-    judul: string;
+
+    // Bahasa Indonesia
+    judul_id: string;
+    excerpt_id: string | null;
+    konten_id: string;
+
+    // English
+    judul_en: string | null;
+    excerpt_en: string | null;
+    konten_en: string | null;
+
+    // Chinese
+    judul_zh: string | null;
+    excerpt_zh: string | null;
+    konten_zh: string | null;
+
+    // Common data
     slug: string;
-    excerpt: string | null;
-    konten: string | null;
     gambar: string | null;
     kategori: string | null;
     penulis: string | null;
-    status: string;
+    status: "draft" | "published" | "archived";
     published_at: string | null;
     is_featured: boolean;
     views: number;
@@ -41,7 +61,6 @@ interface Berita {
 
 interface Props {
     berita: Berita;
-    // Opsional: kirim dari controller bila ingin menampilkan berita terkait
     terkait?: Berita[];
 }
 
@@ -49,9 +68,120 @@ const props = withDefaults(defineProps<Props>(), {
     terkait: () => [],
 });
 
-/* =========================================================
- * Helpers
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Language
+// ---------------------------------------------------------------------------
+
+const languageOptions: Array<{
+    code: LanguageCode;
+    label: string;
+}> = [
+    { code: "id", label: "Indonesia" },
+    { code: "en", label: "English" },
+    { code: "zh", label: "中文" },
+];
+
+// ---------------------------------------------------------------------------
+// UI translation
+// ---------------------------------------------------------------------------
+
+const ui = computed(() => {
+    const translations = {
+        id: {
+            home: "Beranda",
+            news: "Berita",
+            language: "Bahasa",
+            chooseLanguage: "Pilih bahasa berita",
+            featured: "Berita Pilihan",
+            views: "dilihat",
+            summary: "Ringkasan",
+            content: "Isi Berita",
+            contentUnavailable: "Isi berita belum tersedia.",
+            share: "Bagikan berita ini",
+            copy: "Salin tautan",
+            copied: "Tautan disalin",
+            whatsapp: "WhatsApp",
+            back: "Kembali ke daftar berita",
+            related: "Berita lainnya",
+        },
+
+        en: {
+            home: "Home",
+            news: "News",
+            language: "Language",
+            chooseLanguage: "Choose news language",
+            featured: "Featured News",
+            views: "views",
+            summary: "Summary",
+            content: "Article Content",
+            contentUnavailable: "News content is not available.",
+            share: "Share this news",
+            copy: "Copy link",
+            copied: "Link copied",
+            whatsapp: "WhatsApp",
+            back: "Back to news list",
+            related: "Other News",
+        },
+
+        zh: {
+            home: "首页",
+            news: "新闻",
+            language: "语言",
+            chooseLanguage: "选择新闻语言",
+            featured: "精选新闻",
+            views: "次浏览",
+            summary: "摘要",
+            content: "新闻内容",
+            contentUnavailable: "新闻内容暂不可用。",
+            share: "分享这则新闻",
+            copy: "复制链接",
+            copied: "链接已复制",
+            whatsapp: "WhatsApp",
+            back: "返回新闻列表",
+            related: "其他新闻",
+        },
+    } as const;
+
+    return translations[currentLanguage.value];
+});
+
+// ---------------------------------------------------------------------------
+// Localized news value
+//
+// localizedValue() reads:   field / field_en / field_zh
+// Database columns:         judul_id / excerpt_id / konten_id (+ _en, _zh)
+// Indonesian is used as the base (fallback) field.
+// ---------------------------------------------------------------------------
+
+const localizedBeritaValue = (
+    berita: Berita,
+    field: "judul" | "excerpt" | "konten",
+): string => {
+    const source: Record<string, unknown> = {
+        ...berita,
+        judul: berita.judul_id,
+        excerpt: berita.excerpt_id,
+        konten: berita.konten_id,
+    };
+
+    return localizedValue(source, field);
+};
+
+const currentTitle = computed(() =>
+    localizedBeritaValue(props.berita, "judul"),
+);
+
+const currentExcerpt = computed(() =>
+    localizedBeritaValue(props.berita, "excerpt"),
+);
+
+const currentContent = computed(() =>
+    localizedBeritaValue(props.berita, "konten"),
+);
+
+// ---------------------------------------------------------------------------
+// Image
+// ---------------------------------------------------------------------------
 
 const imageFailed = ref(false);
 
@@ -75,6 +205,10 @@ const heroImage = computed(() => {
     return imageFailed.value ? null : resolveImage(props.berita.gambar);
 });
 
+// ---------------------------------------------------------------------------
+// Date
+// ---------------------------------------------------------------------------
+
 const formatDate = (date: string | null): string => {
     if (!date) {
         return "";
@@ -86,12 +220,23 @@ const formatDate = (date: string | null): string => {
         return "";
     }
 
-    return new Intl.DateTimeFormat("id-ID", {
+    const locale =
+        currentLanguage.value === "en"
+            ? "en-US"
+            : currentLanguage.value === "zh"
+              ? "zh-CN"
+              : "id-ID";
+
+    return new Intl.DateTimeFormat(locale, {
         day: "2-digit",
         month: "long",
         year: "numeric",
     }).format(parsed);
 };
+
+// ---------------------------------------------------------------------------
+// HTML helpers
+// ---------------------------------------------------------------------------
 
 const stripHtml = (text: string | null): string => {
     if (!text) {
@@ -103,33 +248,36 @@ const stripHtml = (text: string | null): string => {
         .replace(/&nbsp;/gi, " ")
         .replace(/&amp;/gi, "&")
         .replace(/&quot;/gi, '"')
-        .replace(/&#039;/gi, "'")
+        .replace(/&#039;|&#39;/gi, "'")
         .replace(/\s+/g, " ")
         .trim();
 };
 
 const metaDescription = computed(() => {
-    const source = props.berita.excerpt || props.berita.konten;
+    const source = currentExcerpt.value || currentContent.value;
+
     const clean = stripHtml(source);
 
     return clean.length > 160 ? `${clean.slice(0, 160).trim()}…` : clean;
 });
 
-/**
- * Konten bisa berupa HTML (dari rich text editor) atau teks biasa.
- * Teks biasa diubah menjadi paragraf agar enter tetap terbaca.
- */
+// ---------------------------------------------------------------------------
+// Article content
+// ---------------------------------------------------------------------------
+
 const kontenHtml = computed(() => {
-    const konten = props.berita.konten?.trim();
+    const konten = currentContent.value?.trim();
 
     if (!konten) {
         return "";
     }
 
+    // Already HTML (from a rich text editor): render as is.
     if (/<\/?[a-z][\s\S]*>/i.test(konten)) {
         return konten;
     }
 
+    // Plain text: convert to paragraphs.
     return konten
         .split(/\n{2,}/)
         .map((paragraph) => {
@@ -144,11 +292,12 @@ const kontenHtml = computed(() => {
         .join("");
 });
 
-/* =========================================================
- * Share
- * ========================================================= */
+// ---------------------------------------------------------------------------
+// Share
+// ---------------------------------------------------------------------------
 
 const copied = ref(false);
+
 let copiedTimer: ReturnType<typeof setTimeout> | null = null;
 
 const currentUrl = (): string => {
@@ -156,7 +305,7 @@ const currentUrl = (): string => {
 };
 
 const whatsappUrl = computed(() => {
-    const text = `${props.berita.judul} - ${currentUrl()}`;
+    const text = `${currentTitle.value} - ${currentUrl()}`;
 
     return `https://wa.me/?text=${encodeURIComponent(text)}`;
 });
@@ -164,6 +313,7 @@ const whatsappUrl = computed(() => {
 const copyLink = async () => {
     try {
         await navigator.clipboard.writeText(currentUrl());
+
         copied.value = true;
 
         if (copiedTimer) {
@@ -174,9 +324,19 @@ const copyLink = async () => {
             copied.value = false;
         }, 2000);
     } catch {
-        // Clipboard tidak tersedia (mis. koneksi non-HTTPS); abaikan.
+        // Clipboard is not available.
     }
 };
+
+// Reset per-article state when navigating to another article
+// (Inertia may reuse this component instance).
+watch(
+    () => props.berita.id,
+    () => {
+        imageFailed.value = false;
+        copied.value = false;
+    },
+);
 
 onBeforeUnmount(() => {
     if (copiedTimer) {
@@ -187,12 +347,16 @@ onBeforeUnmount(() => {
 
 <template>
     <Head>
-        <title>{{ berita.judul }} | Berita KITB</title>
+        <title>{{ currentTitle }} | {{ ui.news }} KITB</title>
 
         <meta name="description" :content="metaDescription" />
-        <meta property="og:title" :content="berita.judul" />
+
+        <meta property="og:title" :content="currentTitle" />
+
         <meta property="og:description" :content="metaDescription" />
+
         <meta property="og:type" content="article" />
+
         <meta
             v-if="resolveImage(berita.gambar)"
             property="og:image"
@@ -203,7 +367,6 @@ onBeforeUnmount(() => {
     <main class="relative min-h-screen bg-slate-50/50 dark:bg-slate-950">
         <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
             <!-- Breadcrumb -->
-
             <nav
                 aria-label="Breadcrumb"
                 class="mb-7 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"
@@ -213,7 +376,8 @@ onBeforeUnmount(() => {
                     class="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 transition hover:bg-white hover:text-blue-600 dark:hover:bg-slate-900 dark:hover:text-blue-400"
                 >
                     <Home class="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Beranda</span>
+
+                    <span>{{ ui.home }}</span>
                 </Link>
 
                 <ChevronRight
@@ -226,7 +390,8 @@ onBeforeUnmount(() => {
                     class="inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 transition hover:bg-white hover:text-blue-600 dark:hover:bg-slate-900 dark:hover:text-blue-400"
                 >
                     <Newspaper class="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Berita</span>
+
+                    <span>{{ ui.news }}</span>
                 </Link>
 
                 <ChevronRight
@@ -238,13 +403,47 @@ onBeforeUnmount(() => {
                     class="line-clamp-1 max-w-[16rem] font-semibold text-blue-600 dark:text-blue-400"
                     aria-current="page"
                 >
-                    {{ berita.judul }}
+                    {{ currentTitle }}
                 </span>
             </nav>
 
-            <article>
-                <!-- Header -->
+            <!-- Language Selector -->
+            <div
+                class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-2 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/80"
+            >
+                <div class="flex items-center gap-2 px-2">
+                    <span
+                        class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+                    >
+                        {{ ui.language }}
+                    </span>
+                </div>
 
+                <div
+                    class="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800"
+                    role="group"
+                    :aria-label="ui.chooseLanguage"
+                >
+                    <button
+                        v-for="language in languageOptions"
+                        :key="language.code"
+                        type="button"
+                        :aria-pressed="currentLanguage === language.code"
+                        class="rounded-lg px-3 py-1.5 text-xs font-bold transition focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/20"
+                        :class="
+                            currentLanguage === language.code
+                                ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300'
+                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                        "
+                        @click="currentLanguage = language.code"
+                    >
+                        {{ language.label }}
+                    </button>
+                </div>
+            </div>
+
+            <article>
+                <!-- Article Header -->
                 <header class="mb-6">
                     <div class="flex flex-wrap items-center gap-2">
                         <span
@@ -258,14 +457,14 @@ onBeforeUnmount(() => {
                             v-if="berita.is_featured"
                             class="inline-flex items-center rounded-full bg-blue-600 px-3 py-1 text-[11px] font-bold text-white"
                         >
-                            Berita Pilihan
+                            {{ ui.featured }}
                         </span>
                     </div>
 
                     <h1
                         class="mt-4 text-balance text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl dark:text-white"
                     >
-                        {{ berita.judul }}
+                        {{ currentTitle }}
                     </h1>
 
                     <div
@@ -279,6 +478,7 @@ onBeforeUnmount(() => {
                                 class="h-4 w-4 text-blue-600 dark:text-blue-400"
                                 aria-hidden="true"
                             />
+
                             <time :datetime="berita.published_at">
                                 {{ formatDate(berita.published_at) }}
                             </time>
@@ -292,6 +492,7 @@ onBeforeUnmount(() => {
                                 class="h-4 w-4 text-blue-600 dark:text-blue-400"
                                 aria-hidden="true"
                             />
+
                             {{ berita.penulis }}
                         </span>
 
@@ -303,38 +504,45 @@ onBeforeUnmount(() => {
                                 class="h-4 w-4 text-blue-600 dark:text-blue-400"
                                 aria-hidden="true"
                             />
-                            {{ berita.views }} dilihat
+
+                            {{ berita.views }} {{ ui.views }}
                         </span>
                     </div>
                 </header>
 
-                <!-- Image -->
-
+                <!-- Hero Image -->
                 <figure
                     v-if="heroImage"
                     class="mb-8 overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-100 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 >
                     <img
                         :src="heroImage"
-                        :alt="berita.judul"
+                        :alt="currentTitle"
                         class="max-h-[34rem] w-full object-cover"
                         @error="imageFailed = true"
                     />
                 </figure>
 
-                <!-- Body -->
-
+                <!-- Article Body -->
                 <div
                     class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900"
                 >
-                    <p
-                        v-if="berita.excerpt"
-                        class="mb-6 border-l-4 border-blue-600 pl-4 text-base font-medium leading-7 text-slate-700 dark:border-blue-400 dark:text-slate-200"
-                    >
-                        {{ stripHtml(berita.excerpt) }}
-                    </p>
+                    <template v-if="currentExcerpt">
+                        <h2 class="sr-only">
+                            {{ ui.summary }}
+                        </h2>
 
-                    <!-- Konten dari admin (rich text). Pastikan disanitasi di sisi server. -->
+                        <p
+                            class="mb-6 border-l-4 border-blue-600 pl-4 text-base font-medium leading-7 text-slate-700 dark:border-blue-400 dark:text-slate-200"
+                        >
+                            {{ stripHtml(currentExcerpt) }}
+                        </p>
+                    </template>
+
+                    <h2 class="sr-only">
+                        {{ ui.content }}
+                    </h2>
+
                     <div
                         v-if="kontenHtml"
                         class="berita-content"
@@ -345,18 +553,17 @@ onBeforeUnmount(() => {
                         v-else
                         class="text-sm text-slate-500 dark:text-slate-400"
                     >
-                        Isi berita belum tersedia.
+                        {{ ui.contentUnavailable }}
                     </p>
 
                     <!-- Share -->
-
                     <div
                         class="mt-8 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-6 dark:border-slate-800"
                     >
                         <span
                             class="text-sm font-semibold text-slate-700 dark:text-slate-200"
                         >
-                            Bagikan berita ini
+                            {{ ui.share }}
                         </span>
 
                         <button
@@ -369,10 +576,11 @@ onBeforeUnmount(() => {
                                 class="h-4 w-4 text-emerald-600"
                                 aria-hidden="true"
                             />
+
                             <Link2 v-else class="h-4 w-4" aria-hidden="true" />
 
                             <span aria-live="polite">
-                                {{ copied ? "Tautan disalin" : "Salin tautan" }}
+                                {{ copied ? ui.copied : ui.copy }}
                             </span>
                         </button>
 
@@ -382,31 +590,34 @@ onBeforeUnmount(() => {
                             rel="noopener noreferrer"
                             class="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
                         >
-                            WhatsApp
+                            {{ ui.whatsapp }}
                         </a>
                     </div>
                 </div>
             </article>
 
             <!-- Back -->
-
             <div class="mt-8">
                 <Link
                     href="/berita"
                     class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:text-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-800 dark:hover:text-blue-400"
                 >
                     <ArrowLeft class="h-4 w-4" aria-hidden="true" />
-                    Kembali ke daftar berita
+
+                    {{ ui.back }}
                 </Link>
             </div>
 
-            <!-- Related (opsional, tampil bila controller mengirim `terkait`) -->
-
-            <section v-if="terkait.length" class="mt-12" aria-label="Berita lainnya">
+            <!-- Related News -->
+            <section
+                v-if="terkait.length"
+                class="mt-12"
+                :aria-label="ui.related"
+            >
                 <h2
                     class="mb-4 text-lg font-bold text-slate-900 dark:text-white"
                 >
-                    Berita lainnya
+                    {{ ui.related }}
                 </h2>
 
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -422,10 +633,11 @@ onBeforeUnmount(() => {
                             <img
                                 v-if="resolveImage(item.gambar)"
                                 :src="resolveImage(item.gambar) ?? undefined"
-                                :alt="item.judul"
+                                :alt="localizedBeritaValue(item, 'judul')"
                                 loading="lazy"
                                 class="h-full w-full object-cover"
                             />
+
                             <div
                                 v-else
                                 class="flex h-full items-center justify-center text-slate-400"
@@ -438,7 +650,7 @@ onBeforeUnmount(() => {
                             <h3
                                 class="line-clamp-2 text-sm font-bold leading-6 text-slate-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400"
                             >
-                                {{ item.judul }}
+                                {{ localizedBeritaValue(item, "judul") }}
                             </h3>
 
                             <p
@@ -456,11 +668,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* =========================================================
- * Konten berita (hasil rich text / v-html)
- * Memakai :deep karena elemen dibuat oleh v-html.
- * ========================================================= */
-
 .berita-content {
     font-size: 1rem;
     line-height: 1.85;
@@ -577,7 +784,7 @@ onBeforeUnmount(() => {
     border-radius: 1rem;
 }
 
-.berita-content :deep(> :last-child) {
+.berita-content > :deep(:last-child) {
     margin-bottom: 0;
 }
 </style>

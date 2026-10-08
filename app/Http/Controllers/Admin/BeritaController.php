@@ -26,7 +26,9 @@ class BeritaController extends Controller
 
                     $query->where(function ($query) use ($search) {
                         $query
-                            ->where('judul', 'like', "%{$search}%")
+                            ->where('judul_id', 'like', "%{$search}%")
+                            ->orWhere('judul_en', 'like', "%{$search}%")
+                            ->orWhere('judul_zh', 'like', "%{$search}%")
                             ->orWhere('kategori', 'like', "%{$search}%")
                             ->orWhere('penulis', 'like', "%{$search}%");
                     });
@@ -79,12 +81,74 @@ class BeritaController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'judul' => [
+            /*
+            |--------------------------------------------------------------------------
+            | Bahasa Indonesia
+            |--------------------------------------------------------------------------
+            */
+            'judul_id' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
+            'excerpt_id' => [
+                'nullable',
+                'string',
+            ],
+
+            'konten_id' => [
+                'required',
+                'string',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | English
+            |--------------------------------------------------------------------------
+            */
+            'judul_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'excerpt_en' => [
+                'nullable',
+                'string',
+            ],
+
+            'konten_en' => [
+                'nullable',
+                'string',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | 中文 / Chinese
+            |--------------------------------------------------------------------------
+            */
+            'judul_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'excerpt_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            'konten_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Slug
+            |--------------------------------------------------------------------------
+            */
             'slug' => [
                 'nullable',
                 'string',
@@ -92,16 +156,11 @@ class BeritaController extends Controller
                 'unique:beritas,slug',
             ],
 
-            'excerpt' => [
-                'nullable',
-                'string',
-            ],
-
-            'konten' => [
-                'required',
-                'string',
-            ],
-
+            /*
+            |--------------------------------------------------------------------------
+            | Informasi Berita
+            |--------------------------------------------------------------------------
+            */
             'gambar' => [
                 'nullable',
                 'image',
@@ -121,6 +180,11 @@ class BeritaController extends Controller
                 'max:255',
             ],
 
+            /*
+            |--------------------------------------------------------------------------
+            | Status
+            |--------------------------------------------------------------------------
+            */
             'status' => [
                 'required',
                 'in:draft,published,archived',
@@ -136,10 +200,23 @@ class BeritaController extends Controller
             ],
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Generate Slug
+        |--------------------------------------------------------------------------
+        |
+        | Jika slug tidak diisi, gunakan judul Bahasa Indonesia.
+        |
+        */
         $validated['slug'] = $this->generateUniqueSlug(
-            $validated['slug'] ?? $validated['judul']
+            $validated['slug'] ?? $validated['judul_id']
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | Published At
+        |--------------------------------------------------------------------------
+        */
         if (
             $validated['status'] === 'published' &&
             empty($validated['published_at'])
@@ -147,16 +224,31 @@ class BeritaController extends Controller
             $validated['published_at'] = now();
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Reset publication data jika bukan published
+        |--------------------------------------------------------------------------
+        */
         if ($validated['status'] !== 'published') {
             $validated['published_at'] = null;
             $validated['is_featured'] = false;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Featured hanya boleh untuk berita published
+        |--------------------------------------------------------------------------
+        */
         $validated['is_featured'] = (
             $validated['status'] === 'published'
             && ($validated['is_featured'] ?? false)
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | Upload Gambar
+        |--------------------------------------------------------------------------
+        */
         if ($request->hasFile('gambar')) {
             $validated['gambar'] = $request
                 ->file('gambar')
@@ -165,6 +257,11 @@ class BeritaController extends Controller
 
         Berita::create($validated);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Toast
+        |--------------------------------------------------------------------------
+        */
         return back()->with('toast', [
             'type' => 'success',
             'message' => 'Berita berhasil ditambahkan.',
@@ -179,12 +276,74 @@ class BeritaController extends Controller
         Berita $berita
     ): RedirectResponse {
         $validated = $request->validate([
-            'judul' => [
+            /*
+            |--------------------------------------------------------------------------
+            | Bahasa Indonesia
+            |--------------------------------------------------------------------------
+            */
+            'judul_id' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
+            'excerpt_id' => [
+                'nullable',
+                'string',
+            ],
+
+            'konten_id' => [
+                'required',
+                'string',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | English
+            |--------------------------------------------------------------------------
+            */
+            'judul_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'excerpt_en' => [
+                'nullable',
+                'string',
+            ],
+
+            'konten_en' => [
+                'nullable',
+                'string',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | 中文 / Chinese
+            |--------------------------------------------------------------------------
+            */
+            'judul_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'excerpt_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            'konten_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | Slug
+            |--------------------------------------------------------------------------
+            */
             'slug' => [
                 'nullable',
                 'string',
@@ -192,16 +351,11 @@ class BeritaController extends Controller
                 'unique:beritas,slug,' . $berita->id,
             ],
 
-            'excerpt' => [
-                'nullable',
-                'string',
-            ],
-
-            'konten' => [
-                'required',
-                'string',
-            ],
-
+            /*
+            |--------------------------------------------------------------------------
+            | Informasi Berita
+            |--------------------------------------------------------------------------
+            */
             'gambar' => [
                 'nullable',
                 'image',
@@ -221,6 +375,11 @@ class BeritaController extends Controller
                 'max:255',
             ],
 
+            /*
+            |--------------------------------------------------------------------------
+            | Status
+            |--------------------------------------------------------------------------
+            */
             'status' => [
                 'required',
                 'in:draft,published,archived',
@@ -236,13 +395,23 @@ class BeritaController extends Controller
             ],
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Generate Slug
+        |--------------------------------------------------------------------------
+        */
         if (empty($validated['slug'])) {
             $validated['slug'] = $this->generateUniqueSlug(
-                $validated['judul'],
+                $validated['judul_id'],
                 $berita->id
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Published At
+        |--------------------------------------------------------------------------
+        */
         if (
             $validated['status'] === 'published' &&
             empty($validated['published_at'])
@@ -251,11 +420,21 @@ class BeritaController extends Controller
                 $berita->published_at ?? now();
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Reset publication data jika bukan published
+        |--------------------------------------------------------------------------
+        */
         if ($validated['status'] !== 'published') {
             $validated['published_at'] = null;
             $validated['is_featured'] = false;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Upload Gambar Baru
+        |--------------------------------------------------------------------------
+        */
         if ($request->hasFile('gambar')) {
             if (
                 $berita->gambar &&
@@ -273,6 +452,11 @@ class BeritaController extends Controller
 
         $berita->update($validated);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Toast
+        |--------------------------------------------------------------------------
+        */
         return back()->with('toast', [
             'type' => 'success',
             'message' => 'Berita berhasil diperbarui.',
@@ -296,6 +480,11 @@ class BeritaController extends Controller
 
         $berita->delete();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Toast
+        |--------------------------------------------------------------------------
+        */
         return back()->with('toast', [
             'type' => 'success',
             'message' => 'Berita berhasil dihapus.',
@@ -365,6 +554,16 @@ class BeritaController extends Controller
         ?int $ignoreId = null
     ): string {
         $slug = Str::slug($value);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Fallback jika slug kosong
+        |--------------------------------------------------------------------------
+        */
+        if ($slug === '') {
+            $slug = 'berita';
+        }
+
         $originalSlug = $slug;
         $counter = 1;
 
