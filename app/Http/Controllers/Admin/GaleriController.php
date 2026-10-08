@@ -30,22 +30,62 @@ class GaleriController extends Controller
                 function ($query) use ($search) {
                     $query->where(function ($query) use ($search) {
                         $query
-                            ->where('judul', 'like', "%{$search}%")
-                            ->orWhere('deskripsi', 'like', "%{$search}%")
-                            ->orWhere('kategori', 'like', "%{$search}%")
-                            ->orWhere('alt_text', 'like', "%{$search}%");
+                            ->where('judul_id', 'like', "%{$search}%")
+                            ->orWhere('judul_en', 'like', "%{$search}%")
+                            ->orWhere('judul_zh', 'like', "%{$search}%")
+                            ->orWhere(
+                                'deskripsi_id',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'deskripsi_en',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'deskripsi_zh',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'alt_text_id',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'alt_text_en',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'alt_text_zh',
+                                'like',
+                                "%{$search}%"
+                            )
+                            ->orWhere(
+                                'kategori',
+                                'like',
+                                "%{$search}%"
+                            );
                     });
                 }
             )
             ->when(
                 $kategori !== '',
-                fn($query) => $query->where('kategori', $kategori)
+                fn($query) => $query->where(
+                    'kategori',
+                    $kategori
+                )
             )
             ->when(
                 $status !== '',
                 fn($query) => $query->where(
                     'status',
-                    filter_var($status, FILTER_VALIDATE_BOOLEAN)
+                    filter_var(
+                        $status,
+                        FILTER_VALIDATE_BOOLEAN
+                    )
                 )
             )
             ->ordered()
@@ -79,22 +119,66 @@ class GaleriController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'judul' => [
+            // Indonesian
+            'judul_id' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
+            'deskripsi_id' => [
+                'nullable',
+                'string',
+            ],
+
+            'alt_text_id' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            // English
+            'judul_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+            ],
+
+            'alt_text_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            // Chinese / Mandarin
+            'judul_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            'alt_text_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            // Shared fields
             'slug' => [
                 'nullable',
                 'string',
                 'max:255',
                 'unique:galeris,slug',
-            ],
-
-            'deskripsi' => [
-                'nullable',
-                'string',
             ],
 
             'kategori' => [
@@ -108,12 +192,6 @@ class GaleriController extends Controller
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:2048',
-            ],
-
-            'alt_text' => [
-                'nullable',
-                'string',
-                'max:255',
             ],
 
             'tanggal' => [
@@ -141,26 +219,59 @@ class GaleriController extends Controller
                 ->store('galeri', 'public');
 
             Galeri::create([
-                'judul' => $validated['judul'],
+                // Indonesian
+                'judul_id' => $validated['judul_id'],
 
+                'deskripsi_id' =>
+                $validated['deskripsi_id'] ?? null,
+
+                'alt_text_id' =>
+                $validated['alt_text_id']
+                    ?? $validated['judul_id'],
+
+                // English
+                'judul_en' =>
+                $validated['judul_en'] ?? null,
+
+                'deskripsi_en' =>
+                $validated['deskripsi_en'] ?? null,
+
+                'alt_text_en' =>
+                $validated['alt_text_en']
+                    ?? $validated['judul_en']
+                    ?? null,
+
+                // Chinese / Mandarin
+                'judul_zh' =>
+                $validated['judul_zh'] ?? null,
+
+                'deskripsi_zh' =>
+                $validated['deskripsi_zh'] ?? null,
+
+                'alt_text_zh' =>
+                $validated['alt_text_zh']
+                    ?? $validated['judul_zh']
+                    ?? null,
+
+                // Shared fields
                 'slug' => $this->generateUniqueSlug(
-                    $validated['slug'] ?? $validated['judul']
+                    $validated['slug']
+                        ?? $validated['judul_id']
                 ),
 
-                'deskripsi' => $validated['deskripsi'] ?? null,
-
-                'kategori' => $validated['kategori'] ?? null,
+                'kategori' =>
+                $validated['kategori'] ?? null,
 
                 'gambar' => $gambarPath,
 
-                'alt_text' => $validated['alt_text']
-                    ?? $validated['judul'],
+                'tanggal' =>
+                $validated['tanggal'] ?? null,
 
-                'tanggal' => $validated['tanggal'] ?? null,
+                'status' =>
+                $validated['status'] ?? true,
 
-                'status' => $validated['status'] ?? true,
-
-                'urutan' => $validated['urutan'] ?? 0,
+                'urutan' =>
+                $validated['urutan'] ?? 0,
             ]);
         } catch (\Throwable $e) {
             if ($gambarPath) {
@@ -173,7 +284,8 @@ class GaleriController extends Controller
                 ->withInput()
                 ->with('toast', [
                     'type' => 'error',
-                    'message' => 'Galeri gagal ditambahkan.',
+                    'message' =>
+                    'Galeri gagal ditambahkan.',
                 ]);
         }
 
@@ -181,7 +293,8 @@ class GaleriController extends Controller
             ->route('pusat-informasi.galeri.index')
             ->with('toast', [
                 'type' => 'success',
-                'message' => 'Galeri berhasil ditambahkan.',
+                'message' =>
+                'Galeri berhasil ditambahkan.',
             ]);
     }
 
@@ -193,23 +306,67 @@ class GaleriController extends Controller
         Galeri $galeri
     ): RedirectResponse {
         $validated = $request->validate([
-            'judul' => [
+            // Indonesian
+            'judul_id' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
+            'deskripsi_id' => [
+                'nullable',
+                'string',
+            ],
+
+            'alt_text_id' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            // English
+            'judul_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_en' => [
+                'nullable',
+                'string',
+            ],
+
+            'alt_text_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            // Chinese / Mandarin
+            'judul_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'deskripsi_zh' => [
+                'nullable',
+                'string',
+            ],
+
+            'alt_text_zh' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            // Shared fields
             'slug' => [
                 'nullable',
                 'string',
                 'max:255',
                 Rule::unique('galeris', 'slug')
                     ->ignore($galeri->id),
-            ],
-
-            'deskripsi' => [
-                'nullable',
-                'string',
             ],
 
             'kategori' => [
@@ -223,12 +380,6 @@ class GaleriController extends Controller
                 'image',
                 'mimes:jpg,jpeg,png,webp',
                 'max:2048',
-            ],
-
-            'alt_text' => [
-                'nullable',
-                'string',
-                'max:255',
             ],
 
             'tanggal' => [
@@ -252,7 +403,7 @@ class GaleriController extends Controller
         $newImage = null;
 
         try {
-            /*
+            /**
              * Upload gambar baru jika ada.
              */
             if ($request->hasFile('gambar')) {
@@ -262,44 +413,83 @@ class GaleriController extends Controller
             }
 
             $galeri->update([
-                'judul' => $validated['judul'],
+                // Indonesian
+                'judul_id' => $validated['judul_id'],
 
+                'deskripsi_id' =>
+                $validated['deskripsi_id'] ?? null,
+
+                'alt_text_id' =>
+                $validated['alt_text_id']
+                    ?? $validated['judul_id'],
+
+                // English
+                'judul_en' =>
+                $validated['judul_en'] ?? null,
+
+                'deskripsi_en' =>
+                $validated['deskripsi_en'] ?? null,
+
+                'alt_text_en' =>
+                $validated['alt_text_en']
+                    ?? $validated['judul_en']
+                    ?? null,
+
+                // Chinese / Mandarin
+                'judul_zh' =>
+                $validated['judul_zh'] ?? null,
+
+                'deskripsi_zh' =>
+                $validated['deskripsi_zh'] ?? null,
+
+                'alt_text_zh' =>
+                $validated['alt_text_zh']
+                    ?? $validated['judul_zh']
+                    ?? null,
+
+                // Shared fields
                 'slug' => $this->generateUniqueSlug(
-                    $validated['slug'] ?? $validated['judul'],
+                    $validated['slug']
+                        ?? $validated['judul_id'],
                     $galeri->id
                 ),
 
-                'deskripsi' => $validated['deskripsi'] ?? null,
+                'kategori' =>
+                $validated['kategori'] ?? null,
 
-                'kategori' => $validated['kategori'] ?? null,
+                'tanggal' =>
+                $validated['tanggal'] ?? null,
 
-                'alt_text' => $validated['alt_text']
-                    ?? $validated['judul'],
-
-                'tanggal' => $validated['tanggal'] ?? null,
-
-                'status' => $validated['status']
+                'status' =>
+                $validated['status']
                     ?? $galeri->status,
 
-                'urutan' => $validated['urutan']
+                'urutan' =>
+                $validated['urutan']
                     ?? $galeri->urutan,
 
-                'gambar' => $newImage ?? $galeri->gambar,
+                'gambar' =>
+                $newImage ?? $galeri->gambar,
             ]);
 
-            /*
-             * Hapus gambar lama setelah update database berhasil.
+            /**
+             * Hapus gambar lama setelah
+             * update database berhasil.
              */
             if ($newImage && $oldImage) {
-                Storage::disk('public')->delete($oldImage);
+                Storage::disk('public')->delete(
+                    $oldImage
+                );
             }
         } catch (\Throwable $e) {
-            /*
+            /**
              * Jika update gagal, hapus gambar baru
              * agar tidak meninggalkan file yatim.
              */
             if ($newImage) {
-                Storage::disk('public')->delete($newImage);
+                Storage::disk('public')->delete(
+                    $newImage
+                );
             }
 
             report($e);
@@ -308,7 +498,8 @@ class GaleriController extends Controller
                 ->withInput()
                 ->with('toast', [
                     'type' => 'error',
-                    'message' => 'Galeri gagal diperbarui.',
+                    'message' =>
+                    'Galeri gagal diperbarui.',
                 ]);
         }
 
@@ -316,7 +507,8 @@ class GaleriController extends Controller
             ->route('pusat-informasi.galeri.index')
             ->with('toast', [
                 'type' => 'success',
-                'message' => 'Galeri berhasil diperbarui.',
+                'message' =>
+                'Galeri berhasil diperbarui.',
             ]);
     }
 
@@ -334,16 +526,18 @@ class GaleriController extends Controller
 
                 $galeri->delete();
 
-                /*
-                 * Merapikan urutan data setelah penghapusan.
+                /**
+                 * Merapikan urutan data
+                 * setelah penghapusan.
                  */
                 Galeri::query()
                     ->where('urutan', '>', $urutan)
                     ->decrement('urutan');
             });
 
-            /*
-             * Hapus file gambar setelah database berhasil.
+            /**
+             * Hapus file gambar setelah
+             * database berhasil.
              */
             if ($gambar) {
                 Storage::disk('public')->delete($gambar);
@@ -353,7 +547,8 @@ class GaleriController extends Controller
 
             return back()->with('toast', [
                 'type' => 'error',
-                'message' => 'Galeri gagal dihapus.',
+                'message' =>
+                'Galeri gagal dihapus.',
             ]);
         }
 
@@ -361,7 +556,8 @@ class GaleriController extends Controller
             ->route('pusat-informasi.galeri.index')
             ->with('toast', [
                 'type' => 'success',
-                'message' => 'Galeri berhasil dihapus.',
+                'message' =>
+                'Galeri berhasil dihapus.',
             ]);
     }
 
@@ -380,7 +576,8 @@ class GaleriController extends Controller
 
             return back()->with('toast', [
                 'type' => 'error',
-                'message' => 'Status galeri gagal diperbarui.',
+                'message' =>
+                'Status galeri gagal diperbarui.',
             ]);
         }
 
@@ -410,60 +607,73 @@ class GaleriController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use (
-                $galeri,
-                $validated
-            ) {
-                $operator = $validated['direction'] === 'up'
-                    ? '<'
-                    : '>';
+            DB::transaction(
+                function () use (
+                    $galeri,
+                    $validated
+                ) {
+                    $operator =
+                        $validated['direction'] === 'up'
+                        ? '<'
+                        : '>';
 
-                $orderDirection = $validated['direction'] === 'up'
-                    ? 'desc'
-                    : 'asc';
+                    $orderDirection =
+                        $validated['direction'] === 'up'
+                        ? 'desc'
+                        : 'asc';
 
-                $neighbor = Galeri::query()
-                    ->where('id', '!=', $galeri->id)
-                    ->where(
-                        'urutan',
-                        $operator,
-                        $galeri->urutan
-                    )
-                    ->orderBy(
-                        'urutan',
-                        $orderDirection
-                    )
-                    ->first();
+                    $neighbor = Galeri::query()
+                        ->where(
+                            'id',
+                            '!=',
+                            $galeri->id
+                        )
+                        ->where(
+                            'urutan',
+                            $operator,
+                            $galeri->urutan
+                        )
+                        ->orderBy(
+                            'urutan',
+                            $orderDirection
+                        )
+                        ->first();
 
-                /*
-                 * Tidak ada item di posisi berikutnya.
-                 */
-                if (! $neighbor) {
-                    return;
+                    /**
+                     * Tidak ada item di posisi berikutnya.
+                     */
+                    if (! $neighbor) {
+                        return;
+                    }
+
+                    $currentOrder =
+                        $galeri->urutan;
+
+                    $galeri->update([
+                        'urutan' =>
+                        $neighbor->urutan,
+                    ]);
+
+                    $neighbor->update([
+                        'urutan' =>
+                        $currentOrder,
+                    ]);
                 }
-
-                $currentOrder = $galeri->urutan;
-
-                $galeri->update([
-                    'urutan' => $neighbor->urutan,
-                ]);
-
-                $neighbor->update([
-                    'urutan' => $currentOrder,
-                ]);
-            });
+            );
         } catch (\Throwable $e) {
             report($e);
 
             return back()->with('toast', [
                 'type' => 'error',
-                'message' => 'Urutan galeri gagal diperbarui.',
+                'message' =>
+                'Urutan galeri gagal diperbarui.',
             ]);
         }
 
         return back()->with('toast', [
             'type' => 'success',
-            'message' => $validated['direction'] === 'up'
+            'message' =>
+            $validated['direction'] === 'up'
                 ? 'Galeri berhasil dipindahkan ke atas.'
                 : 'Galeri berhasil dipindahkan ke bawah.',
         ]);

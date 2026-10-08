@@ -14,17 +14,27 @@ return new class extends Migration
         Schema::create('galeris', function (Blueprint $table) {
             $table->id();
 
-            $table->string('judul', 255);
+            // Indonesian
+            $table->string('judul_id', 255);
+            $table->text('deskripsi_id')->nullable();
+            $table->string('alt_text_id', 255)->nullable();
 
+            // English
+            $table->string('judul_en', 255)->nullable();
+            $table->text('deskripsi_en')->nullable();
+            $table->string('alt_text_en', 255)->nullable();
+
+            // Chinese / Mandarin
+            $table->string('judul_zh', 255)->nullable();
+            $table->text('deskripsi_zh')->nullable();
+            $table->string('alt_text_zh', 255)->nullable();
+
+            // Shared fields
             $table->string('slug', 255)->unique();
-
-            $table->text('deskripsi')->nullable();
 
             $table->string('kategori', 100)->nullable();
 
             $table->string('gambar', 500);
-
-            $table->string('alt_text', 255)->nullable();
 
             $table->date('tanggal')->nullable();
 
@@ -36,6 +46,7 @@ return new class extends Migration
 
             $table->softDeletes();
 
+            // Indexes
             $table->index('status');
             $table->index('kategori');
             $table->index('tanggal');

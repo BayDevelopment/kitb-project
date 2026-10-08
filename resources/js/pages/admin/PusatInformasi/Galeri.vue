@@ -18,25 +18,42 @@ import {
 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import AppLayout from "@/layouts/AppLayout.vue";
+import {
+    currentLanguage,
+    localizedValue,
+    type LanguageCode,
+} from "@/composables/useLocale";
 
 defineOptions({
     layout: AppLayout,
 });
 
-/*
-|--------------------------------------------------------------------------
-| Interfaces
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * INTERFACES
+ * ========================================================================== */
 
 interface Galeri {
     id: number;
-    judul: string;
+
+    // Indonesia
+    judul_id: string;
+    deskripsi_id: string | null;
+    alt_text_id: string | null;
+
+    // English
+    judul_en: string | null;
+    deskripsi_en: string | null;
+    alt_text_en: string | null;
+
+    // Mandarin
+    judul_zh: string | null;
+    deskripsi_zh: string | null;
+    alt_text_zh: string | null;
+
+    // Shared
     slug: string;
-    deskripsi: string | null;
     kategori: string | null;
     gambar: string;
-    alt_text: string | null;
     tanggal: string | null;
     status: boolean;
     urutan: number;
@@ -75,14 +92,89 @@ interface Props {
 
 const props = defineProps<Props>();
 
-/*
-|--------------------------------------------------------------------------
-| Filter
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * LANGUAGE
+ * ========================================================================== */
+
+const languageOptions: Array<{
+    code: LanguageCode;
+    label: string;
+    short: string;
+    flag: string;
+}> = [
+    {
+        code: "id",
+        label: "Bahasa Indonesia",
+        short: "ID",
+        flag: "🇮🇩",
+    },
+    {
+        code: "en",
+        label: "English",
+        short: "EN",
+        flag: "🇬🇧",
+    },
+    {
+        code: "zh",
+        label: "中文",
+        short: "中文",
+        flag: "🇨🇳",
+    },
+];
+
+const activeLanguage = ref<LanguageCode>("id");
+
+/**
+ * Adapter supaya localizedValue() dapat bekerja
+ * dengan struktur Galeri:
+ *
+ * id  -> judul / deskripsi
+ * en  -> judul_en / deskripsi_en
+ * zh  -> judul_zh / deskripsi_zh
+ */
+const localizedGaleriValue = (
+    galeri: Galeri,
+    field: "judul" | "deskripsi",
+): string => {
+    return localizedValue(
+        {
+            ...galeri,
+            judul: galeri.judul_id,
+            deskripsi: galeri.deskripsi_id,
+        },
+        field,
+    );
+};
+
+const localizedGaleriAltText = (galeri: Galeri): string => {
+    const source: Record<string, unknown> = {
+        ...galeri,
+        alt_text: galeri.alt_text_id,
+    };
+
+    return localizedValue(source, "alt_text");
+};
+
+const setLanguage = (language: LanguageCode) => {
+    activeLanguage.value = language;
+    currentLanguage.value = language;
+};
+
+const languageLabel = computed(() => {
+    const language = languageOptions.find(
+        (item) => item.code === activeLanguage.value,
+    );
+
+    return language?.label ?? "Bahasa Indonesia";
+});
+
+/* ==========================================================================
+ * FILTER
+ * ========================================================================== */
 
 const search = ref(props.filters.search ?? "");
 const kategori = ref(props.filters.kategori || "all");
+
 const status = ref(
     props.filters.status === ""
         ? "all"
@@ -153,11 +245,9 @@ const hasFilter = computed(() => {
     );
 });
 
-/*
-|--------------------------------------------------------------------------
-| Pagination
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * PAGINATION
+ * ========================================================================== */
 
 const goToPage = (url: string | null) => {
     if (!url) {
@@ -174,11 +264,9 @@ const goToPage = (url: string | null) => {
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| Modal State
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * MODAL STATE
+ * ========================================================================== */
 
 const showModal = ref(false);
 const showDetail = ref(false);
@@ -188,24 +276,33 @@ const modalMode = ref<"create" | "edit">("create");
 
 const selectedGaleri = ref<Galeri | null>(null);
 
-/*
-|--------------------------------------------------------------------------
-| Form
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * FORM
+ * ========================================================================== */
 
 const emptyForm = () => ({
-    judul: "",
+    judul_id: "",
+    deskripsi_id: "",
+    alt_text_id: "",
+
+    judul_en: "",
+    deskripsi_en: "",
+    alt_text_en: "",
+
+    judul_zh: "",
+    deskripsi_zh: "",
+    alt_text_zh: "",
+
     slug: "",
-    deskripsi: "",
     kategori: "",
-    alt_text: "",
     tanggal: "",
     status: true,
     urutan: 0,
 });
 
-const form = ref(emptyForm());
+type FormState = ReturnType<typeof emptyForm>;
+
+const form = ref<FormState>(emptyForm());
 
 const gambarFile = ref<File | null>(null);
 const gambarPreview = ref<string | null>(null);
@@ -213,21 +310,19 @@ const gambarPreview = ref<string | null>(null);
 const processingForm = ref(false);
 const processingDelete = ref(false);
 
-/*
-|--------------------------------------------------------------------------
-| Toggle / Move Processing
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * PROCESSING STATE
+ * ========================================================================== */
 
 const togglingStatusId = ref<number | null>(null);
+
 const movingId = ref<number | null>(null);
+
 const movingDirection = ref<"up" | "down" | null>(null);
 
-/*
-|--------------------------------------------------------------------------
-| Helpers
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * HELPERS
+ * ========================================================================== */
 
 const getImageUrl = (gambar: string | null) => {
     if (!gambar) {
@@ -264,7 +359,14 @@ const formatDate = (value: string | null) => {
         return "-";
     }
 
-    return new Intl.DateTimeFormat("id-ID", {
+    const locale =
+        activeLanguage.value === "en"
+            ? "en-US"
+            : activeLanguage.value === "zh"
+              ? "zh-CN"
+              : "id-ID";
+
+    return new Intl.DateTimeFormat(locale, {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -282,7 +384,14 @@ const formatDateTime = (value: string | null) => {
         return "-";
     }
 
-    return new Intl.DateTimeFormat("id-ID", {
+    const locale =
+        activeLanguage.value === "en"
+            ? "en-US"
+            : activeLanguage.value === "zh"
+              ? "zh-CN"
+              : "id-ID";
+
+    return new Intl.DateTimeFormat(locale, {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -309,18 +418,26 @@ const formatDateInput = (value: string | null) => {
     )}-${pad(date.getDate())}`;
 };
 
-const statusLabel = (statusValue: boolean) => {
-    return statusValue ? "Aktif" : "Nonaktif";
+const statusLabel = (value: boolean) => {
+    if (activeLanguage.value === "en") {
+        return value ? "Active" : "Inactive";
+    }
+
+    if (activeLanguage.value === "zh") {
+        return value ? "启用" : "停用";
+    }
+
+    return value ? "Aktif" : "Nonaktif";
 };
 
-const statusClass = (statusValue: boolean) => {
-    return statusValue
+const statusClass = (value: boolean) => {
+    return value
         ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
         : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
 };
 
-const statusDotClass = (statusValue: boolean) => {
-    return statusValue ? "bg-emerald-500" : "bg-slate-400";
+const statusDotClass = (value: boolean) => {
+    return value ? "bg-emerald-500" : "bg-slate-400";
 };
 
 const revokeGambarPreview = () => {
@@ -331,6 +448,12 @@ const revokeGambarPreview = () => {
     gambarPreview.value = null;
 };
 
+/* ==========================================================================
+ * SLUG
+ * ========================================================================== */
+
+const slugManuallyEdited = ref(false);
+
 const slugify = (value: string) => {
     return value
         .toLowerCase()
@@ -340,30 +463,19 @@ const slugify = (value: string) => {
         .replace(/-+/g, "-");
 };
 
-/*
-|--------------------------------------------------------------------------
-| Auto Slug
-|--------------------------------------------------------------------------
-*/
-
-const slugManuallyEdited = ref(false);
-
 const handleJudulInput = () => {
     if (!slugManuallyEdited.value) {
-        form.value.slug = slugify(form.value.judul);
+        form.value.slug = slugify(form.value.judul_id);
     }
 };
-
 const handleSlugInput = () => {
     slugManuallyEdited.value = true;
     form.value.slug = slugify(form.value.slug);
 };
 
-/*
-|--------------------------------------------------------------------------
-| Modal Actions
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * MODAL ACTIONS
+ * ========================================================================== */
 
 const resetFormState = () => {
     showModal.value = false;
@@ -377,6 +489,9 @@ const resetFormState = () => {
     selectedGaleri.value = null;
 
     slugManuallyEdited.value = false;
+
+    activeLanguage.value = "id";
+    currentLanguage.value = "id";
 };
 
 const openCreate = () => {
@@ -385,11 +500,15 @@ const openCreate = () => {
     form.value = emptyForm();
 
     selectedGaleri.value = null;
+
     gambarFile.value = null;
 
     slugManuallyEdited.value = false;
 
     modalMode.value = "create";
+
+    activeLanguage.value = "id";
+    currentLanguage.value = "id";
 
     showDetail.value = false;
     showDelete.value = false;
@@ -403,14 +522,23 @@ const openEdit = (galeri: Galeri) => {
     selectedGaleri.value = galeri;
 
     form.value = {
-        judul: galeri.judul,
-        slug: galeri.slug,
-        deskripsi: galeri.deskripsi || "",
-        kategori: galeri.kategori || "",
-        alt_text: galeri.alt_text || "",
+        judul_id: galeri.judul_id ?? "",
+        deskripsi_id: galeri.deskripsi_id ?? "",
+        alt_text_id: galeri.alt_text_id ?? "",
+
+        judul_en: galeri.judul_en ?? "",
+        deskripsi_en: galeri.deskripsi_en ?? "",
+        alt_text_en: galeri.alt_text_en ?? "",
+
+        judul_zh: galeri.judul_zh ?? "",
+        deskripsi_zh: galeri.deskripsi_zh ?? "",
+        alt_text_zh: galeri.alt_text_zh ?? "",
+
+        slug: galeri.slug ?? "",
+        kategori: galeri.kategori ?? "",
         tanggal: formatDateInput(galeri.tanggal),
-        status: galeri.status,
-        urutan: galeri.urutan,
+        status: Boolean(galeri.status),
+        urutan: Number(galeri.urutan ?? 0),
     };
 
     gambarFile.value = null;
@@ -418,6 +546,9 @@ const openEdit = (galeri: Galeri) => {
     slugManuallyEdited.value = true;
 
     modalMode.value = "edit";
+
+    activeLanguage.value = "id";
+    currentLanguage.value = "id";
 
     showDetail.value = false;
     showDelete.value = false;
@@ -465,11 +596,9 @@ const closeDelete = () => {
     selectedGaleri.value = null;
 };
 
-/*
-|--------------------------------------------------------------------------
-| Image Upload
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * IMAGE UPLOAD
+ * ========================================================================== */
 
 const handleGambarChange = (event: Event) => {
     const target = event.target as HTMLInputElement;
@@ -485,7 +614,7 @@ const handleGambarChange = (event: Event) => {
 
     const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
 
-    const maxSize = 1024 * 1024;
+    const maxSize = 2 * 1024 * 1024;
 
     if (!allowedTypes.includes(file.type)) {
         gambarFile.value = null;
@@ -500,7 +629,7 @@ const handleGambarChange = (event: Event) => {
         gambarFile.value = null;
         target.value = "";
 
-        toast.error("Ukuran gambar maksimal 1 MB.");
+        toast.error("Ukuran gambar maksimal 2 MB.");
 
         return;
     }
@@ -510,59 +639,75 @@ const handleGambarChange = (event: Event) => {
     gambarPreview.value = URL.createObjectURL(file);
 };
 
-/*
-|--------------------------------------------------------------------------
-| Submit Form
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * SUBMIT
+ * ========================================================================== */
 
 const submitForm = () => {
     if (processingForm.value) {
         return;
     }
 
-    const judul = form.value.judul.trim();
+    const judul = form.value.judul_id.trim();
 
     if (!judul) {
-        toast.error("Judul galeri wajib diisi.");
+        activeLanguage.value = "id";
+
+        toast.error("Judul galeri Bahasa Indonesia wajib diisi.");
+
         return;
     }
 
     if (!gambarFile.value && modalMode.value === "create") {
         toast.error("Gambar galeri wajib dipilih.");
+
         return;
     }
 
-    if (gambarFile.value && gambarFile.value.size > 1024 * 1024) {
-        toast.error("Ukuran gambar maksimal 1 MB.");
+    if (gambarFile.value && gambarFile.value.size > 2 * 1024 * 1024) {
+        toast.error("Ukuran gambar maksimal 2 MB.");
+
         return;
     }
 
     const data = new FormData();
 
-    data.append("judul", judul);
+    /*
+     * Indonesia
+     */
+    data.append("judul_id", form.value.judul_id.trim());
+    data.append("deskripsi_id", form.value.deskripsi_id.trim());
+    data.append(
+        "alt_text_id",
+        form.value.alt_text_id.trim() || form.value.judul_id.trim(),
+    );
 
-    if (form.value.slug.trim()) {
-        data.append("slug", form.value.slug.trim());
-    }
+    /*
+     * English
+     */
+    data.append("judul_en", form.value.judul_en.trim());
+    data.append("deskripsi_en", form.value.deskripsi_en.trim());
+    data.append(
+        "alt_text_en",
+        form.value.alt_text_en.trim() || form.value.judul_en.trim(),
+    );
 
-    if (form.value.deskripsi.trim()) {
-        data.append("deskripsi", form.value.deskripsi.trim());
-    } else {
-        data.append("deskripsi", "");
-    }
+    /*
+     * Mandarin
+     */
+    data.append("judul_zh", form.value.judul_zh.trim());
+    data.append("deskripsi_zh", form.value.deskripsi_zh.trim());
+    data.append(
+        "alt_text_zh",
+        form.value.alt_text_zh.trim() || form.value.judul_zh.trim(),
+    );
 
-    if (form.value.kategori.trim()) {
-        data.append("kategori", form.value.kategori.trim());
-    } else {
-        data.append("kategori", "");
-    }
+    /*
+     * Other fields
+     */
+    data.append("slug", form.value.slug.trim());
 
-    if (form.value.alt_text.trim()) {
-        data.append("alt_text", form.value.alt_text.trim());
-    } else {
-        data.append("alt_text", judul);
-    }
+    data.append("kategori", form.value.kategori.trim());
 
     if (form.value.tanggal) {
         data.append("tanggal", form.value.tanggal);
@@ -577,12 +722,6 @@ const submitForm = () => {
     }
 
     processingForm.value = true;
-
-    /*
-    |--------------------------------------------------------------------------
-    | CREATE
-    |--------------------------------------------------------------------------
-    */
 
     if (modalMode.value === "create") {
         router.post("/admin/pusat-informasi/galeri", data, {
@@ -615,14 +754,9 @@ const submitForm = () => {
         return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | EDIT
-    |--------------------------------------------------------------------------
-    */
-
     if (!selectedGaleri.value) {
         processingForm.value = false;
+
         return;
     }
 
@@ -660,11 +794,9 @@ const submitForm = () => {
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| Delete
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * DELETE
+ * ========================================================================== */
 
 const deleteGaleri = () => {
     if (!selectedGaleri.value || processingDelete.value) {
@@ -678,6 +810,7 @@ const deleteGaleri = () => {
 
         onSuccess: () => {
             showDelete.value = false;
+
             selectedGaleri.value = null;
         },
 
@@ -701,11 +834,9 @@ const deleteGaleri = () => {
     });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Toggle Status
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * TOGGLE STATUS
+ * ========================================================================== */
 
 const toggleStatus = (galeri: Galeri) => {
     if (togglingStatusId.value !== null) {
@@ -741,11 +872,9 @@ const toggleStatus = (galeri: Galeri) => {
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| Move
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * MOVE ORDER
+ * ========================================================================== */
 
 const moveGaleri = (galeri: Galeri, direction: "up" | "down") => {
     if (movingId.value !== null) {
@@ -785,14 +914,13 @@ const moveGaleri = (galeri: Galeri, direction: "up" | "down") => {
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| Cleanup
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================================
+ * CLEANUP
+ * ========================================================================== */
 
 onBeforeUnmount(() => {
     clearTimeout(searchTimeout);
+
     revokeGambarPreview();
 });
 </script>
@@ -801,24 +929,24 @@ onBeforeUnmount(() => {
     <div
         class="relative min-h-full overflow-hidden bg-slate-50/50 transition-colors duration-300 dark:bg-slate-950/50"
     >
-        <!-- =========================================================
-             BACKGROUND
-        ========================================================== -->
+        <!-- =================================================================
+             BACKGROUND DECORATION
+        ================================================================== -->
 
         <div
             class="pointer-events-none absolute inset-x-0 top-0 z-0 h-96 overflow-hidden"
             aria-hidden="true"
         >
             <div
-                class="blob-shape absolute -left-24 -top-32 size-96 rounded-full bg-gradient-to-br from-blue-400/30 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/15 dark:to-transparent"
+                class="blob-shape absolute -left-24 -top-32 size-96 rounded-full bg-gradient-to-br from-blue-400/30 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/15"
             ></div>
 
             <div
-                class="blob-shape-delayed absolute -right-20 top-4 size-80 rounded-full bg-gradient-to-tr from-sky-300/30 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10 dark:to-transparent"
+                class="blob-shape-delayed absolute -right-20 top-4 size-80 rounded-full bg-gradient-to-tr from-sky-300/30 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10"
             ></div>
 
             <div
-                class="blob-shape-slow absolute left-1/3 -top-40 size-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/10 dark:to-transparent"
+                class="blob-shape-slow absolute left-1/3 -top-40 size-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/10"
             ></div>
 
             <div class="absolute inset-0 opacity-40 dark:opacity-20">
@@ -832,30 +960,36 @@ onBeforeUnmount(() => {
             ></div>
         </div>
 
-        <!-- =========================================================
+        <!-- =================================================================
              MAIN
-        ========================================================== -->
+        ================================================================== -->
 
         <div
             class="relative z-10 mx-auto w-full max-w-[1600px] p-4 sm:p-5 lg:p-6 xl:p-8"
         >
-            <!-- =====================================================
+            <!-- =============================================================
                  HEADER
-            ====================================================== -->
+            ============================================================== -->
 
             <div
-                class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                class="mb-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"
             >
                 <div class="flex items-center gap-3">
                     <div
-                        class="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-400"
+                        class="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-400"
                     >
                         <Images class="size-5" />
                     </div>
 
                     <div class="min-w-0">
+                        <p
+                            class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400"
+                        >
+                            Pusat Informasi
+                        </p>
+
                         <h1
-                            class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl"
+                            class="mt-0.5 text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl"
                         >
                             Galeri
                         </h1>
@@ -868,57 +1002,122 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <button
-                    type="button"
-                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/20 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-950"
-                    @click="openCreate"
-                >
-                    <Plus class="size-4" />
-                    Tambah Galeri
-                </button>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <!-- PAGE LANGUAGE -->
+
+                    <div
+                        class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white/90 p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900/90"
+                    >
+                        <button
+                            v-for="language in languageOptions"
+                            :key="language.code"
+                            type="button"
+                            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all"
+                            :class="
+                                activeLanguage === language.code
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
+                            "
+                            @click="setLanguage(language.code)"
+                        >
+                            <span>{{ language.flag }}</span>
+
+                            <span>{{ language.short }}</span>
+                        </button>
+                    </div>
+
+                    <!-- ADD -->
+
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        @click="openCreate"
+                    >
+                        <Plus class="size-4" />
+                        Tambah Galeri
+                    </button>
+                </div>
             </div>
 
-            <!-- =====================================================
-                 FILTER
-            ====================================================== -->
+            <!-- =============================================================
+                 ACTIVE LANGUAGE INFO
+            ============================================================== -->
 
             <div
-                class="mb-5 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm shadow-slate-200/40 backdrop-blur-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
+                class="mb-5 flex items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300"
             >
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <span
+                    class="flex size-7 items-center justify-center rounded-lg bg-white/80 dark:bg-slate-900/60"
+                >
+                    {{
+                        languageOptions.find(
+                            (item) => item.code === activeLanguage,
+                        )?.flag
+                    }}
+                </span>
+
+                <span>
+                    Tampilan bahasa:
+                    <strong>{{ languageLabel }}</strong>
+                </span>
+            </div>
+
+            <!-- =============================================================
+                 FILTER CARD
+            ============================================================== -->
+
+            <div
+                class="mb-5 rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm shadow-slate-200/40 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
+            >
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                        <h2
+                            class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                        >
+                            Pencarian & Filter
+                        </h2>
+
+                        <p
+                            class="mt-0.5 text-xs text-slate-400 dark:text-slate-500"
+                        >
+                            Temukan data galeri dengan cepat.
+                        </p>
+                    </div>
+
+                    <button
+                        v-if="hasFilter"
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+                        @click="resetFilter"
+                    >
+                        <RotateCcw class="size-3.5" />
+                        Reset
+                    </button>
+                </div>
+
+                <div
+                    class="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px]"
+                >
                     <!-- SEARCH -->
 
-                    <div class="relative flex-1">
+                    <div class="relative">
                         <Search
-                            class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                            class="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"
                         />
 
                         <input
                             v-model="search"
                             type="text"
                             placeholder="Cari judul, kategori, atau deskripsi..."
-                            class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
+                            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
                         />
                     </div>
 
-                    <!-- STATUS -->
-
-                    <select
-                        v-model="status"
-                        class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    >
-                        <option value="all">Semua Status</option>
-
-                        <option value="1">Aktif</option>
-
-                        <option value="0">Nonaktif</option>
-                    </select>
-
-                    <!-- KATEGORI -->
+                    <!-- CATEGORY -->
 
                     <select
                         v-model="kategori"
-                        class="h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        class="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     >
                         <option value="all">Semua Kategori</option>
 
@@ -931,27 +1130,52 @@ onBeforeUnmount(() => {
                         </option>
                     </select>
 
-                    <!-- RESET -->
+                    <!-- STATUS -->
 
-                    <button
-                        v-if="hasFilter"
-                        type="button"
-                        class="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
-                        @click="resetFilter"
+                    <select
+                        v-model="status"
+                        class="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     >
-                        <RotateCcw class="size-4" />
-                        Reset
-                    </button>
+                        <option value="all">Semua Status</option>
+
+                        <option value="1">Aktif</option>
+
+                        <option value="0">Nonaktif</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- =====================================================
-                 TABLE
-            ====================================================== -->
+            <!-- =============================================================
+                 TABLE CARD
+            ============================================================== -->
 
             <div
-                class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-sm transition-all duration-300 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10"
+                class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10"
             >
+                <div
+                    class="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800"
+                >
+                    <div>
+                        <h2
+                            class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                        >
+                            Data Galeri
+                        </h2>
+
+                        <p
+                            class="mt-0.5 text-xs text-slate-400 dark:text-slate-500"
+                        >
+                            {{ galeris.total }} data tersedia
+                        </p>
+                    </div>
+
+                    <div
+                        class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                    >
+                        {{ activeLanguage.toUpperCase() }}
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[1100px] text-left text-sm">
                         <thead
@@ -959,37 +1183,37 @@ onBeforeUnmount(() => {
                         >
                             <tr>
                                 <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Galeri
                                 </th>
 
                                 <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Kategori
                                 </th>
 
                                 <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Tanggal
                                 </th>
 
                                 <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Status
                                 </th>
 
                                 <th
-                                    class="px-6 py-4 text-center font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Urutan
                                 </th>
 
                                 <th
-                                    class="px-6 py-4 text-right font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Aksi
                                 </th>
@@ -1009,7 +1233,7 @@ onBeforeUnmount(() => {
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div
-                                            class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-900/40"
+                                            class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-900/40"
                                         >
                                             <img
                                                 v-if="galeri.gambar"
@@ -1017,8 +1241,13 @@ onBeforeUnmount(() => {
                                                     getImageUrl(galeri.gambar)!
                                                 "
                                                 :alt="
-                                                    galeri.alt_text ||
-                                                    galeri.judul
+                                                    localizedGaleriAltText(
+                                                        galeri,
+                                                    ) ||
+                                                    localizedGaleriValue(
+                                                        galeri,
+                                                        'judul',
+                                                    )
                                                 "
                                                 class="size-full object-cover transition duration-300 hover:scale-105"
                                                 loading="lazy"
@@ -1031,7 +1260,12 @@ onBeforeUnmount(() => {
                                             <p
                                                 class="truncate font-semibold text-slate-900 dark:text-white"
                                             >
-                                                {{ galeri.judul }}
+                                                {{
+                                                    localizedGaleriValue(
+                                                        galeri,
+                                                        "judul",
+                                                    )
+                                                }}
                                             </p>
 
                                             <p
@@ -1039,7 +1273,10 @@ onBeforeUnmount(() => {
                                             >
                                                 {{
                                                     truncate(
-                                                        galeri.deskripsi,
+                                                        localizedGaleriValue(
+                                                            galeri,
+                                                            "deskripsi",
+                                                        ),
                                                         100,
                                                     )
                                                 }}
@@ -1069,7 +1306,7 @@ onBeforeUnmount(() => {
                                     </span>
                                 </td>
 
-                                <!-- TANGGAL -->
+                                <!-- DATE -->
 
                                 <td class="px-6 py-4">
                                     <div
@@ -1120,7 +1357,7 @@ onBeforeUnmount(() => {
                                     </button>
                                 </td>
 
-                                <!-- URUTAN -->
+                                <!-- ORDER -->
 
                                 <td class="px-6 py-4">
                                     <div
@@ -1170,12 +1407,10 @@ onBeforeUnmount(() => {
                                     </div>
                                 </td>
 
-                                <!-- AKSI -->
+                                <!-- ACTION -->
 
                                 <td class="px-6 py-4">
                                     <div class="flex justify-end gap-1">
-                                        <!-- DETAIL -->
-
                                         <button
                                             type="button"
                                             class="rounded-xl p-2 text-slate-500 transition-all hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
@@ -1185,8 +1420,6 @@ onBeforeUnmount(() => {
                                             <Eye class="size-4" />
                                         </button>
 
-                                        <!-- EDIT -->
-
                                         <button
                                             type="button"
                                             class="rounded-xl p-2 text-slate-500 transition-all hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
@@ -1195,8 +1428,6 @@ onBeforeUnmount(() => {
                                         >
                                             <Pencil class="size-4" />
                                         </button>
-
-                                        <!-- DELETE -->
 
                                         <button
                                             type="button"
@@ -1237,9 +1468,9 @@ onBeforeUnmount(() => {
                     </table>
                 </div>
 
-                <!-- =================================================
+                <!-- =========================================================
                      PAGINATION
-                ================================================== -->
+                ========================================================== -->
 
                 <div
                     v-if="galeris.total > 0"
@@ -1247,29 +1478,23 @@ onBeforeUnmount(() => {
                 >
                     <p class="text-sm text-slate-500 dark:text-slate-400">
                         Menampilkan
-
                         <span
-                            class="font-medium text-slate-700 dark:text-slate-200"
+                            class="font-semibold text-slate-700 dark:text-slate-200"
                         >
                             {{ galeris.from }}
                         </span>
-
                         -
-
                         <span
-                            class="font-medium text-slate-700 dark:text-slate-200"
+                            class="font-semibold text-slate-700 dark:text-slate-200"
                         >
                             {{ galeris.to }}
                         </span>
-
                         dari
-
                         <span
-                            class="font-medium text-slate-700 dark:text-slate-200"
+                            class="font-semibold text-slate-700 dark:text-slate-200"
                         >
                             {{ galeris.total }}
                         </span>
-
                         data
                     </p>
 
@@ -1295,9 +1520,9 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-        <!-- =========================================================
-             MODAL CREATE / EDIT
-        ========================================================== -->
+        <!-- =================================================================
+             CREATE / EDIT MODAL
+        ================================================================== -->
 
         <Transition name="modal">
             <div
@@ -1306,7 +1531,7 @@ onBeforeUnmount(() => {
                 @click.self="closeModal"
             >
                 <div
-                    class="w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
+                    class="w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
                 >
                     <!-- HEADER -->
 
@@ -1335,13 +1560,13 @@ onBeforeUnmount(() => {
                             <p
                                 class="mt-1 pl-11 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Lengkapi informasi foto galeri perusahaan.
+                                Lengkapi informasi galeri dalam tiga bahasa.
                             </p>
                         </div>
 
                         <button
                             type="button"
-                            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-200/70 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
+                            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-200/70 hover:text-slate-600 dark:hover:bg-slate-800"
                             :disabled="processingForm"
                             @click="closeModal"
                         >
@@ -1352,37 +1577,213 @@ onBeforeUnmount(() => {
                     <!-- FORM -->
 
                     <form
-                        class="max-h-[75vh] overflow-y-auto p-6"
+                        class="max-h-[78vh] overflow-y-auto p-6"
                         @submit.prevent="submitForm"
                     >
-                        <div class="grid gap-5 md:grid-cols-2">
-                            <!-- JUDUL -->
+                        <!-- =================================================
+                             LANGUAGE TABS
+                        ================================================== -->
 
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                        <div
+                            class="mb-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 dark:border-slate-800 dark:bg-slate-800/40"
+                        >
+                            <div class="grid grid-cols-3 gap-1">
+                                <button
+                                    v-for="language in languageOptions"
+                                    :key="language.code"
+                                    type="button"
+                                    class="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all"
+                                    :class="
+                                        activeLanguage === language.code
+                                            ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-blue-400 dark:ring-slate-700'
+                                            : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-900/60 dark:hover:text-white'
+                                    "
+                                    @click="setLanguage(language.code)"
                                 >
-                                    Judul Galeri
+                                    <span>
+                                        {{ language.flag }}
+                                    </span>
 
-                                    <span class="text-red-500"> * </span>
-                                </label>
+                                    <span>
+                                        {{ language.label }}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
 
-                                <input
-                                    v-model="form.judul"
-                                    type="text"
-                                    required
-                                    maxlength="255"
-                                    placeholder="Contoh: Kunjungan Investor ke Kawasan KITB"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                    @input="handleJudulInput"
-                                />
+                        <!-- =================================================
+                             LANGUAGE CONTENT
+                        ================================================== -->
+
+                        <div
+                            class="rounded-2xl border border-blue-100 bg-blue-50/30 p-5 dark:border-blue-900/30 dark:bg-blue-950/10"
+                        >
+                            <!-- ID -->
+
+                            <div
+                                v-if="activeLanguage === 'id'"
+                                class="space-y-5"
+                            >
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Judul
+                                        <span class="text-red-500"> * </span>
+                                    </label>
+
+                                    <input
+                                        v-model="form.judul_id"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="Masukkan judul galeri"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                        @input="handleJudulInput"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Deskripsi
+                                    </label>
+
+                                    <textarea
+                                        v-model="form.deskripsi_id"
+                                        rows="5"
+                                        placeholder="Masukkan deskripsi galeri"
+                                        class="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    ></textarea>
+                                </div>
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Alt Text
+                                    </label>
+                                    <input
+                                        v-model="form.alt_text_id"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="Deskripsi singkat gambar dalam Bahasa Indonesia"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
                             </div>
 
+                            <!-- EN -->
+
+                            <div
+                                v-else-if="activeLanguage === 'en'"
+                                class="space-y-5"
+                            >
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Title
+                                    </label>
+
+                                    <input
+                                        v-model="form.judul_en"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="Enter gallery title in English"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Description
+                                    </label>
+
+                                    <textarea
+                                        v-model="form.deskripsi_en"
+                                        rows="5"
+                                        placeholder="Enter gallery description in English"
+                                        class="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    ></textarea>
+                                </div>
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Alt Text
+                                    </label>
+                                    <input
+                                        v-model="form.alt_text_en"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="Short image description in English"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- ZH -->
+
+                            <div v-else class="space-y-5">
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        标题
+                                    </label>
+
+                                    <input
+                                        v-model="form.judul_zh"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="请输入图库标题"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        描述
+                                    </label>
+
+                                    <textarea
+                                        v-model="form.deskripsi_zh"
+                                        rows="5"
+                                        placeholder="请输入图库描述"
+                                        class="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    ></textarea>
+                                </div>
+                                <div>
+                                    <label
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        图片替代文本
+                                    </label>
+                                    <input
+                                        v-model="form.alt_text_zh"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="请输入图片简短描述"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- =================================================
+                             GENERAL INFORMATION
+                        ================================================== -->
+
+                        <div class="mt-6 grid gap-5 md:grid-cols-2">
                             <!-- SLUG -->
 
                             <div>
                                 <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
                                 >
                                     Slug
                                 </label>
@@ -1390,22 +1791,22 @@ onBeforeUnmount(() => {
                                 <input
                                     v-model="form.slug"
                                     type="text"
-                                    maxlength="255"
-                                    placeholder="kunjungan-investor-ke-kawasan-kitb"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                    placeholder="slug-galeri"
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                                     @input="handleSlugInput"
                                 />
 
                                 <p class="mt-1.5 text-xs text-slate-400">
-                                    Slug dibuat otomatis dari judul.
+                                    Slug dibuat otomatis dari judul Bahasa
+                                    Indonesia.
                                 </p>
                             </div>
 
-                            <!-- KATEGORI -->
+                            <!-- CATEGORY -->
 
                             <div>
                                 <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
                                 >
                                     Kategori
                                 </label>
@@ -1413,26 +1814,16 @@ onBeforeUnmount(() => {
                                 <input
                                     v-model="form.kategori"
                                     type="text"
-                                    list="galeri-kategori-options"
                                     maxlength="100"
-                                    placeholder="Contoh: Kegiatan"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                    placeholder="Contoh: Kegiatan, Infrastruktur, Investasi"
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                                 />
-
-                                <datalist id="galeri-kategori-options">
-                                    <option
-                                        v-for="item in kategoriOptions"
-                                        :key="item"
-                                        :value="item"
-                                    />
-                                </datalist>
                             </div>
-
-                            <!-- TANGGAL -->
+                            <!-- DATE -->
 
                             <div>
                                 <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
                                 >
                                     Tanggal
                                 </label>
@@ -1440,34 +1831,15 @@ onBeforeUnmount(() => {
                                 <input
                                     v-model="form.tanggal"
                                     type="date"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                                 />
                             </div>
 
-                            <!-- STATUS -->
+                            <!-- ORDER -->
 
                             <div>
                                 <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Status
-                                </label>
-
-                                <select
-                                    v-model="form.status"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                >
-                                    <option :value="true">Aktif</option>
-
-                                    <option :value="false">Nonaktif</option>
-                                </select>
-                            </div>
-
-                            <!-- URUTAN -->
-
-                            <div>
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
                                 >
                                     Urutan
                                 </label>
@@ -1476,183 +1848,166 @@ onBeforeUnmount(() => {
                                     v-model.number="form.urutan"
                                     type="number"
                                     min="0"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                                 />
-
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Posisi tampilan galeri.
-                                </p>
                             </div>
 
-                            <!-- ALT TEXT -->
+                            <!-- STATUS -->
 
-                            <div class="md:col-span-2">
+                            <div>
                                 <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                    class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
                                 >
-                                    Alt Text
+                                    Status
                                 </label>
 
+                                <label
+                                    class="flex min-h-12 cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 dark:border-slate-700 dark:bg-slate-800"
+                                >
+                                    <div>
+                                        <p
+                                            class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                                        >
+                                            Galeri aktif
+                                        </p>
+
+                                        <p class="text-xs text-slate-400">
+                                            Tampilkan galeri pada halaman
+                                            publik.
+                                        </p>
+                                    </div>
+
+                                    <input
+                                        v-model="form.status"
+                                        type="checkbox"
+                                        class="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- =================================================
+                             IMAGE
+                        ================================================== -->
+
+                        <div class="mt-6">
+                            <label
+                                class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                            >
+                                Gambar Galeri
+                                <span
+                                    v-if="modalMode === 'create'"
+                                    class="text-red-500"
+                                >
+                                    *
+                                </span>
+                            </label>
+
+                            <label
+                                class="group flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/70 p-6 text-center transition hover:border-blue-400 hover:bg-blue-50/50 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-blue-700 dark:hover:bg-blue-950/20"
+                            >
                                 <input
-                                    v-model="form.alt_text"
-                                    type="text"
-                                    maxlength="255"
-                                    placeholder="Deskripsi singkat gambar untuk SEO dan accessibility"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    class="hidden"
+                                    @change="handleGambarChange"
                                 />
-                            </div>
-
-                            <!-- DESKRIPSI -->
-
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Deskripsi
-                                </label>
-
-                                <textarea
-                                    v-model="form.deskripsi"
-                                    rows="4"
-                                    placeholder="Tuliskan keterangan mengenai foto atau kegiatan..."
-                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                ></textarea>
-                            </div>
-
-                            <!-- IMAGE -->
-
-                            <div class="md:col-span-2">
-                                <label
-                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    Gambar Galeri
-
-                                    <span
-                                        v-if="modalMode === 'create'"
-                                        class="text-red-500"
-                                    >
-                                        *
-                                    </span>
-                                </label>
 
                                 <div
-                                    class="rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-4 transition-colors dark:border-slate-700 dark:bg-slate-800/50"
+                                    class="flex size-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 transition group-hover:scale-105 dark:bg-blue-950/50 dark:text-blue-400"
                                 >
-                                    <div
-                                        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-                                    >
-                                        <div class="flex items-center gap-3">
-                                            <div
-                                                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700"
-                                            >
-                                                <Upload class="size-5" />
-                                            </div>
-
-                                            <div>
-                                                <p
-                                                    class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                                                >
-                                                    Upload gambar
-                                                </p>
-
-                                                <p
-                                                    class="text-xs text-slate-500 dark:text-slate-400"
-                                                >
-                                                    PNG, JPG, JPEG, atau WEBP —
-                                                    maksimal 1 MB.
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <label
-                                            class="inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                                        >
-                                            Pilih File
-
-                                            <input
-                                                type="file"
-                                                accept="image/png,image/jpeg,image/webp"
-                                                class="hidden"
-                                                @change="handleGambarChange"
-                                            />
-                                        </label>
-                                    </div>
+                                    <Upload class="size-5" />
                                 </div>
 
-                                <!-- NEW PREVIEW -->
-
-                                <div
-                                    v-if="gambarPreview"
-                                    class="mt-3 flex items-center gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-3 dark:border-blue-900/40 dark:bg-blue-950/20"
+                                <p
+                                    class="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200"
                                 >
-                                    <img
-                                        :src="gambarPreview"
-                                        alt="Preview gambar baru"
-                                        class="h-24 w-36 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700"
-                                    />
+                                    Klik untuk memilih gambar
+                                </p>
 
-                                    <div>
-                                        <p
-                                            class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                                        >
-                                            Preview Gambar Baru
-                                        </p>
+                                <p class="mt-1 text-xs text-slate-400">
+                                    PNG, JPG, JPEG, atau WEBP · Maksimal 2 MB
+                                </p>
+                            </label>
 
-                                        <p
-                                            class="mt-1 text-xs text-slate-500 dark:text-slate-400"
-                                        >
-                                            Gambar baru akan digunakan setelah
-                                            disimpan.
-                                        </p>
-                                    </div>
+                            <!-- NEW IMAGE -->
+
+                            <div
+                                v-if="gambarPreview"
+                                class="mt-4 flex items-center gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-3 dark:border-blue-900/40 dark:bg-blue-950/20"
+                            >
+                                <img
+                                    :src="gambarPreview"
+                                    alt="Preview gambar baru"
+                                    class="h-24 w-36 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700"
+                                />
+
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Preview Gambar Baru
+                                    </p>
+
+                                    <p
+                                        class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                                    >
+                                        Gambar baru akan digunakan setelah
+                                        disimpan.
+                                    </p>
                                 </div>
+                            </div>
 
-                                <!-- CURRENT IMAGE -->
+                            <!-- CURRENT IMAGE -->
 
-                                <div
-                                    v-else-if="
-                                        modalMode === 'edit' &&
-                                        selectedGaleri?.gambar
+                            <div
+                                v-else-if="
+                                    modalMode === 'edit' &&
+                                    selectedGaleri?.gambar
+                                "
+                                class="mt-4 flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"
+                            >
+                                <img
+                                    :src="getImageUrl(selectedGaleri.gambar)!"
+                                    :alt="
+                                        localizedGaleriAltText(
+                                            selectedGaleri,
+                                        ) ||
+                                        localizedGaleriValue(
+                                            selectedGaleri,
+                                            'judul',
+                                        )
                                     "
-                                    class="mt-3 flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900"
-                                >
-                                    <img
-                                        :src="
-                                            getImageUrl(selectedGaleri.gambar)!
-                                        "
-                                        :alt="
-                                            selectedGaleri.alt_text ||
-                                            selectedGaleri.judul
-                                        "
-                                        class="h-24 w-36 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700"
-                                    />
+                                    class="h-24 w-36 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700"
+                                />
 
-                                    <div>
-                                        <p
-                                            class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                                        >
-                                            Gambar Saat Ini
-                                        </p>
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                    >
+                                        Gambar Saat Ini
+                                    </p>
 
-                                        <p
-                                            class="mt-1 text-xs text-slate-500 dark:text-slate-400"
-                                        >
-                                            Pilih file baru jika ingin mengganti
-                                            gambar.
-                                        </p>
-                                    </div>
+                                    <p
+                                        class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                                    >
+                                        Pilih file baru jika ingin mengganti
+                                        gambar.
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- FOOTER -->
+                        <!-- =================================================
+                             FOOTER
+                        ================================================== -->
 
                         <div
                             class="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end dark:border-slate-800"
                         >
                             <button
                                 type="button"
-                                class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                                 :disabled="processingForm"
                                 @click="closeModal"
                             >
@@ -1663,10 +2018,10 @@ onBeforeUnmount(() => {
                                 type="submit"
                                 :disabled="
                                     processingForm ||
-                                    !form.judul.trim() ||
+                                    !form.judul_id.trim() ||
                                     (modalMode === 'create' && !gambarFile)
                                 "
-                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <span
                                     v-if="processingForm"
@@ -1687,9 +2042,9 @@ onBeforeUnmount(() => {
             </div>
         </Transition>
 
-        <!-- =========================================================
-             DETAIL
-        ========================================================== -->
+        <!-- =================================================================
+             DETAIL MODAL
+        ================================================================== -->
 
         <Transition name="modal">
             <div
@@ -1698,7 +2053,7 @@ onBeforeUnmount(() => {
                 @click.self="closeDetail"
             >
                 <div
-                    class="w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
+                    class="w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
                 >
                     <!-- HEADER -->
 
@@ -1728,6 +2083,30 @@ onBeforeUnmount(() => {
                         </button>
                     </div>
 
+                    <!-- DETAIL LANGUAGE -->
+
+                    <div class="px-6 pt-5">
+                        <div
+                            class="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800"
+                        >
+                            <button
+                                v-for="language in languageOptions"
+                                :key="language.code"
+                                type="button"
+                                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                                :class="
+                                    activeLanguage === language.code
+                                        ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'
+                                "
+                                @click="setLanguage(language.code)"
+                            >
+                                {{ language.flag }}
+                                {{ language.short }}
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- CONTENT -->
 
                     <div class="max-h-[75vh] space-y-6 overflow-y-auto p-6">
@@ -1740,14 +2119,17 @@ onBeforeUnmount(() => {
                             <img
                                 :src="getImageUrl(selectedGaleri.gambar)!"
                                 :alt="
-                                    selectedGaleri.alt_text ||
-                                    selectedGaleri.judul
+                                    localizedGaleriAltText(selectedGaleri) ||
+                                    localizedGaleriValue(
+                                        selectedGaleri,
+                                        'judul',
+                                    )
                                 "
                                 class="max-h-[420px] w-full object-contain"
                             />
                         </div>
 
-                        <!-- META -->
+                        <!-- TITLE -->
 
                         <div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -1778,7 +2160,12 @@ onBeforeUnmount(() => {
                             <h3
                                 class="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
                             >
-                                {{ selectedGaleri.judul }}
+                                {{
+                                    localizedGaleriValue(
+                                        selectedGaleri,
+                                        "judul",
+                                    )
+                                }}
                             </h3>
 
                             <div
@@ -1792,9 +2179,8 @@ onBeforeUnmount(() => {
 
                                 <span>
                                     Urutan:
-
                                     <strong
-                                        class="font-medium text-slate-700 dark:text-slate-200"
+                                        class="font-semibold text-slate-700 dark:text-slate-200"
                                     >
                                         {{ selectedGaleri.urutan }}
                                     </strong>
@@ -1802,16 +2188,26 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <!-- DESKRIPSI -->
+                        <!-- DESCRIPTION -->
 
                         <div
-                            v-if="selectedGaleri.deskripsi"
-                            class="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20"
+                            v-if="
+                                localizedGaleriValue(
+                                    selectedGaleri,
+                                    'deskripsi',
+                                )
+                            "
+                            class="rounded-2xl border border-blue-100 bg-blue-50/60 p-5 dark:border-blue-900/40 dark:bg-blue-950/20"
                         >
                             <p
-                                class="text-sm leading-6 text-slate-600 dark:text-slate-300"
+                                class="text-sm leading-7 text-slate-600 dark:text-slate-300"
                             >
-                                {{ selectedGaleri.deskripsi }}
+                                {{
+                                    localizedGaleriValue(
+                                        selectedGaleri,
+                                        "deskripsi",
+                                    )
+                                }}
                             </p>
                         </div>
 
@@ -1846,7 +2242,11 @@ onBeforeUnmount(() => {
                                 <p
                                     class="mt-2 text-sm text-slate-700 dark:text-slate-200"
                                 >
-                                    {{ selectedGaleri.alt_text || "-" }}
+                                    {{
+                                        localizedGaleriAltText(
+                                            selectedGaleri,
+                                        ) || "-"
+                                    }}
                                 </p>
                             </div>
                         </div>
@@ -1883,9 +2283,9 @@ onBeforeUnmount(() => {
             </div>
         </Transition>
 
-        <!-- =========================================================
-             DELETE
-        ========================================================== -->
+        <!-- =================================================================
+             DELETE MODAL
+        ================================================================== -->
 
         <Transition name="modal">
             <div
@@ -1917,7 +2317,12 @@ onBeforeUnmount(() => {
                             <span
                                 class="font-semibold text-slate-700 dark:text-slate-200"
                             >
-                                {{ selectedGaleri.judul }}
+                                {{
+                                    localizedGaleriValue(
+                                        selectedGaleri,
+                                        "judul",
+                                    )
+                                }}
                             </span>
 
                             ?
@@ -1934,7 +2339,7 @@ onBeforeUnmount(() => {
                         <button
                             type="button"
                             :disabled="processingDelete"
-                            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                             @click="closeDelete"
                         >
                             Batal
@@ -1943,7 +2348,7 @@ onBeforeUnmount(() => {
                         <button
                             type="button"
                             :disabled="processingDelete"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-600/20 transition hover:bg-red-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-red-600/20 transition hover:bg-red-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
                             @click="deleteGaleri"
                         >
                             <span
@@ -1964,8 +2369,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* ==========================================================================
-   Modal Transition
-   ========================================================================== */
+ * MODAL
+ * ========================================================================== */
 
 .modal-enter-active,
 .modal-leave-active {
@@ -1985,8 +2390,8 @@ onBeforeUnmount(() => {
 }
 
 /* ==========================================================================
-   Decorative Blobs
-   ========================================================================== */
+ * BLOBS
+ * ========================================================================== */
 
 .blob-shape {
     animation: blob-float 12s ease-in-out infinite;
@@ -2006,22 +2411,14 @@ onBeforeUnmount(() => {
     will-change: transform;
 }
 
-/* ==========================================================================
-   Blob Animations
-   ========================================================================== */
-
 @keyframes blob-float {
     0%,
     100% {
         transform: translate3d(0, 0, 0) scale(1);
     }
 
-    33% {
-        transform: translate3d(25px, 15px, 0) scale(1.05);
-    }
-
-    66% {
-        transform: translate3d(-15px, 30px, 0) scale(0.96);
+    50% {
+        transform: translate3d(20px, 12px, 0) scale(1.05);
     }
 }
 
@@ -2031,12 +2428,8 @@ onBeforeUnmount(() => {
         transform: translate3d(0, 0, 0) scale(1);
     }
 
-    40% {
-        transform: translate3d(-30px, 20px, 0) scale(1.08);
-    }
-
-    75% {
-        transform: translate3d(15px, -15px, 0) scale(0.95);
+    50% {
+        transform: translate3d(-18px, 16px, 0) scale(1.04);
     }
 }
 
@@ -2047,47 +2440,24 @@ onBeforeUnmount(() => {
     }
 
     50% {
-        transform: translate3d(0, 35px, 0) scale(1.1);
+        transform: translate3d(12px, 18px, 0) scale(1.06);
     }
 }
 
 /* ==========================================================================
-   Accessibility
-   ========================================================================== */
+ * REDUCED MOTION
+ * ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
     .blob-shape,
     .blob-shape-delayed,
-    .blob-shape-slow,
+    .blob-shape-slow {
+        animation: none;
+    }
+
     .modal-enter-active,
     .modal-leave-active {
-        animation: none;
-        transition: none;
-    }
-}
-
-/* ==========================================================================
-   Mobile
-   ========================================================================== */
-
-@media (max-width: 640px) {
-    .blob-shape {
-        left: -10rem;
-        top: -8rem;
-        width: 20rem;
-        height: 20rem;
-    }
-
-    .blob-shape-delayed {
-        right: -8rem;
-        width: 17rem;
-        height: 17rem;
-    }
-
-    .blob-shape-slow {
-        left: 35%;
-        width: 15rem;
-        height: 15rem;
+        transition: opacity 0.1s ease;
     }
 }
 </style>

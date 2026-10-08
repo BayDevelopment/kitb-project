@@ -11,7 +11,12 @@ use Inertia\Response;
 class GuestGaleriController extends Controller
 {
     /**
-     * Menampilkan galeri yang aktif untuk halaman publik.
+     * Menampilkan galeri aktif untuk halaman publik.
+     *
+     * Pencarian mendukung:
+     * - Bahasa Indonesia
+     * - Bahasa Inggris
+     * - Bahasa Mandarin
      */
     public function index(Request $request): Response
     {
@@ -26,10 +31,23 @@ class GuestGaleriController extends Controller
                 function ($query) use ($search) {
                     $query->where(function ($query) use ($search) {
                         $query
-                            ->where('judul', 'like', "%{$search}%")
-                            ->orWhere('deskripsi', 'like', "%{$search}%")
-                            ->orWhere('kategori', 'like', "%{$search}%")
-                            ->orWhere('alt_text', 'like', "%{$search}%");
+                            // Bahasa Indonesia
+                            ->where('judul_id', 'like', "%{$search}%")
+                            ->orWhere('deskripsi_id', 'like', "%{$search}%")
+                            ->orWhere('alt_text_id', 'like', "%{$search}%")
+
+                            // Bahasa Inggris
+                            ->orWhere('judul_en', 'like', "%{$search}%")
+                            ->orWhere('deskripsi_en', 'like', "%{$search}%")
+                            ->orWhere('alt_text_en', 'like', "%{$search}%")
+
+                            // Bahasa Mandarin
+                            ->orWhere('judul_zh', 'like', "%{$search}%")
+                            ->orWhere('deskripsi_zh', 'like', "%{$search}%")
+                            ->orWhere('alt_text_zh', 'like', "%{$search}%")
+
+                            // Field umum
+                            ->orWhere('kategori', 'like', "%{$search}%");
                     });
                 }
             )
@@ -38,7 +56,7 @@ class GuestGaleriController extends Controller
             ->withQueryString();
 
         /**
-         * Ambil kategori hanya dari galeri aktif.
+         * Mengambil kategori hanya dari galeri aktif.
          */
         $kategoris = Galeri::query()
             ->aktif()

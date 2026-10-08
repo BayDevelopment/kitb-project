@@ -14,12 +14,25 @@ class Galeri extends Model
     protected $table = 'galeris';
 
     protected $fillable = [
-        'judul',
+        // Indonesian
+        'judul_id',
+        'deskripsi_id',
+        'alt_text_id',
+
+        // English
+        'judul_en',
+        'deskripsi_en',
+        'alt_text_en',
+
+        // Chinese / Mandarin
+        'judul_zh',
+        'deskripsi_zh',
+        'alt_text_zh',
+
+        // Shared fields
         'slug',
-        'deskripsi',
         'kategori',
         'gambar',
-        'alt_text',
         'tanggal',
         'status',
         'urutan',
