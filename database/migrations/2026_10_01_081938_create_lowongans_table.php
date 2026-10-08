@@ -6,58 +6,114 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('lowongans', function (Blueprint $table) {
+        Schema::create('lowongans', function (Blueprint $table): void {
             $table->id();
 
-            // Identitas lowongan
-            $table->string('judul');
+            // =========================
+            // IDENTITAS LOWONGAN
+            // =========================
             $table->string('slug')->unique();
 
-            // Informasi pekerjaan
-            $table->string('departemen')->nullable();
-            $table->string('lokasi')->nullable();
+            // =========================
+            // JUDUL — 3 BAHASA
+            // =========================
+            $table->string('judul_id');
+            $table->string('judul_en');
+            $table->string('judul_zh');
+
+            // =========================
+            // DEPARTEMEN — 3 BAHASA
+            // =========================
+            $table->string('departemen_id')->nullable();
+            $table->string('departemen_en')->nullable();
+            $table->string('departemen_zh')->nullable();
+
+            // =========================
+            // LOKASI — 3 BAHASA
+            // =========================
+            $table->string('lokasi_id')->nullable();
+            $table->string('lokasi_en')->nullable();
+            $table->string('lokasi_zh')->nullable();
+
+            // =========================
+            // TIPE PEKERJAAN
+            // =========================
             $table->string('tipe_pekerjaan', 50)->nullable();
 
-            // Konten lowongan
-            $table->longText('deskripsi')->nullable();
-            $table->longText('tanggung_jawab')->nullable();
-            $table->longText('kualifikasi')->nullable();
-            $table->longText('benefit')->nullable();
+            // =========================
+            // DESKRIPSI — 3 BAHASA
+            // =========================
+            $table->longText('deskripsi_id')->nullable();
+            $table->longText('deskripsi_en')->nullable();
+            $table->longText('deskripsi_zh')->nullable();
 
-            // Periode recruitment
+            // =========================
+            // TANGGUNG JAWAB — 3 BAHASA
+            // =========================
+            $table->longText('tanggung_jawab_id')->nullable();
+            $table->longText('tanggung_jawab_en')->nullable();
+            $table->longText('tanggung_jawab_zh')->nullable();
+
+            // =========================
+            // KUALIFIKASI — 3 BAHASA
+            // =========================
+            $table->longText('kualifikasi_id')->nullable();
+            $table->longText('kualifikasi_en')->nullable();
+            $table->longText('kualifikasi_zh')->nullable();
+
+            // =========================
+            // BENEFIT — 3 BAHASA
+            // =========================
+            $table->longText('benefit_id')->nullable();
+            $table->longText('benefit_en')->nullable();
+            $table->longText('benefit_zh')->nullable();
+
+            // =========================
+            // PERIODE LOWONGAN
+            // =========================
             $table->date('tanggal_mulai')->nullable();
             $table->date('tanggal_tutup')->nullable();
 
-            // Publishing
+            // =========================
+            // STATUS
+            // =========================
             $table->string('status', 20)
                 ->default('draft')
                 ->index();
 
+            // =========================
+            // FEATURED / UNGGULAN
+            // =========================
             $table->boolean('unggulan')
                 ->default(false)
                 ->index();
 
-            // Sorting
+            // =========================
+            // URUTAN
+            // =========================
             $table->unsignedInteger('urutan')
                 ->default(0)
                 ->index();
 
             $table->timestamps();
 
-            // Index tambahan untuk pencarian/filter
-            $table->index(['status', 'unggulan']);
-            $table->index(['tanggal_mulai', 'tanggal_tutup']);
+            // =========================
+            // INDEX TAMBAHAN
+            // =========================
+            $table->index([
+                'status',
+                'unggulan',
+            ]);
+
+            $table->index([
+                'tanggal_mulai',
+                'tanggal_tutup',
+            ]);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('lowongans');

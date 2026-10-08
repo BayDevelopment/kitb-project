@@ -16,9 +16,6 @@ use Throwable;
 
 class LowonganController extends Controller
 {
-    /**
-     * Menampilkan daftar lowongan.
-     */
     public function index(Request $request): Response
     {
         $search = trim((string) $request->input('search', ''));
@@ -69,56 +66,20 @@ class LowonganController extends Controller
         );
     }
 
-    /**
-     * Menyimpan lowongan baru.
-     *
-     * Nomor urut akan dinormalisasi agar tidak terjadi
-     * dua lowongan dengan nomor urut yang sama.
-     */
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateLowongan($request);
 
         try {
             DB::transaction(function () use ($validated): void {
-                /*
-                 * Urutan yang diminta admin.
-                 *
-                 * Jika kosong, lowongan ditempatkan
-                 * setelah posisi terakhir.
-                 */
                 $requestedOrder = (int) ($validated['urutan'] ?? 0);
 
-                $maxOrder = (int) Lowongan::query()
-                    ->max('urutan');
+                $maxOrder = (int) Lowongan::query()->max('urutan');
 
-                /*
-                 * Untuk data baru:
-                 *
-                 * - urutan <= 0  => ditempatkan paling akhir
-                 * - urutan > max  => ditempatkan paling akhir
-                 * - urutan valid  => sisipkan pada posisi tersebut
-                 */
                 if ($requestedOrder <= 0 || $requestedOrder > $maxOrder + 1) {
                     $requestedOrder = $maxOrder + 1;
                 }
 
-                /*
-                 * Geser semua data mulai dari posisi tersebut
-                 * satu tingkat ke bawah.
-                 *
-                 * Contoh:
-                 *
-                 * A = 1
-                 * B = 2
-                 * C = 3
-                 *
-                 * Insert pada 1:
-                 *
-                 * A = 2
-                 * B = 3
-                 * C = 4
-                 */
                 if ($requestedOrder <= $maxOrder) {
                     Lowongan::query()
                         ->where('urutan', '>=', $requestedOrder)
@@ -132,49 +93,22 @@ class LowonganController extends Controller
                         });
                 }
 
-                /*
-                 * Slug dibuat sepenuhnya oleh server.
-                 *
-                 * Request dari frontend tidak pernah dipercaya
-                 * untuk menentukan slug.
-                 */
-                $slug = $this->generateUniqueSlug(
-                    $validated['judul']
-                );
-
-                /*
-                 * Sanitasi rich text.
-                 */
-                $validated['deskripsi'] = $this->sanitizeHtml(
-                    $validated['deskripsi'] ?? null
-                );
-
-                $validated['tanggung_jawab'] = $this->sanitizeHtml(
-                    $validated['tanggung_jawab'] ?? null
-                );
-
-                $validated['kualifikasi'] = $this->sanitizeHtml(
-                    $validated['kualifikasi'] ?? null
-                );
-
-                $validated['benefit'] = $this->sanitizeHtml(
-                    $validated['benefit'] ?? null
-                );
+                $validated = $this->sanitizeTranslatedContent($validated);
 
                 $validated['unggulan'] = (bool) (
                     $validated['unggulan'] ?? false
                 );
 
-                /*
-                 * Jangan gunakan slug melalui mass assignment.
-                 *
-                 * Slug ditentukan secara eksplisit oleh server.
-                 */
-                $lowongan = new Lowongan();
+                unset($validated['slug']);
 
+                $lowongan = new Lowongan();
                 $lowongan->fill($validated);
 
-                $lowongan->slug = $slug;
+                // Slug selalu dibuat server-side dari judul Indonesia.
+                $lowongan->slug = $this->generateUniqueSlug(
+                    $validated['judul_id']
+                );
+
                 $lowongan->urutan = $requestedOrder;
 
                 $lowongan->save();
@@ -196,9 +130,6 @@ class LowonganController extends Controller
         }
     }
 
-    /**
-     * Memperbarui lowongan.
-     */
     public function update(
         Request $request,
         Lowongan $lowongan
@@ -220,14 +151,9 @@ class LowonganController extends Controller
                 );
 
                 $maxOrder = (int) Lowongan::query()
-                    ->whereKeyNot($lowongan->id)
+                    ->where('id', '!=', $lowongan->id)
                     ->max('urutan');
 
-                /*
-                 * Karena data yang sedang diedit akan menempati
-                 * salah satu posisi, maksimum posisi adalah jumlah
-                 * data selain dirinya + 1.
-                 */
                 $maxAllowedOrder = max(
                     1,
                     $maxOrder + 1
@@ -241,36 +167,14 @@ class LowonganController extends Controller
                     )
                 );
 
-                /*
-                 * Cek apakah judul berubah sebelum melakukan fill().
-                 */
+                // Judul Indonesia menjadi sumber slug.
                 $judulChanged =
-                    $validated['judul'] !== $lowongan->judul;
+                    $validated['judul_id'] !== $lowongan->judul_id;
 
-                /*
-                 * Jika posisi berubah, rapikan posisi data lain.
-                 */
                 if ($requestedOrder !== $oldOrder) {
-                    /*
-                     * Pindah ke posisi lebih atas.
-                     *
-                     * Contoh:
-                     *
-                     * A = 1
-                     * B = 2
-                     * C = 3
-                     * D = 4
-                     *
-                     * D pindah ke 2:
-                     *
-                     * A = 1
-                     * D = 2
-                     * B = 3
-                     * C = 4
-                     */
                     if ($requestedOrder < $oldOrder) {
                         Lowongan::query()
-                            ->whereKeyNot($lowongan->id)
+                            ->where('id', '!=', $lowongan->id)
                             ->whereBetween(
                                 'urutan',
                                 [
@@ -287,25 +191,8 @@ class LowonganController extends Controller
                                 ]);
                             });
                     } else {
-                        /*
-                         * Pindah ke posisi lebih bawah.
-                         *
-                         * Contoh:
-                         *
-                         * A = 1
-                         * B = 2
-                         * C = 3
-                         * D = 4
-                         *
-                         * A pindah ke 3:
-                         *
-                         * B = 1
-                         * C = 2
-                         * A = 3
-                         * D = 4
-                         */
                         Lowongan::query()
-                            ->whereKeyNot($lowongan->id)
+                            ->where('id', '!=', $lowongan->id)
                             ->whereBetween(
                                 'urutan',
                                 [
@@ -324,41 +211,20 @@ class LowonganController extends Controller
                     }
                 }
 
-                /*
-                 * Sanitasi rich text.
-                 */
-                $validated['deskripsi'] = $this->sanitizeHtml(
-                    $validated['deskripsi'] ?? null
-                );
-
-                $validated['tanggung_jawab'] = $this->sanitizeHtml(
-                    $validated['tanggung_jawab'] ?? null
-                );
-
-                $validated['kualifikasi'] = $this->sanitizeHtml(
-                    $validated['kualifikasi'] ?? null
-                );
-
-                $validated['benefit'] = $this->sanitizeHtml(
-                    $validated['benefit'] ?? null
-                );
+                $validated = $this->sanitizeTranslatedContent($validated);
 
                 $validated['unggulan'] = (bool) (
                     $validated['unggulan'] ?? false
                 );
 
-                /*
-                 * Jangan pernah menerima slug dari frontend.
-                 *
-                 * Jika judul berubah, server membuat slug baru.
-                 */
+                // Slug tidak pernah diterima dari frontend.
                 unset($validated['slug']);
 
                 $lowongan->fill($validated);
 
                 if ($judulChanged) {
                     $lowongan->slug = $this->generateUniqueSlug(
-                        $validated['judul'],
+                        $validated['judul_id'],
                         $lowongan->id
                     );
                 }
@@ -384,9 +250,6 @@ class LowonganController extends Controller
         }
     }
 
-    /**
-     * Menghapus lowongan.
-     */
     public function destroy(
         Lowongan $lowongan
     ): RedirectResponse {
@@ -396,20 +259,6 @@ class LowonganController extends Controller
 
                 $lowongan->delete();
 
-                /*
-                 * Rapikan nomor urut setelah penghapusan.
-                 *
-                 * Contoh:
-                 *
-                 * A = 1
-                 * B = 2
-                 * C = 3
-                 *
-                 * B dihapus:
-                 *
-                 * A = 1
-                 * C = 2
-                 */
                 Lowongan::query()
                     ->where('urutan', '>', $deletedOrder)
                     ->orderBy('urutan')
@@ -436,9 +285,6 @@ class LowonganController extends Controller
         }
     }
 
-    /**
-     * Mengubah status lowongan.
-     */
     public function toggleStatus(
         Request $request,
         Lowongan $lowongan
@@ -461,17 +307,10 @@ class LowonganController extends Controller
             ]);
 
             $message = match ($validated['status']) {
-                'published' =>
-                'Lowongan berhasil dipublikasikan.',
-
-                'closed' =>
-                'Lowongan berhasil ditutup.',
-
-                'draft' =>
-                'Lowongan berhasil dikembalikan ke draft.',
-
-                default =>
-                'Status lowongan berhasil diperbarui.',
+                'published' => 'Lowongan berhasil dipublikasikan.',
+                'closed' => 'Lowongan berhasil ditutup.',
+                'draft' => 'Lowongan berhasil dikembalikan ke draft.',
+                default => 'Status lowongan berhasil diperbarui.',
             };
 
             return back()->with('toast', [
@@ -488,9 +327,6 @@ class LowonganController extends Controller
         }
     }
 
-    /**
-     * Mengubah status unggulan.
-     */
     public function toggleFeatured(
         Lowongan $lowongan
     ): RedirectResponse {
@@ -515,9 +351,6 @@ class LowonganController extends Controller
         }
     }
 
-    /**
-     * Memindahkan urutan lowongan.
-     */
     public function move(
         Request $request,
         Lowongan $lowongan
@@ -562,10 +395,6 @@ class LowonganController extends Controller
                         ->first();
                 }
 
-                /*
-                 * Tidak ada tetangga berarti sudah berada
-                 * di posisi paling atas / bawah.
-                 */
                 if (! $neighbor) {
                     return;
                 }
@@ -596,30 +425,63 @@ class LowonganController extends Controller
         }
     }
 
-    /**
-     * Validasi data lowongan.
-     *
-     * Slug sengaja TIDAK divalidasi dari request.
-     */
     private function validateLowongan(
         Request $request,
         ?Lowongan $lowongan = null
     ): array {
         return $request->validate([
-            'judul' => [
+            'judul_id' => [
                 'required',
                 'string',
                 'min:3',
                 'max:255',
             ],
 
-            'departemen' => [
+            'judul_en' => [
+                'required',
+                'string',
+                'min:3',
+                'max:255',
+            ],
+
+            'judul_zh' => [
+                'required',
+                'string',
+                'min:1',
+                'max:255',
+            ],
+
+            'departemen_id' => [
                 'nullable',
                 'string',
                 'max:150',
             ],
 
-            'lokasi' => [
+            'departemen_en' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            'departemen_zh' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            'lokasi_id' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            'lokasi_en' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            'lokasi_zh' => [
                 'nullable',
                 'string',
                 'max:150',
@@ -631,25 +493,73 @@ class LowonganController extends Controller
                 'max:50',
             ],
 
-            'deskripsi' => [
+            'deskripsi_id' => [
                 'nullable',
                 'string',
                 'max:50000',
             ],
 
-            'tanggung_jawab' => [
+            'deskripsi_en' => [
                 'nullable',
                 'string',
                 'max:50000',
             ],
 
-            'kualifikasi' => [
+            'deskripsi_zh' => [
                 'nullable',
                 'string',
                 'max:50000',
             ],
 
-            'benefit' => [
+            'tanggung_jawab_id' => [
+                'nullable',
+                'string',
+                'max:50000',
+            ],
+
+            'tanggung_jawab_en' => [
+                'nullable',
+                'string',
+                'max:50000',
+            ],
+
+            'tanggung_jawab_zh' => [
+                'nullable',
+                'string',
+                'max:50000',
+            ],
+
+            'kualifikasi_id' => [
+                'nullable',
+                'string',
+                'max:50000',
+            ],
+
+            'kualifikasi_en' => [
+                'nullable',
+                'string',
+                'max:50000',
+            ],
+
+            'kualifikasi_zh' => [
+                'nullable',
+                'string',
+                'max:50000',
+            ],
+
+            'benefit_id' => [
+                'nullable',
+                'string',
+                'max:50000',
+            ],
+
+            'benefit_en' => [
+                'nullable',
+                'string',
+                'max:50000',
+            ],
+
+            'benefit_zh' => [
                 'nullable',
                 'string',
                 'max:50000',
@@ -688,14 +598,17 @@ class LowonganController extends Controller
                 'max:4294967295',
             ],
         ], [
-            'judul.required' =>
-            'Judul lowongan wajib diisi.',
+            'judul_id.required' => 'Judul Indonesia wajib diisi.',
+            'judul_id.min' => 'Judul Indonesia minimal 3 karakter.',
+            'judul_id.max' => 'Judul Indonesia maksimal 255 karakter.',
 
-            'judul.min' =>
-            'Judul lowongan minimal 3 karakter.',
+            'judul_en.required' => 'Judul English wajib diisi.',
+            'judul_en.min' => 'Judul English minimal 3 karakter.',
+            'judul_en.max' => 'Judul English maksimal 255 karakter.',
 
-            'judul.max' =>
-            'Judul lowongan maksimal 255 karakter.',
+            'judul_zh.required' => 'Judul 中文 wajib diisi.',
+            'judul_zh.min' => 'Judul 中文 minimal 1 karakter.',
+            'judul_zh.max' => 'Judul 中文 maksimal 255 karakter.',
 
             'tanggal_tutup.after_or_equal' =>
             'Tanggal tutup harus sama atau setelah tanggal mulai.',
@@ -717,9 +630,35 @@ class LowonganController extends Controller
         ]);
     }
 
-    /**
-     * Membuat slug unik secara server-side.
-     */
+    private function sanitizeTranslatedContent(array $validated): array
+    {
+        $fields = [
+            'deskripsi_id',
+            'deskripsi_en',
+            'deskripsi_zh',
+
+            'tanggung_jawab_id',
+            'tanggung_jawab_en',
+            'tanggung_jawab_zh',
+
+            'kualifikasi_id',
+            'kualifikasi_en',
+            'kualifikasi_zh',
+
+            'benefit_id',
+            'benefit_en',
+            'benefit_zh',
+        ];
+
+        foreach ($fields as $field) {
+            $validated[$field] = $this->sanitizeHtml(
+                $validated[$field] ?? null
+            );
+        }
+
+        return $validated;
+    }
+
     private function generateUniqueSlug(
         string $judul,
         ?int $ignoreId = null
@@ -755,35 +694,21 @@ class LowonganController extends Controller
         return $slug;
     }
 
-    /**
-     * Sanitasi HTML rich text.
-     */
     private function sanitizeHtml(?string $html): ?string
     {
         if ($html === null || trim($html) === '') {
             return null;
         }
 
-        /*
-         * Hapus script dan style block.
-         */
         $html = preg_replace(
             [
-                '/<script\b[^>]*>(.*?)<\/script>/is',
-                '/<style\b[^>]*>(.*?)<\/style>/is',
+                '/<script\b[^>]*>.*?<\/script>/is',
+                '/<style\b[^>]*>.*?<\/style>/is',
             ],
             '',
             $html
         );
 
-        /*
-         * Hapus seluruh inline event handler.
-         *
-         * Contoh:
-         * onclick=""
-         * onerror=""
-         * onload=""
-         */
         $html = preg_replace(
             [
                 '/\son[a-z]+\s*=\s*(["\']).*?\1/is',
@@ -793,9 +718,6 @@ class LowonganController extends Controller
             (string) $html
         );
 
-        /*
-         * Hapus javascript:, vbscript:, dan data:
-         */
         $html = preg_replace(
             [
                 '/javascript\s*:/i',
@@ -806,9 +728,6 @@ class LowonganController extends Controller
             (string) $html
         );
 
-        /*
-         * Whitelist HTML yang diperbolehkan.
-         */
         $allowedTags = [
             '<p>',
             '<br>',
@@ -831,9 +750,6 @@ class LowonganController extends Controller
             implode('', $allowedTags)
         );
 
-        /*
-         * Normalisasi newline berlebihan.
-         */
         $html = preg_replace(
             "/(\r\n|\r|\n){3,}/",
             "\n\n",
@@ -842,8 +758,6 @@ class LowonganController extends Controller
 
         $html = trim((string) $html);
 
-        return $html !== ''
-            ? $html
-            : null;
+        return $html !== '' ? $html : null;
     }
 }

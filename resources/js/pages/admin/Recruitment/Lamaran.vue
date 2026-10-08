@@ -37,7 +37,9 @@ defineOptions({
 
 interface Lowongan {
     id: number;
-    judul: string;
+    judul_id: string;
+    judul_en: string | null;
+    judul_zh: string | null;
 }
 
 interface Lamaran {
@@ -48,7 +50,11 @@ interface Lamaran {
     no_hp: string;
     linkedin: string | null;
     portfolio: string | null;
-    pesan: string | null;
+    pesan_id: string | null;
+    pesan_en: string | null;
+    pesan_zh: string | null;
+    /** Fallback untuk data lama yang masih memakai kolom pesan. */
+    pesan?: string | null;
     status: string;
     submitted_at: string | null;
     created_at: string;
@@ -121,7 +127,7 @@ let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 
 const applyFilter = () => {
     router.get(
-        "/recruitment/lamaran",
+        "/admin/recruitment/lamaran",
         {
             search: search.value.trim() || undefined,
             status: status.value !== "all" ? status.value : undefined,
@@ -160,7 +166,7 @@ const resetFilter = () => {
     lowonganId.value = "all";
 
     router.get(
-        "/recruitment/lamaran",
+        "/admin/recruitment/lamaran",
         {},
         {
             preserveState: true,
@@ -224,7 +230,9 @@ const emptyForm = () => ({
     no_hp: "",
     linkedin: "",
     portfolio: "",
-    pesan: "",
+    pesan_id: "",
+    pesan_en: "",
+    pesan_zh: "",
     status: "",
     submitted_at: "",
     cv: null as File | null,
@@ -232,6 +240,18 @@ const emptyForm = () => ({
 });
 
 const form = ref(emptyForm());
+
+const messageLanguages = [
+    { code: "id", label: "Indonesia" },
+    { code: "en", label: "English" },
+    { code: "zh", label: "中文" },
+] as const;
+
+const messageLanguage = ref<"id" | "en" | "zh">("id");
+
+const setMessageLanguage = (language: "id" | "en" | "zh") => {
+    messageLanguage.value = language;
+};
 
 const processingForm = ref(false);
 const processingDelete = ref(false);
@@ -446,11 +466,15 @@ const getFirstError = (errors: Record<string, string | string[]>) => {
     return Array.isArray(firstError) ? firstError[0] : String(firstError);
 };
 
-const lowonganTitle = (lamaran: Lamaran) => {
+const lowonganTitle = (lamaran: Lamaran): string => {
+    const lowongan =
+        lamaran.lowongan ??
+        props.lowongans.find((item) => item.id === lamaran.lowongan_id);
+
     return (
-        lamaran.lowongan?.judul ||
-        props.lowongans.find((lowongan) => lowongan.id === lamaran.lowongan_id)
-            ?.judul ||
+        lowongan?.judul_id ||
+        lowongan?.judul_en ||
+        lowongan?.judul_zh ||
         "Lowongan tidak ditemukan"
     );
 };
@@ -473,8 +497,25 @@ const resetFormState = () => {
     selectedLamaran.value = null;
 };
 
+const getInitialMessageLanguage = (lamaran: Lamaran): "id" | "en" | "zh" => {
+    if (lamaran.pesan_id?.trim() || lamaran.pesan?.trim()) {
+        return "id";
+    }
+
+    if (lamaran.pesan_en?.trim()) {
+        return "en";
+    }
+
+    if (lamaran.pesan_zh?.trim()) {
+        return "zh";
+    }
+
+    return "id";
+};
+
 const openDetail = (lamaran: Lamaran) => {
     selectedLamaran.value = lamaran;
+    messageLanguage.value = getInitialMessageLanguage(lamaran);
 
     showEdit.value = false;
     showDelete.value = false;
@@ -490,19 +531,31 @@ const closeDetail = () => {
 const openEdit = (lamaran: Lamaran) => {
     selectedLamaran.value = lamaran;
 
+    // Muat semua pesan ke form sekaligus. Jika data lama masih memakai
+    // kolom `pesan`, masukkan ke Bahasa Indonesia sebagai fallback.
     form.value = {
         lowongan_id: String(lamaran.lowongan_id),
-        nama_lengkap: lamaran.nama_lengkap,
-        email: lamaran.email,
-        no_hp: lamaran.no_hp,
-        linkedin: lamaran.linkedin || "",
-        portfolio: lamaran.portfolio || "",
-        pesan: lamaran.pesan || "",
-        status: lamaran.status,
+        nama_lengkap: lamaran.nama_lengkap ?? "",
+        email: lamaran.email ?? "",
+        no_hp: lamaran.no_hp ?? "",
+        linkedin: lamaran.linkedin ?? "",
+        portfolio: lamaran.portfolio ?? "",
+        pesan_id: lamaran.pesan_id ?? lamaran.pesan ?? "",
+        pesan_en: lamaran.pesan_en ?? "",
+        pesan_zh: lamaran.pesan_zh ?? "",
+        status: lamaran.status ?? "submitted",
         submitted_at: formatDateTimeInput(lamaran.submitted_at),
         cv: null,
         surat_lamaran: null,
     };
+
+    // Buka tab bahasa yang memang memiliki isi agar modal tidak tampak kosong.
+    messageLanguage.value = getInitialMessageLanguage({
+        ...lamaran,
+        pesan_id: form.value.pesan_id || null,
+        pesan_en: form.value.pesan_en || null,
+        pesan_zh: form.value.pesan_zh || null,
+    });
 
     showDetail.value = false;
     showDelete.value = false;
@@ -561,16 +614,15 @@ const handleSuratChange = (event: Event) => {
 */
 
 const submitForm = () => {
-    if (processingForm.value || !selectedLamaran.value) {
+    const lamaran = selectedLamaran.value;
+
+    if (processingForm.value || !lamaran) {
         return;
     }
 
     const nama = form.value.nama_lengkap.trim();
-
-    if (!nama) {
-        toast.error("Nama lengkap pelamar wajib diisi.");
-        return;
-    }
+    const email = form.value.email.trim();
+    const noHp = form.value.no_hp.trim();
 
     if (nama.length < 3) {
         toast.error("Nama lengkap minimal 3 karakter.");
@@ -582,62 +634,51 @@ const submitForm = () => {
         return;
     }
 
-    if (!form.value.email.trim()) {
+    if (!email) {
         toast.error("Email pelamar wajib diisi.");
         return;
     }
 
-    if (!form.value.no_hp.trim()) {
+    if (!noHp) {
         toast.error("Nomor HP pelamar wajib diisi.");
+        return;
+    }
+
+    if (!form.value.status) {
+        toast.error("Status lamaran wajib dipilih.");
         return;
     }
 
     const data = {
         _method: "PUT",
-
         lowongan_id: Number(form.value.lowongan_id),
-
         nama_lengkap: nama,
-
-        email: form.value.email.trim(),
-
-        no_hp: form.value.no_hp.trim(),
-
+        email,
+        no_hp: noHp,
         linkedin: form.value.linkedin.trim() || null,
-
         portfolio: form.value.portfolio.trim() || null,
-
-        pesan: form.value.pesan.trim() || null,
-
+        pesan_id: form.value.pesan_id.trim() || null,
+        pesan_en: form.value.pesan_en.trim() || null,
+        pesan_zh: form.value.pesan_zh.trim() || null,
         status: form.value.status,
-
         submitted_at: form.value.submitted_at || null,
-
         cv: form.value.cv,
-
         surat_lamaran: form.value.surat_lamaran,
     };
 
     processingForm.value = true;
 
-    router.post(`/recruitment/lamaran/${selectedLamaran.value.id}`, data, {
+    router.post(`/admin/recruitment/lamaran/${lamaran.id}`, data, {
         forceFormData: true,
         preserveScroll: true,
-
         onSuccess: () => {
             resetFormState();
+            toast.success("Data lamaran berhasil diperbarui.");
         },
-
         onError: (errors) => {
-            console.error("Gagal memperbarui lamaran:", errors);
-
             const message = getFirstError(errors);
-
-            if (message) {
-                toast.error(message);
-            }
+            toast.error(message ?? "Data lamaran gagal diperbarui.");
         },
-
         onFinish: () => {
             processingForm.value = false;
         },
@@ -651,30 +692,25 @@ const submitForm = () => {
 */
 
 const deleteLamaran = () => {
-    if (!selectedLamaran.value || processingDelete.value) {
+    const lamaran = selectedLamaran.value;
+
+    if (!lamaran || processingDelete.value) {
         return;
     }
 
     processingDelete.value = true;
 
-    router.delete(`/recruitment/lamaran/${selectedLamaran.value.id}`, {
+    router.delete(`/admin/recruitment/lamaran/${lamaran.id}`, {
         preserveScroll: true,
-
         onSuccess: () => {
             showDelete.value = false;
             selectedLamaran.value = null;
+            toast.success("Data lamaran berhasil dihapus.");
         },
-
         onError: (errors) => {
-            console.error("Gagal menghapus lamaran:", errors);
-
             const message = getFirstError(errors);
-
-            if (message) {
-                toast.error(message);
-            }
+            toast.error(message ?? "Lamaran gagal dihapus.");
         },
-
         onFinish: () => {
             processingDelete.value = false;
         },
@@ -694,7 +730,7 @@ const downloadCv = (lamaran: Lamaran) => {
     }
 
     window.open(
-        `/recruitment/lamaran/${lamaran.id}/cv`,
+        `/admin/recruitment/lamaran/${lamaran.id}/cv`,
         "_blank",
         "noopener,noreferrer",
     );
@@ -707,7 +743,7 @@ const downloadSurat = (lamaran: Lamaran) => {
     }
 
     window.open(
-        `/recruitment/lamaran/${lamaran.id}/surat`,
+        `/admin/recruitment/lamaran/${lamaran.id}/surat`,
         "_blank",
         "noopener,noreferrer",
     );
@@ -910,7 +946,11 @@ onBeforeUnmount(() => {
                             :key="lowongan.id"
                             :value="String(lowongan.id)"
                         >
-                            {{ lowongan.judul }}
+                            {{
+                                lowongan.judul_id ||
+                                lowongan.judul_en ||
+                                lowongan.judul_zh
+                            }}
                         </option>
                     </select>
 
@@ -1662,7 +1702,12 @@ onBeforeUnmount(() => {
                         <!-- MESSAGE -->
 
                         <div
-                            v-if="selectedLamaran.pesan"
+                            v-if="
+                                selectedLamaran.pesan_id ||
+                                selectedLamaran.pesan ||
+                                selectedLamaran.pesan_en ||
+                                selectedLamaran.pesan_zh
+                            "
                             class="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-800/50"
                         >
                             <div class="flex items-center gap-2">
@@ -1677,10 +1722,64 @@ onBeforeUnmount(() => {
                                 </h4>
                             </div>
 
-                            <p
-                                class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300"
+                            <div
+                                class="mt-4 flex flex-wrap gap-2 border-b border-slate-200 pb-3 dark:border-slate-700"
                             >
-                                {{ selectedLamaran.pesan }}
+                                <button
+                                    v-for="language in messageLanguages"
+                                    :key="language.code"
+                                    type="button"
+                                    class="rounded-lg px-3 py-1.5 text-xs font-medium transition"
+                                    :class="
+                                        messageLanguage === language.code
+                                            ? 'bg-blue-600 text-white'
+                                            : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200'
+                                    "
+                                    @click="setMessageLanguage(language.code)"
+                                >
+                                    {{ language.label }}
+                                </button>
+                            </div>
+
+                            <p
+                                v-if="
+                                    messageLanguage === 'id' &&
+                                    (selectedLamaran.pesan_id ||
+                                        selectedLamaran.pesan)
+                                "
+                                class="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300"
+                            >
+                                {{
+                                    selectedLamaran.pesan_id ||
+                                    selectedLamaran.pesan
+                                }}
+                            </p>
+
+                            <p
+                                v-else-if="
+                                    messageLanguage === 'en' &&
+                                    selectedLamaran.pesan_en
+                                "
+                                class="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300"
+                            >
+                                {{ selectedLamaran.pesan_en }}
+                            </p>
+
+                            <p
+                                v-else-if="
+                                    messageLanguage === 'zh' &&
+                                    selectedLamaran.pesan_zh
+                                "
+                                class="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300"
+                            >
+                                {{ selectedLamaran.pesan_zh }}
+                            </p>
+
+                            <p
+                                v-else
+                                class="mt-4 text-sm italic text-slate-400 dark:text-slate-500"
+                            >
+                                Pesan dalam bahasa ini tidak tersedia.
                             </p>
                         </div>
 
@@ -1814,7 +1913,11 @@ onBeforeUnmount(() => {
                                         :key="lowongan.id"
                                         :value="String(lowongan.id)"
                                     >
-                                        {{ lowongan.judul }}
+                                        {{
+                                            lowongan.judul_id ||
+                                            lowongan.judul_en ||
+                                            lowongan.judul_zh
+                                        }}
                                     </option>
                                 </select>
                             </div>
@@ -2017,7 +2120,7 @@ onBeforeUnmount(() => {
                                 </p>
                             </div>
 
-                            <!-- PESAN -->
+                            <!-- PESAN 3 BAHASA -->
 
                             <div class="md:col-span-2">
                                 <label
@@ -2026,11 +2129,51 @@ onBeforeUnmount(() => {
                                     Pesan Pelamar
                                 </label>
 
+                                <div
+                                    class="mb-3 flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800"
+                                >
+                                    <button
+                                        v-for="language in messageLanguages"
+                                        :key="language.code"
+                                        type="button"
+                                        class="rounded-t-xl border-b-2 px-4 py-2 text-xs font-semibold transition"
+                                        :class="
+                                            messageLanguage === language.code
+                                                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                                                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                                        "
+                                        @click="
+                                            setMessageLanguage(language.code)
+                                        "
+                                    >
+                                        {{ language.label }}
+                                    </button>
+                                </div>
+
                                 <textarea
-                                    v-model="form.pesan"
+                                    v-if="messageLanguage === 'id'"
+                                    v-model="form.pesan_id"
                                     rows="5"
                                     maxlength="2000"
-                                    placeholder="Pesan atau catatan dari pelamar..."
+                                    placeholder="Pesan atau catatan dari pelamar dalam Bahasa Indonesia..."
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                ></textarea>
+
+                                <textarea
+                                    v-else-if="messageLanguage === 'en'"
+                                    v-model="form.pesan_en"
+                                    rows="5"
+                                    maxlength="2000"
+                                    placeholder="Applicant message or note in English..."
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                ></textarea>
+
+                                <textarea
+                                    v-else
+                                    v-model="form.pesan_zh"
+                                    rows="5"
+                                    maxlength="2000"
+                                    placeholder="申请人的留言或备注（中文）..."
                                     class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
                                 ></textarea>
                             </div>

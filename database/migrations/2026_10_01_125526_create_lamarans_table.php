@@ -12,46 +12,89 @@ return new class extends Migration
             $table->id();
 
             /*
-             * Relasi ke lowongan.
-             */
+            |--------------------------------------------------------------------------
+            | Relasi ke lowongan
+            |--------------------------------------------------------------------------
+            */
+
             $table->foreignId('lowongan_id')
                 ->constrained('lowongans')
                 ->cascadeOnDelete();
 
             /*
-             * Data pelamar.
-             */
+            |--------------------------------------------------------------------------
+            | Data pelamar
+            |--------------------------------------------------------------------------
+            |
+            | Data personal berasal langsung dari pelamar sehingga
+            | tidak menggunakan struktur multilingual.
+            |
+            */
+
             $table->string('nama_lengkap');
             $table->string('email');
             $table->string('no_hp', 30);
 
             /*
-             * Dokumen lamaran.
-             */
+            |--------------------------------------------------------------------------
+            | Dokumen lamaran
+            |--------------------------------------------------------------------------
+            */
+
             $table->string('cv');
             $table->string('surat_lamaran')->nullable();
 
             /*
-             * Informasi tambahan.
-             */
+            |--------------------------------------------------------------------------
+            | Informasi tambahan
+            |--------------------------------------------------------------------------
+            */
+
             $table->string('linkedin')->nullable();
             $table->string('portfolio')->nullable();
-            $table->text('pesan')->nullable();
 
             /*
-             * Status proses recruitment.
-             */
+            |--------------------------------------------------------------------------
+            | Pesan lamaran multilingual
+            |--------------------------------------------------------------------------
+            |
+            | Sesuai dengan form Lamaran.vue:
+            | - pesan_id = Bahasa Indonesia
+            | - pesan_en = English
+            | - pesan_zh = 中文
+            |
+            */
+
+            $table->text('pesan_id')->nullable();
+            $table->text('pesan_en')->nullable();
+            $table->text('pesan_zh')->nullable();
+
+            /*
+            |--------------------------------------------------------------------------
+            | Status proses rekrutmen
+            |--------------------------------------------------------------------------
+            */
+
             $table->string('status', 30)
                 ->default('submitted')
                 ->index();
 
             $table->timestamp('submitted_at')->nullable();
 
+            /*
+            |--------------------------------------------------------------------------
+            | Timestamps
+            |--------------------------------------------------------------------------
+            */
+
             $table->timestamps();
 
             /*
-             * Index.
-             */
+            |--------------------------------------------------------------------------
+            | Index
+            |--------------------------------------------------------------------------
+            */
+
             $table->index(['lowongan_id', 'status']);
             $table->index('email');
         });

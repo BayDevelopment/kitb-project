@@ -26,26 +26,46 @@ defineOptions({
     layout: AppLayout,
 });
 
-/*
-|--------------------------------------------------------------------------
-| Interfaces
-|--------------------------------------------------------------------------
-*/
+type LanguageCode = "id" | "en" | "zh";
+type Status = "draft" | "published" | "closed";
 
 interface Lowongan {
     id: number;
-    judul: string;
     slug: string;
-    departemen: string | null;
-    lokasi: string | null;
+
+    judul_id: string;
+    judul_en: string;
+    judul_zh: string;
+
+    departemen_id: string | null;
+    departemen_en: string | null;
+    departemen_zh: string | null;
+
+    lokasi_id: string | null;
+    lokasi_en: string | null;
+    lokasi_zh: string | null;
+
     tipe_pekerjaan: string | null;
-    deskripsi: string | null;
-    tanggung_jawab: string | null;
-    kualifikasi: string | null;
-    benefit: string | null;
+
+    deskripsi_id: string | null;
+    deskripsi_en: string | null;
+    deskripsi_zh: string | null;
+
+    tanggung_jawab_id: string | null;
+    tanggung_jawab_en: string | null;
+    tanggung_jawab_zh: string | null;
+
+    kualifikasi_id: string | null;
+    kualifikasi_en: string | null;
+    kualifikasi_zh: string | null;
+
+    benefit_id: string | null;
+    benefit_en: string | null;
+    benefit_zh: string | null;
+
     tanggal_mulai: string | null;
     tanggal_tutup: string | null;
-    status: "draft" | "published" | "closed";
+    status: Status;
     unggulan: boolean;
     urutan: number;
     url?: string;
@@ -88,13 +108,63 @@ interface Props {
     statusOptions: StatusOption[];
 }
 
+interface LowonganForm {
+    judul_id: string;
+    judul_en: string;
+    judul_zh: string;
+
+    departemen_id: string;
+    departemen_en: string;
+    departemen_zh: string;
+
+    lokasi_id: string;
+    lokasi_en: string;
+    lokasi_zh: string;
+
+    tipe_pekerjaan: string;
+
+    deskripsi_id: string;
+    deskripsi_en: string;
+    deskripsi_zh: string;
+
+    tanggung_jawab_id: string;
+    tanggung_jawab_en: string;
+    tanggung_jawab_zh: string;
+
+    kualifikasi_id: string;
+    kualifikasi_en: string;
+    kualifikasi_zh: string;
+
+    benefit_id: string;
+    benefit_en: string;
+    benefit_zh: string;
+
+    tanggal_mulai: string;
+    tanggal_tutup: string;
+    status: Status;
+    unggulan: boolean;
+    urutan: number;
+}
+
 const props = defineProps<Props>();
 
-/*
-|--------------------------------------------------------------------------
-| Filter
-|--------------------------------------------------------------------------
-*/
+const languages: Array<{
+    code: LanguageCode;
+    label: string;
+    short: string;
+}> = [
+    { code: "id", label: "Indonesia", short: "ID" },
+    { code: "en", label: "English", short: "EN" },
+    { code: "zh", label: "中文", short: "ZH" },
+];
+
+const activeLanguage = ref<LanguageCode>("id");
+const formLanguage = ref<LanguageCode>("id");
+const detailLanguage = ref<LanguageCode>("id");
+
+const setLanguage = (language: LanguageCode) => {
+    activeLanguage.value = language;
+};
 
 const search = ref(props.filters.search ?? "");
 
@@ -155,12 +225,6 @@ const hasFilter = computed(() => {
     return search.value.trim() !== "" || status.value !== "all";
 });
 
-/*
-|--------------------------------------------------------------------------
-| Pagination
-|--------------------------------------------------------------------------
-*/
-
 const goToPage = (url: string | null) => {
     if (!url) {
         return;
@@ -176,65 +240,61 @@ const goToPage = (url: string | null) => {
     );
 };
 
-/*
-|--------------------------------------------------------------------------
-| Modal State
-|--------------------------------------------------------------------------
-*/
-
 const showModal = ref(false);
 const showDetail = ref(false);
 const showDelete = ref(false);
 
 const modalMode = ref<"create" | "edit">("create");
-
 const selectedLowongan = ref<Lowongan | null>(null);
 
-/*
-|--------------------------------------------------------------------------
-| Form
-|--------------------------------------------------------------------------
-*/
+const emptyForm = (): LowonganForm => ({
+    judul_id: "",
+    judul_en: "",
+    judul_zh: "",
 
-const emptyForm = () => ({
-    judul: "",
-    slug: "",
-    departemen: "",
-    lokasi: "",
+    departemen_id: "",
+    departemen_en: "",
+    departemen_zh: "",
+
+    lokasi_id: "",
+    lokasi_en: "",
+    lokasi_zh: "",
+
     tipe_pekerjaan: "",
-    deskripsi: "",
-    tanggung_jawab: "",
-    kualifikasi: "",
-    benefit: "",
+
+    deskripsi_id: "",
+    deskripsi_en: "",
+    deskripsi_zh: "",
+
+    tanggung_jawab_id: "",
+    tanggung_jawab_en: "",
+    tanggung_jawab_zh: "",
+
+    kualifikasi_id: "",
+    kualifikasi_en: "",
+    kualifikasi_zh: "",
+
+    benefit_id: "",
+    benefit_en: "",
+    benefit_zh: "",
+
     tanggal_mulai: "",
     tanggal_tutup: "",
-    status: "draft" as "draft" | "published" | "closed",
+    status: "draft",
     unggulan: false,
-    urutan: 0,
+    urutan: 1,
 });
 
-const form = ref(emptyForm());
+const form = ref<LowonganForm>(emptyForm());
 
 const processingForm = ref(false);
 const processingDelete = ref(false);
-
-/*
-|--------------------------------------------------------------------------
-| Toggle / Move Processing
-|--------------------------------------------------------------------------
-*/
 
 const togglingStatusId = ref<number | null>(null);
 const togglingFeaturedId = ref<number | null>(null);
 
 const movingId = ref<number | null>(null);
 const movingDirection = ref<"up" | "down" | null>(null);
-
-/*
-|--------------------------------------------------------------------------
-| Helpers
-|--------------------------------------------------------------------------
-*/
 
 const truncate = (text: string | null, length = 100) => {
     if (!text) {
@@ -308,16 +368,7 @@ const formatDateInput = (value: string | null) => {
     )}-${pad(date.getDate())}`;
 };
 
-const slugify = (value: string) => {
-    return value
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-");
-};
-
-const statusLabel = (statusValue: Lowongan["status"]) => {
+const statusLabel = (statusValue: Status) => {
     return {
         draft: "Draft",
         published: "Published",
@@ -325,7 +376,7 @@ const statusLabel = (statusValue: Lowongan["status"]) => {
     }[statusValue];
 };
 
-const statusClass = (statusValue: Lowongan["status"]) => {
+const statusClass = (statusValue: Status) => {
     if (statusValue === "published") {
         return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400";
     }
@@ -337,7 +388,7 @@ const statusClass = (statusValue: Lowongan["status"]) => {
     return "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400";
 };
 
-const statusDotClass = (statusValue: Lowongan["status"]) => {
+const statusDotClass = (statusValue: Status) => {
     if (statusValue === "published") {
         return "bg-emerald-500";
     }
@@ -375,46 +426,49 @@ const getFirstError = (errors: Record<string, string | string[]>) => {
     return Array.isArray(firstError) ? firstError[0] : String(firstError);
 };
 
-/*
-|--------------------------------------------------------------------------
-| Auto Slug Preview
-|--------------------------------------------------------------------------
-|
-| SECURITY:
-| Slug hanya preview di frontend.
-| Slug TIDAK dikirim ke backend.
-| Backend tetap menjadi sumber slug yang sebenarnya.
-|--------------------------------------------------------------------------
-*/
+const localizedLowonganValue = (
+    lowongan: Lowongan,
+    field: "judul" | "departemen" | "lokasi" | "deskripsi",
+): string => {
+    const suffix =
+        activeLanguage.value === "en"
+            ? "_en"
+            : activeLanguage.value === "zh"
+              ? "_zh"
+              : "_id";
 
-const handleJudulInput = () => {
-    form.value.slug = slugify(form.value.judul);
+    return String(lowongan[`${field}${suffix}` as keyof Lowongan] ?? "");
 };
 
-/*
-|--------------------------------------------------------------------------
-| Modal Actions
-|--------------------------------------------------------------------------
-*/
+const languageLabel = computed(() => {
+    return (
+        languages.find((item) => item.code === activeLanguage.value)?.label ??
+        "Indonesia"
+    );
+});
+
+const currentLanguageLabel = computed(() => {
+    return (
+        languages.find((item) => item.code === formLanguage.value)?.label ??
+        "Indonesia"
+    );
+});
 
 const resetFormState = () => {
     showModal.value = false;
-
     form.value = emptyForm();
-
     selectedLowongan.value = null;
+    formLanguage.value = "id";
 };
 
 const openCreate = () => {
     form.value = emptyForm();
-
     selectedLowongan.value = null;
-
     modalMode.value = "create";
-
+    formLanguage.value = "id";
+    detailLanguage.value = "id";
     showDetail.value = false;
     showDelete.value = false;
-
     showModal.value = true;
 };
 
@@ -422,15 +476,36 @@ const openEdit = (lowongan: Lowongan) => {
     selectedLowongan.value = lowongan;
 
     form.value = {
-        judul: lowongan.judul,
-        slug: lowongan.slug,
-        departemen: lowongan.departemen || "",
-        lokasi: lowongan.lokasi || "",
+        judul_id: lowongan.judul_id || "",
+        judul_en: lowongan.judul_en || "",
+        judul_zh: lowongan.judul_zh || "",
+
+        departemen_id: lowongan.departemen_id || "",
+        departemen_en: lowongan.departemen_en || "",
+        departemen_zh: lowongan.departemen_zh || "",
+
+        lokasi_id: lowongan.lokasi_id || "",
+        lokasi_en: lowongan.lokasi_en || "",
+        lokasi_zh: lowongan.lokasi_zh || "",
+
         tipe_pekerjaan: lowongan.tipe_pekerjaan || "",
-        deskripsi: lowongan.deskripsi || "",
-        tanggung_jawab: lowongan.tanggung_jawab || "",
-        kualifikasi: lowongan.kualifikasi || "",
-        benefit: lowongan.benefit || "",
+
+        deskripsi_id: lowongan.deskripsi_id || "",
+        deskripsi_en: lowongan.deskripsi_en || "",
+        deskripsi_zh: lowongan.deskripsi_zh || "",
+
+        tanggung_jawab_id: lowongan.tanggung_jawab_id || "",
+        tanggung_jawab_en: lowongan.tanggung_jawab_en || "",
+        tanggung_jawab_zh: lowongan.tanggung_jawab_zh || "",
+
+        kualifikasi_id: lowongan.kualifikasi_id || "",
+        kualifikasi_en: lowongan.kualifikasi_en || "",
+        kualifikasi_zh: lowongan.kualifikasi_zh || "",
+
+        benefit_id: lowongan.benefit_id || "",
+        benefit_en: lowongan.benefit_en || "",
+        benefit_zh: lowongan.benefit_zh || "",
+
         tanggal_mulai: formatDateInput(lowongan.tanggal_mulai),
         tanggal_tutup: formatDateInput(lowongan.tanggal_tutup),
         status: lowongan.status,
@@ -439,10 +514,10 @@ const openEdit = (lowongan: Lowongan) => {
     };
 
     modalMode.value = "edit";
-
+    formLanguage.value = "id";
+    detailLanguage.value = "id";
     showDetail.value = false;
     showDelete.value = false;
-
     showModal.value = true;
 };
 
@@ -456,10 +531,9 @@ const closeModal = () => {
 
 const openDetail = (lowongan: Lowongan) => {
     selectedLowongan.value = lowongan;
-
+    detailLanguage.value = "id";
     showModal.value = false;
     showDelete.value = false;
-
     showDetail.value = true;
 };
 
@@ -470,10 +544,8 @@ const closeDetail = () => {
 
 const openDelete = (lowongan: Lowongan) => {
     selectedLowongan.value = lowongan;
-
     showModal.value = false;
     showDetail.value = false;
-
     showDelete.value = true;
 };
 
@@ -486,26 +558,32 @@ const closeDelete = () => {
     selectedLowongan.value = null;
 };
 
-/*
-|--------------------------------------------------------------------------
-| Submit Form
-|--------------------------------------------------------------------------
-*/
-
 const submitForm = () => {
     if (processingForm.value) {
         return;
     }
 
-    const judul = form.value.judul.trim();
-
-    if (!judul) {
-        toast.error("Judul lowongan wajib diisi.");
+    if (!form.value.judul_id.trim()) {
+        formLanguage.value = "id";
+        toast.error("Judul lowongan Bahasa Indonesia wajib diisi.");
         return;
     }
 
-    if (judul.length < 3) {
-        toast.error("Judul lowongan minimal 3 karakter.");
+    if (form.value.judul_id.trim().length < 3) {
+        formLanguage.value = "id";
+        toast.error("Judul lowongan Bahasa Indonesia minimal 3 karakter.");
+        return;
+    }
+
+    if (!form.value.judul_en.trim()) {
+        formLanguage.value = "en";
+        toast.error("Judul lowongan Bahasa Inggris wajib diisi.");
+        return;
+    }
+
+    if (!form.value.judul_zh.trim()) {
+        formLanguage.value = "zh";
+        toast.error("Judul lowongan Bahasa Mandarin wajib diisi.");
         return;
     }
 
@@ -515,73 +593,63 @@ const submitForm = () => {
         form.value.tanggal_tutup < form.value.tanggal_mulai
     ) {
         toast.error("Tanggal tutup harus sama atau setelah tanggal mulai.");
-
         return;
     }
 
     const parsedUrutan = Number(form.value.urutan);
-
     const urutan =
-        Number.isFinite(parsedUrutan) && parsedUrutan >= 0
+        Number.isFinite(parsedUrutan) && parsedUrutan >= 1
             ? Math.floor(parsedUrutan)
-            : 0;
+            : 1;
 
-    /*
-    |--------------------------------------------------------------------------
-    | IMPORTANT SECURITY
-    |--------------------------------------------------------------------------
-    |
-    | Jangan kirim `slug` dari frontend.
-    |
-    | Backend akan membuat slug secara server-side menggunakan:
-    | generateUniqueSlug()
-    |--------------------------------------------------------------------------
-    */
+    const trimOrNull = (value: string) => value.trim() || null;
 
     const data = {
-        judul,
+        judul_id: form.value.judul_id.trim(),
+        judul_en: form.value.judul_en.trim(),
+        judul_zh: form.value.judul_zh.trim(),
 
-        departemen: form.value.departemen.trim() || null,
+        departemen_id: trimOrNull(form.value.departemen_id),
+        departemen_en: trimOrNull(form.value.departemen_en),
+        departemen_zh: trimOrNull(form.value.departemen_zh),
 
-        lokasi: form.value.lokasi.trim() || null,
+        lokasi_id: trimOrNull(form.value.lokasi_id),
+        lokasi_en: trimOrNull(form.value.lokasi_en),
+        lokasi_zh: trimOrNull(form.value.lokasi_zh),
 
-        tipe_pekerjaan: form.value.tipe_pekerjaan.trim() || null,
+        tipe_pekerjaan: trimOrNull(form.value.tipe_pekerjaan),
 
-        deskripsi: form.value.deskripsi.trim() || null,
+        deskripsi_id: trimOrNull(form.value.deskripsi_id),
+        deskripsi_en: trimOrNull(form.value.deskripsi_en),
+        deskripsi_zh: trimOrNull(form.value.deskripsi_zh),
 
-        tanggung_jawab: form.value.tanggung_jawab.trim() || null,
+        tanggung_jawab_id: trimOrNull(form.value.tanggung_jawab_id),
+        tanggung_jawab_en: trimOrNull(form.value.tanggung_jawab_en),
+        tanggung_jawab_zh: trimOrNull(form.value.tanggung_jawab_zh),
 
-        kualifikasi: form.value.kualifikasi.trim() || null,
+        kualifikasi_id: trimOrNull(form.value.kualifikasi_id),
+        kualifikasi_en: trimOrNull(form.value.kualifikasi_en),
+        kualifikasi_zh: trimOrNull(form.value.kualifikasi_zh),
 
-        benefit: form.value.benefit.trim() || null,
+        benefit_id: trimOrNull(form.value.benefit_id),
+        benefit_en: trimOrNull(form.value.benefit_en),
+        benefit_zh: trimOrNull(form.value.benefit_zh),
 
         tanggal_mulai: form.value.tanggal_mulai || null,
-
         tanggal_tutup: form.value.tanggal_tutup || null,
-
         status: form.value.status,
-
         unggulan: form.value.unggulan,
-
         urutan,
     };
 
     processingForm.value = true;
 
-    /*
-    |--------------------------------------------------------------------------
-    | CREATE
-    |--------------------------------------------------------------------------
-    */
-
     if (modalMode.value === "create") {
         router.post("/admin/pusat-informasi/lowongan", data, {
             preserveScroll: true,
-
             onSuccess: () => {
                 resetFormState();
             },
-
             onError: (errors) => {
                 console.error("Gagal menambahkan lowongan:", errors);
 
@@ -591,7 +659,6 @@ const submitForm = () => {
                     toast.error(message);
                 }
             },
-
             onFinish: () => {
                 processingForm.value = false;
             },
@@ -599,12 +666,6 @@ const submitForm = () => {
 
         return;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | EDIT
-    |--------------------------------------------------------------------------
-    */
 
     if (!selectedLowongan.value) {
         processingForm.value = false;
@@ -616,11 +677,9 @@ const submitForm = () => {
         data,
         {
             preserveScroll: true,
-
             onSuccess: () => {
                 resetFormState();
             },
-
             onError: (errors) => {
                 console.error("Gagal memperbarui lowongan:", errors);
 
@@ -630,19 +689,12 @@ const submitForm = () => {
                     toast.error(message);
                 }
             },
-
             onFinish: () => {
                 processingForm.value = false;
             },
         },
     );
 };
-
-/*
-|--------------------------------------------------------------------------
-| Delete
-|--------------------------------------------------------------------------
-*/
 
 const deleteLowongan = () => {
     if (!selectedLowongan.value || processingDelete.value) {
@@ -655,12 +707,10 @@ const deleteLowongan = () => {
         `/admin/pusat-informasi/lowongan/${selectedLowongan.value.id}`,
         {
             preserveScroll: true,
-
             onSuccess: () => {
                 showDelete.value = false;
                 selectedLowongan.value = null;
             },
-
             onError: (errors) => {
                 console.error("Gagal menghapus lowongan:", errors);
 
@@ -670,19 +720,12 @@ const deleteLowongan = () => {
                     toast.error(message);
                 }
             },
-
             onFinish: () => {
                 processingDelete.value = false;
             },
         },
     );
 };
-
-/*
-|--------------------------------------------------------------------------
-| Toggle Status
-|--------------------------------------------------------------------------
-*/
 
 const toggleStatus = (lowongan: Lowongan) => {
     if (togglingStatusId.value !== null) {
@@ -700,7 +743,6 @@ const toggleStatus = (lowongan: Lowongan) => {
         },
         {
             preserveScroll: true,
-
             onError: (errors) => {
                 console.error("Gagal mengubah status lowongan:", errors);
 
@@ -710,19 +752,12 @@ const toggleStatus = (lowongan: Lowongan) => {
                     toast.error(message);
                 }
             },
-
             onFinish: () => {
                 togglingStatusId.value = null;
             },
         },
     );
 };
-
-/*
-|--------------------------------------------------------------------------
-| Toggle Featured
-|--------------------------------------------------------------------------
-*/
 
 const toggleFeatured = (lowongan: Lowongan) => {
     if (togglingFeaturedId.value !== null) {
@@ -736,7 +771,6 @@ const toggleFeatured = (lowongan: Lowongan) => {
         {},
         {
             preserveScroll: true,
-
             onError: (errors) => {
                 console.error("Gagal mengubah status unggulan:", errors);
 
@@ -746,19 +780,12 @@ const toggleFeatured = (lowongan: Lowongan) => {
                     toast.error(message);
                 }
             },
-
             onFinish: () => {
                 togglingFeaturedId.value = null;
             },
         },
     );
 };
-
-/*
-|--------------------------------------------------------------------------
-| Move
-|--------------------------------------------------------------------------
-*/
 
 const moveLowongan = (lowongan: Lowongan, direction: "up" | "down") => {
     if (movingId.value !== null) {
@@ -775,7 +802,6 @@ const moveLowongan = (lowongan: Lowongan, direction: "up" | "down") => {
         },
         {
             preserveScroll: true,
-
             onError: (errors) => {
                 console.error("Gagal mengubah urutan lowongan:", errors);
 
@@ -785,7 +811,6 @@ const moveLowongan = (lowongan: Lowongan, direction: "up" | "down") => {
                     toast.error(message);
                 }
             },
-
             onFinish: () => {
                 movingId.value = null;
                 movingDirection.value = null;
@@ -793,12 +818,6 @@ const moveLowongan = (lowongan: Lowongan, direction: "up" | "down") => {
         },
     );
 };
-
-/*
-|--------------------------------------------------------------------------
-| Cleanup
-|--------------------------------------------------------------------------
-*/
 
 onBeforeUnmount(() => {
     clearTimeout(searchTimeout);
@@ -852,7 +871,7 @@ onBeforeUnmount(() => {
             ====================================================== -->
 
             <div
-                class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                class="mb-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"
             >
                 <div class="flex items-center gap-3">
                     <div
@@ -862,8 +881,14 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div class="min-w-0">
+                        <p
+                            class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400"
+                        >
+                            Pusat Informasi
+                        </p>
+
                         <h1
-                            class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl"
+                            class="mt-0.5 text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl"
                         >
                             Lowongan Kerja
                         </h1>
@@ -877,14 +902,50 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <button
-                    type="button"
-                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/20 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-2 focus:ring-offset-slate-50 dark:focus:ring-offset-slate-950"
-                    @click="openCreate"
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div
+                        class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white/90 p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900/90"
+                    >
+                        <button
+                            v-for="language in languages"
+                            :key="language.code"
+                            type="button"
+                            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all"
+                            :class="
+                                activeLanguage === language.code
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
+                            "
+                            @click="setLanguage(language.code)"
+                        >
+                            <span>{{ language.short }}</span>
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        @click="openCreate"
+                    >
+                        <Plus class="size-4" />
+                        Tambah Lowongan
+                    </button>
+                </div>
+            </div>
+
+            <div
+                class="mb-5 flex items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300"
+            >
+                <span
+                    class="flex size-7 items-center justify-center rounded-lg bg-white/80 font-semibold text-xs dark:bg-slate-900/60"
                 >
-                    <Plus class="size-4" />
-                    Tambah Lowongan
-                </button>
+                    {{ activeLanguage.toUpperCase() }}
+                </span>
+
+                <span>
+                    Tampilan bahasa:
+                    <strong>{{ languageLabel }}</strong>
+                </span>
             </div>
 
             <!-- =====================================================
@@ -892,9 +953,34 @@ onBeforeUnmount(() => {
             ====================================================== -->
 
             <div
-                class="mb-5 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm shadow-slate-200/40 backdrop-blur-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
+                class="mb-5 rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm shadow-slate-200/40 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
             >
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                        <h2
+                            class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                        >
+                            Pencarian & Filter
+                        </h2>
+                        <p
+                            class="mt-0.5 text-xs text-slate-400 dark:text-slate-500"
+                        >
+                            Temukan data lowongan dengan cepat.
+                        </p>
+                    </div>
+
+                    <button
+                        v-if="hasFilter"
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+                        @click="resetFilter"
+                    >
+                        <RotateCcw class="size-3.5" />
+                        Reset
+                    </button>
+                </div>
+
+                <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
                     <div class="relative flex-1">
                         <Search
                             class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
@@ -922,16 +1008,6 @@ onBeforeUnmount(() => {
                             {{ option.label }}
                         </option>
                     </select>
-
-                    <button
-                        v-if="hasFilter"
-                        type="button"
-                        class="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
-                        @click="resetFilter"
-                    >
-                        <RotateCcw class="size-4" />
-                        Reset
-                    </button>
                 </div>
             </div>
 
@@ -940,40 +1016,63 @@ onBeforeUnmount(() => {
             ====================================================== -->
 
             <div
-                class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-sm transition-all duration-300 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10"
+                class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10"
             >
+                <div
+                    class="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800"
+                >
+                    <div>
+                        <h2
+                            class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                        >
+                            Data Lowongan
+                        </h2>
+                        <p
+                            class="mt-0.5 text-xs text-slate-400 dark:text-slate-500"
+                        >
+                            {{ lowongans.total }} data tersedia
+                        </p>
+                    </div>
+
+                    <div
+                        class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                    >
+                        {{ activeLanguage.toUpperCase() }}
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto">
-                    <table class="w-full min-w-[1250px] text-left text-sm">
+                    <table class="w-full min-w-[1100px] text-left text-sm">
                         <thead
                             class="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-800/50"
                         >
                             <tr>
                                 <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Lowongan
                                 </th>
 
                                 <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Departemen
                                 </th>
 
                                 <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Lokasi
                                 </th>
 
                                 <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Periode
                                 </th>
 
                                 <th
-                                    class="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200"
+                                    class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                                 >
                                     Status
                                 </th>
@@ -1005,7 +1104,7 @@ onBeforeUnmount(() => {
                                 <td class="px-6 py-4">
                                     <div class="flex items-start gap-3">
                                         <div
-                                            class="mt-0.5 flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-900/40"
+                                            class="mt-0.5 flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-900/40"
                                         >
                                             <BriefcaseBusiness class="size-5" />
                                         </div>
@@ -1017,7 +1116,12 @@ onBeforeUnmount(() => {
                                                 <p
                                                     class="truncate font-semibold text-slate-900 dark:text-white"
                                                 >
-                                                    {{ lowongan.judul }}
+                                                    {{
+                                                        localizedLowonganValue(
+                                                            lowongan,
+                                                            "judul",
+                                                        )
+                                                    }}
                                                 </p>
 
                                                 <span
@@ -1036,7 +1140,10 @@ onBeforeUnmount(() => {
                                             >
                                                 {{
                                                     truncate(
-                                                        lowongan.deskripsi,
+                                                        localizedLowonganValue(
+                                                            lowongan,
+                                                            "deskripsi",
+                                                        ),
                                                         90,
                                                     )
                                                 }}
@@ -1074,7 +1181,12 @@ onBeforeUnmount(() => {
                                         />
 
                                         <span>
-                                            {{ lowongan.departemen || "-" }}
+                                            {{
+                                                localizedLowonganValue(
+                                                    lowongan,
+                                                    "departemen",
+                                                ) || "-"
+                                            }}
                                         </span>
                                     </div>
                                 </td>
@@ -1088,7 +1200,12 @@ onBeforeUnmount(() => {
                                         <MapPin class="size-4 text-slate-400" />
 
                                         <span>
-                                            {{ lowongan.lokasi || "-" }}
+                                            {{
+                                                localizedLowonganValue(
+                                                    lowongan,
+                                                    "lokasi",
+                                                ) || "-"
+                                            }}
                                         </span>
                                     </div>
                                 </td>
@@ -1381,7 +1498,7 @@ onBeforeUnmount(() => {
                             "
                             @click="goToPage(link.url)"
                             v-html="link.label"
-                        />
+                        ></button>
                     </div>
                 </div>
             </div>
@@ -1398,7 +1515,7 @@ onBeforeUnmount(() => {
                 @click.self="closeModal"
             >
                 <div
-                    class="w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
+                    class="w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl shadow-slate-950/20 dark:border-slate-800 dark:bg-slate-900"
                 >
                     <!-- HEADER -->
 
@@ -1427,8 +1544,7 @@ onBeforeUnmount(() => {
                             <p
                                 class="mt-1 pl-11 text-sm text-slate-500 dark:text-slate-400"
                             >
-                                Lengkapi informasi lowongan pekerjaan
-                                perusahaan.
+                                Lengkapi informasi lowongan dalam tiga bahasa.
                             </p>
                         </div>
 
@@ -1448,19 +1564,58 @@ onBeforeUnmount(() => {
                         class="max-h-[78vh] overflow-y-auto p-6"
                         @submit.prevent="submitForm"
                     >
+                        <div
+                            class="mb-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 dark:border-slate-800 dark:bg-slate-800/40"
+                        >
+                            <div class="grid grid-cols-3 gap-1">
+                                <button
+                                    v-for="language in languages"
+                                    :key="language.code"
+                                    type="button"
+                                    class="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all"
+                                    :class="
+                                        formLanguage === language.code
+                                            ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-blue-400 dark:ring-slate-700'
+                                            : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-900/60 dark:hover:text-white'
+                                    "
+                                    @click="formLanguage = language.code"
+                                >
+                                    <span>{{ language.short }}</span>
+                                    <span>{{ language.label }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            class="mb-6 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20"
+                        >
+                            <p
+                                class="text-sm font-medium text-blue-800 dark:text-blue-300"
+                            >
+                                Konten Bahasa {{ currentLanguageLabel }}
+                            </p>
+                            <p
+                                class="mt-1 text-xs leading-5 text-blue-700/80 dark:text-blue-400/80"
+                            >
+                                Isi judul, departemen, lokasi, deskripsi,
+                                tanggung jawab, kualifikasi, dan benefit untuk
+                                bahasa yang dipilih.
+                            </p>
+                        </div>
+
                         <div class="grid gap-5 md:grid-cols-2">
                             <!-- JUDUL -->
-
                             <div class="md:col-span-2">
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Judul Lowongan
-                                    <span class="text-red-500"> * </span>
+                                    <span class="text-red-500">*</span>
                                 </label>
 
                                 <input
-                                    v-model="form.judul"
+                                    v-if="formLanguage === 'id'"
+                                    v-model="form.judul_id"
                                     type="text"
                                     required
                                     minlength="3"
@@ -1468,12 +1623,38 @@ onBeforeUnmount(() => {
                                     autocomplete="off"
                                     placeholder="Contoh: Staff Administrasi"
                                     class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
-                                    @input="handleJudulInput"
                                 />
+
+                                <input
+                                    v-else-if="formLanguage === 'en'"
+                                    v-model="form.judul_en"
+                                    type="text"
+                                    required
+                                    minlength="3"
+                                    maxlength="255"
+                                    autocomplete="off"
+                                    placeholder="Example: Administrative Staff"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                />
+
+                                <input
+                                    v-else
+                                    v-model="form.judul_zh"
+                                    type="text"
+                                    required
+                                    minlength="1"
+                                    maxlength="255"
+                                    autocomplete="off"
+                                    placeholder="例如：行政人员"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                />
+
+                                <p class="mt-1.5 text-xs text-slate-400">
+                                    Judul dalam ketiga bahasa wajib diisi.
+                                </p>
                             </div>
 
                             <!-- SLUG -->
-
                             <div class="md:col-span-2">
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1483,7 +1664,10 @@ onBeforeUnmount(() => {
 
                                 <div class="relative">
                                     <input
-                                        :value="form.slug"
+                                        :value="
+                                            selectedLowongan?.slug ||
+                                            'slug-dibuat-otomatis'
+                                        "
                                         type="text"
                                         readonly
                                         disabled
@@ -1491,8 +1675,7 @@ onBeforeUnmount(() => {
                                         autocomplete="off"
                                         aria-readonly="true"
                                         aria-disabled="true"
-                                        placeholder="slug-dibuat-otomatis"
-                                        class="h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 pr-16 text-sm text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400 dark:placeholder:text-slate-600"
+                                        class="h-11 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 pr-16 text-sm text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-400"
                                     />
 
                                     <span
@@ -1503,13 +1686,13 @@ onBeforeUnmount(() => {
                                 </div>
 
                                 <p class="mt-1.5 text-xs text-slate-400">
-                                    Slug dibuat otomatis oleh sistem berdasarkan
-                                    judul dan tidak dapat diubah secara manual.
+                                    Slug dibuat otomatis oleh server berdasarkan
+                                    judul Bahasa Indonesia dan tidak dikirim
+                                    dari frontend.
                                 </p>
                             </div>
 
                             <!-- DEPARTEMEN -->
-
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1518,17 +1701,34 @@ onBeforeUnmount(() => {
                                 </label>
 
                                 <input
-                                    v-model="form.departemen"
+                                    v-if="formLanguage === 'id'"
+                                    v-model="form.departemen_id"
                                     type="text"
                                     maxlength="150"
-                                    autocomplete="organization-title"
                                     placeholder="Contoh: Human Resources"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                />
+
+                                <input
+                                    v-else-if="formLanguage === 'en'"
+                                    v-model="form.departemen_en"
+                                    type="text"
+                                    maxlength="150"
+                                    placeholder="Example: Human Resources"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                />
+
+                                <input
+                                    v-else
+                                    v-model="form.departemen_zh"
+                                    type="text"
+                                    maxlength="150"
+                                    placeholder="例如：人力资源部"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 />
                             </div>
 
                             <!-- LOKASI -->
-
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1537,17 +1737,34 @@ onBeforeUnmount(() => {
                                 </label>
 
                                 <input
-                                    v-model="form.lokasi"
+                                    v-if="formLanguage === 'id'"
+                                    v-model="form.lokasi_id"
                                     type="text"
                                     maxlength="150"
-                                    autocomplete="street-address"
                                     placeholder="Contoh: Siak, Riau"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                />
+
+                                <input
+                                    v-else-if="formLanguage === 'en'"
+                                    v-model="form.lokasi_en"
+                                    type="text"
+                                    maxlength="150"
+                                    placeholder="Example: Siak, Riau"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                />
+
+                                <input
+                                    v-else
+                                    v-model="form.lokasi_zh"
+                                    type="text"
+                                    maxlength="150"
+                                    placeholder="例如：廖内省锡亚克"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 />
                             </div>
 
-                            <!-- TIPE PEKERJAAN -->
-
+                            <!-- TIPE -->
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1557,28 +1774,22 @@ onBeforeUnmount(() => {
 
                                 <select
                                     v-model="form.tipe_pekerjaan"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 >
                                     <option value="">
                                         Pilih tipe pekerjaan
                                     </option>
-
                                     <option value="full_time">Full Time</option>
-
                                     <option value="part_time">Part Time</option>
-
                                     <option value="contract">Contract</option>
-
                                     <option value="internship">
                                         Internship
                                     </option>
-
                                     <option value="freelance">Freelance</option>
                                 </select>
                             </div>
 
                             <!-- STATUS -->
-
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
@@ -1588,33 +1799,27 @@ onBeforeUnmount(() => {
 
                                 <select
                                     v-model="form.status"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 >
                                     <option value="draft">Draft</option>
-
                                     <option value="published">Published</option>
-
                                     <option value="closed">Closed</option>
                                 </select>
                             </div>
 
-                            <!-- TANGGAL MULAI -->
-
+                            <!-- DATES -->
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Tanggal Mulai
                                 </label>
-
                                 <input
                                     v-model="form.tanggal_mulai"
                                     type="date"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 />
                             </div>
-
-                            <!-- TANGGAL TUTUP -->
 
                             <div>
                                 <label
@@ -1622,41 +1827,32 @@ onBeforeUnmount(() => {
                                 >
                                     Tanggal Tutup
                                 </label>
-
                                 <input
                                     v-model="form.tanggal_tutup"
                                     type="date"
                                     :min="form.tanggal_mulai || undefined"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 />
                             </div>
 
                             <!-- URUTAN -->
-
                             <div>
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Urutan
                                 </label>
-
                                 <input
                                     v-model.number="form.urutan"
                                     type="number"
-                                    min="0"
+                                    min="1"
                                     max="4294967295"
                                     step="1"
-                                    inputmode="numeric"
-                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:bg-slate-900"
+                                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 />
-
-                                <p class="mt-1.5 text-xs text-slate-400">
-                                    Menentukan posisi tampil lowongan.
-                                </p>
                             </div>
 
                             <!-- FEATURED -->
-
                             <div
                                 class="flex items-center rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50"
                             >
@@ -1668,14 +1864,12 @@ onBeforeUnmount(() => {
                                         type="checkbox"
                                         class="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700"
                                     />
-
                                     <div>
                                         <p
                                             class="text-sm font-medium text-slate-700 dark:text-slate-200"
                                         >
                                             Jadikan Lowongan Unggulan
                                         </p>
-
                                         <p
                                             class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
                                         >
@@ -1687,40 +1881,69 @@ onBeforeUnmount(() => {
                             </div>
 
                             <!-- DESKRIPSI -->
-
                             <div class="md:col-span-2">
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Deskripsi
                                 </label>
-
                                 <textarea
-                                    v-model="form.deskripsi"
+                                    v-if="formLanguage === 'id'"
+                                    v-model="form.deskripsi_id"
                                     rows="5"
                                     maxlength="50000"
                                     placeholder="Tuliskan gambaran umum mengenai posisi yang dibutuhkan..."
-                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                ></textarea>
+                                <textarea
+                                    v-else-if="formLanguage === 'en'"
+                                    v-model="form.deskripsi_en"
+                                    rows="5"
+                                    maxlength="50000"
+                                    placeholder="Describe the position and its main purpose..."
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                ></textarea>
+                                <textarea
+                                    v-else
+                                    v-model="form.deskripsi_zh"
+                                    rows="5"
+                                    maxlength="50000"
+                                    placeholder="请填写职位概述..."
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 ></textarea>
                             </div>
 
                             <!-- TANGGUNG JAWAB -->
-
                             <div class="md:col-span-2">
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Tanggung Jawab
                                 </label>
-
                                 <textarea
-                                    v-model="form.tanggung_jawab"
+                                    v-if="formLanguage === 'id'"
+                                    v-model="form.tanggung_jawab_id"
                                     rows="6"
                                     maxlength="50000"
                                     placeholder="Tuliskan tanggung jawab dan tugas utama posisi..."
-                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 ></textarea>
-
+                                <textarea
+                                    v-else-if="formLanguage === 'en'"
+                                    v-model="form.tanggung_jawab_en"
+                                    rows="6"
+                                    maxlength="50000"
+                                    placeholder="Describe the main responsibilities and duties..."
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                ></textarea>
+                                <textarea
+                                    v-else
+                                    v-model="form.tanggung_jawab_zh"
+                                    rows="6"
+                                    maxlength="50000"
+                                    placeholder="请填写主要职责和工作内容..."
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                ></textarea>
                                 <p class="mt-1.5 text-xs text-slate-400">
                                     Kamu dapat menuliskan setiap poin dalam
                                     baris baru.
@@ -1728,42 +1951,71 @@ onBeforeUnmount(() => {
                             </div>
 
                             <!-- KUALIFIKASI -->
-
                             <div class="md:col-span-2">
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Kualifikasi
                                 </label>
-
                                 <textarea
-                                    v-model="form.kualifikasi"
+                                    v-if="formLanguage === 'id'"
+                                    v-model="form.kualifikasi_id"
                                     rows="6"
                                     maxlength="50000"
                                     placeholder="Tuliskan pendidikan, pengalaman, kemampuan, dan persyaratan kandidat..."
-                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                ></textarea>
+                                <textarea
+                                    v-else-if="formLanguage === 'en'"
+                                    v-model="form.kualifikasi_en"
+                                    rows="6"
+                                    maxlength="50000"
+                                    placeholder="Describe education, experience, skills, and candidate requirements..."
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                ></textarea>
+                                <textarea
+                                    v-else
+                                    v-model="form.kualifikasi_zh"
+                                    rows="6"
+                                    maxlength="50000"
+                                    placeholder="请填写学历、经验、技能和任职要求..."
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 ></textarea>
                             </div>
 
                             <!-- BENEFIT -->
-
                             <div class="md:col-span-2">
                                 <label
                                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                                 >
                                     Benefit
                                 </label>
-
                                 <textarea
-                                    v-model="form.benefit"
+                                    v-if="formLanguage === 'id'"
+                                    v-model="form.benefit_id"
                                     rows="5"
                                     maxlength="50000"
                                     placeholder="Tuliskan benefit atau fasilitas yang ditawarkan perusahaan..."
-                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                ></textarea>
+                                <textarea
+                                    v-else-if="formLanguage === 'en'"
+                                    v-model="form.benefit_en"
+                                    rows="5"
+                                    maxlength="50000"
+                                    placeholder="Describe the benefits or facilities offered by the company..."
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                ></textarea>
+                                <textarea
+                                    v-else
+                                    v-model="form.benefit_zh"
+                                    rows="5"
+                                    maxlength="50000"
+                                    placeholder="请填写公司提供的福利和设施..."
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 ></textarea>
                             </div>
                         </div>
-
                         <!-- FOOTER -->
 
                         <div
@@ -1771,7 +2023,7 @@ onBeforeUnmount(() => {
                         >
                             <button
                                 type="button"
-                                class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                                 :disabled="processingForm"
                                 @click="closeModal"
                             >
@@ -1780,7 +2032,12 @@ onBeforeUnmount(() => {
 
                             <button
                                 type="submit"
-                                :disabled="processingForm || !form.judul.trim()"
+                                :disabled="
+                                    processingForm ||
+                                    !form.judul_id.trim() ||
+                                    !form.judul_en.trim() ||
+                                    !form.judul_zh.trim()
+                                "
                                 class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <span
@@ -1845,8 +2102,25 @@ onBeforeUnmount(() => {
 
                     <!-- CONTENT -->
 
-                    <div class="max-h-[78vh] space-y-6 overflow-y-auto p-6">
-                        <!-- HEADER INFO -->
+                    <div class="max-h-[75vh] space-y-6 overflow-y-auto p-6">
+                        <div
+                            class="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800"
+                        >
+                            <button
+                                v-for="language in languages"
+                                :key="language.code"
+                                type="button"
+                                class="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                                :class="
+                                    detailLanguage === language.code
+                                        ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400'
+                                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'
+                                "
+                                @click="detailLanguage = language.code"
+                            >
+                                {{ language.short }}
+                            </button>
+                        </div>
 
                         <div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -1864,7 +2138,6 @@ onBeforeUnmount(() => {
                                             )
                                         "
                                     ></span>
-
                                     {{ statusLabel(selectedLowongan.status) }}
                                 </span>
 
@@ -1873,7 +2146,6 @@ onBeforeUnmount(() => {
                                     class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
                                 >
                                     <Star class="size-3.5 fill-current" />
-
                                     Unggulan
                                 </span>
 
@@ -1890,9 +2162,15 @@ onBeforeUnmount(() => {
                             </div>
 
                             <h3
-                                class="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
+                                class="mt-4 text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
                             >
-                                {{ selectedLowongan.judul }}
+                                {{
+                                    detailLanguage === "id"
+                                        ? selectedLowongan.judul_id
+                                        : detailLanguage === "en"
+                                          ? selectedLowongan.judul_en
+                                          : selectedLowongan.judul_zh
+                                }}
                             </h3>
 
                             <div
@@ -1900,19 +2178,29 @@ onBeforeUnmount(() => {
                             >
                                 <span class="flex items-center gap-1.5">
                                     <UserRound class="size-4" />
-
                                     {{
-                                        selectedLowongan.departemen ||
-                                        "Departemen tidak ditentukan"
+                                        detailLanguage === "id"
+                                            ? selectedLowongan.departemen_id ||
+                                              "Departemen tidak ditentukan"
+                                            : detailLanguage === "en"
+                                              ? selectedLowongan.departemen_en ||
+                                                "Department not specified"
+                                              : selectedLowongan.departemen_zh ||
+                                                "未指定部门"
                                     }}
                                 </span>
 
                                 <span class="flex items-center gap-1.5">
                                     <MapPin class="size-4" />
-
                                     {{
-                                        selectedLowongan.lokasi ||
-                                        "Lokasi tidak ditentukan"
+                                        detailLanguage === "id"
+                                            ? selectedLowongan.lokasi_id ||
+                                              "Lokasi tidak ditentukan"
+                                            : detailLanguage === "en"
+                                              ? selectedLowongan.lokasi_en ||
+                                                "Location not specified"
+                                              : selectedLowongan.lokasi_zh ||
+                                                "未指定地点"
                                     }}
                                 </span>
                             </div>
@@ -1922,7 +2210,6 @@ onBeforeUnmount(() => {
                             >
                                 <span class="flex items-center gap-1.5">
                                     <Calendar class="size-4" />
-
                                     Mulai:
                                     {{
                                         formatDate(
@@ -1933,7 +2220,6 @@ onBeforeUnmount(() => {
 
                                 <span class="flex items-center gap-1.5">
                                     <Clock3 class="size-4" />
-
                                     Tutup:
                                     {{
                                         formatDate(
@@ -1944,17 +2230,21 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <!-- DESCRIPTION -->
-
                         <div
-                            v-if="selectedLowongan.deskripsi"
+                            v-if="
+                                (detailLanguage === 'id' &&
+                                    selectedLowongan.deskripsi_id) ||
+                                (detailLanguage === 'en' &&
+                                    selectedLowongan.deskripsi_en) ||
+                                (detailLanguage === 'zh' &&
+                                    selectedLowongan.deskripsi_zh)
+                            "
                             class="rounded-2xl border border-blue-100 bg-blue-50/60 p-5 dark:border-blue-900/40 dark:bg-blue-950/20"
                         >
                             <div class="flex items-center gap-2">
                                 <BriefcaseBusiness
                                     class="size-4 text-blue-600 dark:text-blue-400"
                                 />
-
                                 <h4
                                     class="font-semibold text-slate-800 dark:text-slate-200"
                                 >
@@ -1965,21 +2255,31 @@ onBeforeUnmount(() => {
                             <p
                                 class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300"
                             >
-                                {{ selectedLowongan.deskripsi }}
+                                {{
+                                    detailLanguage === "id"
+                                        ? selectedLowongan.deskripsi_id
+                                        : detailLanguage === "en"
+                                          ? selectedLowongan.deskripsi_en
+                                          : selectedLowongan.deskripsi_zh
+                                }}
                             </p>
                         </div>
 
-                        <!-- RESPONSIBILITIES -->
-
                         <div
-                            v-if="selectedLowongan.tanggung_jawab"
+                            v-if="
+                                (detailLanguage === 'id' &&
+                                    selectedLowongan.tanggung_jawab_id) ||
+                                (detailLanguage === 'en' &&
+                                    selectedLowongan.tanggung_jawab_en) ||
+                                (detailLanguage === 'zh' &&
+                                    selectedLowongan.tanggung_jawab_zh)
+                            "
                             class="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-800/50"
                         >
                             <div class="flex items-center gap-2">
                                 <CheckCircle2
                                     class="size-4 text-blue-600 dark:text-blue-400"
                                 />
-
                                 <h4
                                     class="font-semibold text-slate-800 dark:text-slate-200"
                                 >
@@ -1990,21 +2290,31 @@ onBeforeUnmount(() => {
                             <p
                                 class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300"
                             >
-                                {{ selectedLowongan.tanggung_jawab }}
+                                {{
+                                    detailLanguage === "id"
+                                        ? selectedLowongan.tanggung_jawab_id
+                                        : detailLanguage === "en"
+                                          ? selectedLowongan.tanggung_jawab_en
+                                          : selectedLowongan.tanggung_jawab_zh
+                                }}
                             </p>
                         </div>
 
-                        <!-- QUALIFICATION -->
-
                         <div
-                            v-if="selectedLowongan.kualifikasi"
+                            v-if="
+                                (detailLanguage === 'id' &&
+                                    selectedLowongan.kualifikasi_id) ||
+                                (detailLanguage === 'en' &&
+                                    selectedLowongan.kualifikasi_en) ||
+                                (detailLanguage === 'zh' &&
+                                    selectedLowongan.kualifikasi_zh)
+                            "
                             class="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-800/50"
                         >
                             <div class="flex items-center gap-2">
                                 <UserRound
                                     class="size-4 text-blue-600 dark:text-blue-400"
                                 />
-
                                 <h4
                                     class="font-semibold text-slate-800 dark:text-slate-200"
                                 >
@@ -2015,21 +2325,31 @@ onBeforeUnmount(() => {
                             <p
                                 class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300"
                             >
-                                {{ selectedLowongan.kualifikasi }}
+                                {{
+                                    detailLanguage === "id"
+                                        ? selectedLowongan.kualifikasi_id
+                                        : detailLanguage === "en"
+                                          ? selectedLowongan.kualifikasi_en
+                                          : selectedLowongan.kualifikasi_zh
+                                }}
                             </p>
                         </div>
 
-                        <!-- BENEFIT -->
-
                         <div
-                            v-if="selectedLowongan.benefit"
+                            v-if="
+                                (detailLanguage === 'id' &&
+                                    selectedLowongan.benefit_id) ||
+                                (detailLanguage === 'en' &&
+                                    selectedLowongan.benefit_en) ||
+                                (detailLanguage === 'zh' &&
+                                    selectedLowongan.benefit_zh)
+                            "
                             class="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 dark:border-emerald-900/30 dark:bg-emerald-950/20"
                         >
                             <div class="flex items-center gap-2">
                                 <CheckCircle2
                                     class="size-4 text-emerald-600 dark:text-emerald-400"
                                 />
-
                                 <h4
                                     class="font-semibold text-slate-800 dark:text-slate-200"
                                 >
@@ -2040,11 +2360,15 @@ onBeforeUnmount(() => {
                             <p
                                 class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300"
                             >
-                                {{ selectedLowongan.benefit }}
+                                {{
+                                    detailLanguage === "id"
+                                        ? selectedLowongan.benefit_id
+                                        : detailLanguage === "en"
+                                          ? selectedLowongan.benefit_en
+                                          : selectedLowongan.benefit_zh
+                                }}
                             </p>
                         </div>
-
-                        <!-- META -->
 
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div
@@ -2055,7 +2379,6 @@ onBeforeUnmount(() => {
                                 >
                                     Slug
                                 </p>
-
                                 <p
                                     class="mt-2 break-all text-sm text-slate-700 dark:text-slate-200"
                                 >
@@ -2071,7 +2394,6 @@ onBeforeUnmount(() => {
                                 >
                                     Urutan
                                 </p>
-
                                 <p
                                     class="mt-2 text-sm text-slate-700 dark:text-slate-200"
                                 >
@@ -2079,8 +2401,6 @@ onBeforeUnmount(() => {
                                 </p>
                             </div>
                         </div>
-
-                        <!-- TIMESTAMPS -->
 
                         <div
                             class="border-t border-slate-200 pt-5 dark:border-slate-800"
@@ -2096,7 +2416,6 @@ onBeforeUnmount(() => {
                                         )
                                     }}
                                 </p>
-
                                 <p>
                                     Diperbarui:
                                     {{
@@ -2146,7 +2465,7 @@ onBeforeUnmount(() => {
                             <span
                                 class="font-semibold text-slate-700 dark:text-slate-200"
                             >
-                                {{ selectedLowongan.judul }}
+                                {{ selectedLowongan.judul_id }}
                             </span>
 
                             ?
@@ -2163,7 +2482,7 @@ onBeforeUnmount(() => {
                         <button
                             type="button"
                             :disabled="processingDelete"
-                            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                            class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                             @click="closeDelete"
                         >
                             Batal
@@ -2172,7 +2491,7 @@ onBeforeUnmount(() => {
                         <button
                             type="button"
                             :disabled="processingDelete"
-                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-600/20 transition hover:bg-red-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-red-600/20 transition hover:bg-red-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
                             @click="deleteLowongan"
                         >
                             <span

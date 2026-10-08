@@ -19,14 +19,21 @@ class Lamaran extends Model
 
     protected $fillable = [
         'lowongan_id',
+
         'nama_lengkap',
         'email',
         'no_hp',
+
         'cv',
         'surat_lamaran',
+
         'linkedin',
         'portfolio',
-        'pesan',
+
+        'pesan_id',
+        'pesan_en',
+        'pesan_zh',
+
         'status',
         'submitted_at',
     ];
@@ -61,7 +68,10 @@ class Lamaran extends Model
     protected static function booted(): void
     {
         static::deleted(function (Lamaran $lamaran) {
-            $paths = array_filter([$lamaran->cv, $lamaran->surat_lamaran]);
+            $paths = array_filter([
+                $lamaran->cv,
+                $lamaran->surat_lamaran,
+            ]);
 
             DB::afterCommit(function () use ($paths) {
                 foreach ($paths as $path) {

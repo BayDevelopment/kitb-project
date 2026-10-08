@@ -6,12 +6,17 @@ use App\Models\Lamaran;
 use App\Models\Lowongan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class PublicLamaranController extends Controller
 {
+    /**
+     * Menampilkan formulir lamaran untuk lowongan yang dipublikasikan.
+     */
     public function create(Lowongan $lowongan): Response
     {
         abort_unless($lowongan->status === 'published', 404);
@@ -21,6 +26,9 @@ class PublicLamaranController extends Controller
         ]);
     }
 
+    /**
+     * Menyimpan lamaran dari halaman publik.
+     */
     public function store(
         Request $request,
         Lowongan $lowongan
@@ -31,6 +39,7 @@ class PublicLamaranController extends Controller
             'nama_lengkap' => [
                 'required',
                 'string',
+                'min:3',
                 'max:255',
             ],
 
@@ -72,35 +81,85 @@ class PublicLamaranController extends Controller
                 'max:255',
             ],
 
-            'pesan' => [
+            // Pesan lamaran dalam tiga bahasa.
+            'pesan_id' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+
+            'pesan_en' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+
+            'pesan_zh' => [
                 'nullable',
                 'string',
                 'max:2000',
             ],
         ], [
-            'cv.required' => 'CV wajib diunggah.',
-            'cv.mimes' => 'CV harus berupa PDF, DOC, atau DOCX.',
-            'cv.max' => 'Ukuran CV maksimal 1 MB.',
+            'nama_lengkap.required' =>
+            'Nama lengkap wajib diisi.',
+            'nama_lengkap.min' =>
+            'Nama lengkap minimal 3 karakter.',
+            'nama_lengkap.max' =>
+            'Nama lengkap maksimal 255 karakter.',
 
+            'email.required' =>
+            'Email wajib diisi.',
+            'email.email' =>
+            'Format email tidak valid.',
+            'email.max' =>
+            'Email maksimal 255 karakter.',
+
+            'no_hp.required' =>
+            'Nomor HP wajib diisi.',
+            'no_hp.max' =>
+            'Nomor HP maksimal 30 karakter.',
+
+            'cv.required' =>
+            'CV wajib diunggah.',
+            'cv.file' =>
+            'CV yang diunggah tidak valid.',
+            'cv.mimes' =>
+            'CV harus berupa PDF, DOC, atau DOCX.',
+            'cv.max' =>
+            'Ukuran CV maksimal 1 MB.',
+
+            'surat_lamaran.file' =>
+            'Surat lamaran yang diunggah tidak valid.',
             'surat_lamaran.mimes' =>
             'Surat lamaran harus berupa PDF, DOC, atau DOCX.',
-
             'surat_lamaran.max' =>
             'Ukuran surat lamaran maksimal 1 MB.',
 
-            'email.email' =>
-            'Format email tidak valid.',
-
             'linkedin.url' =>
             'Format URL LinkedIn tidak valid.',
-
             'portfolio.url' =>
             'Format URL portfolio tidak valid.',
+
+            'pesan_id.max' =>
+            'Pesan Bahasa Indonesia maksimal 2000 karakter.',
+            'pesan_en.max' =>
+            'Pesan Bahasa Inggris maksimal 2000 karakter.',
+            'pesan_zh.max' =>
+            'Pesan Bahasa Mandarin maksimal 2000 karakter.',
         ]);
 
+        /*
+         * Normalisasi email agar perbedaan huruf besar/kecil
+         * tidak menyebabkan email yang sama lolos dari pemeriksaan.
+         */
+        $email = mb_strtolower(trim($validated['email']));
+
+        /*
+         * Cegah email yang sama melamar lowongan yang sama.
+         */
         $alreadyApplied = Lamaran::query()
             ->where('lowongan_id', $lowongan->id)
-            ->where('email', $validated['email'])
+            ->whereRaw('LOWER(email) = ?', [$email])
             ->exists();
 
         if ($alreadyApplied) {
@@ -116,44 +175,101 @@ class PublicLamaranController extends Controller
         $suratLamaranPath = null;
 
         try {
+            /*
+             * Simpan CV wajib.
+             */
             $cvPath = $request
                 ->file('cv')
                 ->store('lamaran/cv', 'public');
 
+            if (!$cvPath) {
+                throw new \RuntimeException(
+                    'CV gagal disimpan ke penyimpanan.'
+                );
+            }
+
+            /*
+             * Simpan surat lamaran jika diunggah.
+             */
             if ($request->hasFile('surat_lamaran')) {
                 $suratLamaranPath = $request
                     ->file('surat_lamaran')
                     ->store('lamaran/surat', 'public');
+
+                if (!$suratLamaranPath) {
+                    throw new \RuntimeException(
+                        'Surat lamaran gagal disimpan ke penyimpanan.'
+                    );
+                }
             }
 
-            Lamaran::create([
-                'lowongan_id' => $lowongan->id,
-                'nama_lengkap' => $validated['nama_lengkap'],
-                'email' => $validated['email'],
-                'no_hp' => $validated['no_hp'],
-                'cv' => $cvPath,
-                'surat_lamaran' => $suratLamaranPath,
-                'linkedin' => $validated['linkedin'] ?? null,
-                'portfolio' => $validated['portfolio'] ?? null,
-                'pesan' => $validated['pesan'] ?? null,
-                'status' => 'submitted',
-                'submitted_at' => now(),
-            ]);
-        } catch (\Throwable $e) {
-            if ($cvPath) {
+            /*
+             * Simpan data lamaran ke database.
+             */
+            DB::transaction(function () use (
+                $lowongan,
+                $validated,
+                $email,
+                $cvPath,
+                $suratLamaranPath
+            ): void {
+                Lamaran::create([
+                    'lowongan_id' => $lowongan->id,
+
+                    'nama_lengkap' => trim(
+                        $validated['nama_lengkap']
+                    ),
+
+                    'email' => $email,
+
+                    'no_hp' => trim($validated['no_hp']),
+
+                    'cv' => $cvPath,
+
+                    'surat_lamaran' => $suratLamaranPath,
+
+                    'linkedin' => $validated['linkedin'] ?? null,
+
+                    'portfolio' => $validated['portfolio'] ?? null,
+
+                    // Pesan lamaran dalam tiga bahasa.
+                    'pesan_id' => $validated['pesan_id'] ?? null,
+
+                    'pesan_en' => $validated['pesan_en'] ?? null,
+
+                    'pesan_zh' => $validated['pesan_zh'] ?? null,
+
+                    'status' => 'submitted',
+
+                    'submitted_at' => now(),
+                ]);
+            });
+        } catch (Throwable $e) {
+            /*
+             * Hapus file yang sudah terunggah jika proses
+             * penyimpanan lamaran gagal.
+             */
+            if (is_string($cvPath) && $cvPath !== '') {
                 Storage::disk('public')->delete($cvPath);
             }
 
-            if ($suratLamaranPath) {
-                Storage::disk('public')->delete($suratLamaranPath);
+            if (
+                is_string($suratLamaranPath)
+                && $suratLamaranPath !== ''
+            ) {
+                Storage::disk('public')->delete(
+                    $suratLamaranPath
+                );
             }
 
             report($e);
 
-            return back()->with(
-                'error',
-                'Lamaran gagal dikirim. Silakan coba kembali.'
-            );
+            return back()
+                ->with(
+                    'error',
+                    'Lamaran gagal dikirim. Silakan coba kembali.'
+                )
+                ->withInput();
         }
 
         return back()->with(

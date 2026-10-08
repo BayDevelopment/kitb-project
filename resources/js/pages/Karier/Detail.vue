@@ -14,6 +14,8 @@ import {
     Users,
 } from "lucide-vue-next";
 import PublicLayout from "@/layouts/PublicLayout.vue";
+import { trans } from "laravel-vue-i18n";
+import { currentLanguage, localizedValue } from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
@@ -45,8 +47,24 @@ interface Props {
 const props = defineProps<Props>();
 
 /* ==========================================================================
+   Translations
+========================================================================== */
+
+// Teks antarmuka dibaca dari lang/{id,en,zh_CN}/karier.php lewat laravel-vue-i18n.
+const t = (key: string, params: Record<string, string | number> = {}) =>
+    trans(`karier.${key}`, params);
+
+/* ==========================================================================
    Helpers
 ========================================================================== */
+
+const dateLocale = computed(() =>
+    currentLanguage.value === "zh"
+        ? "zh-CN"
+        : currentLanguage.value === "en"
+          ? "en-US"
+          : "id-ID",
+);
 
 const formatDate = (value: string | null) => {
     if (!value) return "-";
@@ -57,7 +75,7 @@ const formatDate = (value: string | null) => {
         return value;
     }
 
-    return date.toLocaleDateString("id-ID", {
+    return date.toLocaleDateString(dateLocale.value, {
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -65,15 +83,15 @@ const formatDate = (value: string | null) => {
     });
 };
 
-const typeLabels: Record<string, string> = {
-    full_time: "Full Time",
-    part_time: "Part Time",
-    contract: "Contract",
-    kontrak: "Kontrak",
-    internship: "Internship",
-    magang: "Magang",
-    freelance: "Freelance",
-    remote: "Remote",
+const typeKeys: Record<string, string> = {
+    full_time: "types.full_time",
+    part_time: "types.part_time",
+    contract: "types.contract",
+    kontrak: "types.contract",
+    internship: "types.internship",
+    magang: "types.internship",
+    freelance: "types.freelance",
+    remote: "types.remote",
 };
 
 const normalizeType = (value: string) =>
@@ -82,17 +100,24 @@ const normalizeType = (value: string) =>
         .toLowerCase()
         .replace(/[\s-]+/g, "_");
 
-const getTypeLabel = (value: string | null) => {
-    if (!value) return "Tipe pekerjaan";
+const typeLabel = computed(() => {
+    const value = props.lowongan.tipe_pekerjaan;
 
-    const normalized = normalizeType(value);
+    if (!value) return t("detail.meta.job_type_fallback");
 
-    return typeLabels[normalized] ?? value;
-};
+    const key = typeKeys[normalizeType(value)];
+
+    return key ? t(key) : value;
+});
 
 /* ==========================================================================
    Recruitment Status
 ========================================================================== */
+
+const jakartaDateKey = (value: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Jakarta",
+    }).format(value);
 
 const isClosed = computed(() => {
     if (props.lowongan.status !== "published") {
@@ -103,73 +128,175 @@ const isClosed = computed(() => {
         return false;
     }
 
-    const now = new Date();
-
-    const todayKey = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Asia/Jakarta",
-    }).format(now);
-
     const closingDate = new Date(props.lowongan.tanggal_tutup);
 
     if (Number.isNaN(closingDate.getTime())) {
         return false;
     }
 
-    const closingKey = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Asia/Jakarta",
-    }).format(closingDate);
-
-    return closingKey < todayKey;
+    // Batas lamaran bersifat inklusif: masih terbuka sampai akhir hari tutup.
+    return jakartaDateKey(closingDate) < jakartaDateKey(new Date());
 });
 
 const recruitmentStatus = computed(() => {
     if (props.lowongan.status !== "published") {
         return {
-            label: "Tidak tersedia",
-            description: "Lowongan ini belum tersedia untuk pelamar.",
+            label: t("detail.status.unavailable"),
+            description: t("detail.status.unavailable_description"),
         };
     }
 
     if (isClosed.value) {
         return {
-            label: "Lamaran ditutup",
-            description: "Periode pendaftaran untuk posisi ini telah berakhir.",
+            label: t("detail.status.closed"),
+            description: t("detail.status.closed_description"),
         };
     }
 
     return {
-        label: "Lamaran dibuka",
-        description: "Posisi ini sedang menerima lamaran.",
+        label: t("detail.status.open"),
+        description: t("detail.status.open_description"),
     };
 });
 
 /* ==========================================================================
-   Content State
+   Display data
 ========================================================================== */
 
-const hasDescription = computed(() =>
-    Boolean(props.lowongan.deskripsi?.trim()),
+// Kartu metadata di bagian hero.
+const heroMeta = computed(() => [
+    {
+        key: "department",
+        label: t("detail.meta.department"),
+        icon: Building2,
+        value: localizedValue(props.lowongan, "departemen") || "-",
+        truncate: true,
+    },
+    {
+        key: "location",
+        label: t("detail.meta.location"),
+        icon: MapPin,
+        value: localizedValue(props.lowongan, "lokasi") || "-",
+        truncate: true,
+    },
+    {
+        key: "start",
+        label: t("detail.meta.start"),
+        icon: CalendarDays,
+        value: formatDate(props.lowongan.tanggal_mulai),
+        truncate: false,
+    },
+    {
+        key: "deadline",
+        label: t("detail.meta.deadline"),
+        icon: Clock3,
+        value: formatDate(props.lowongan.tanggal_tutup),
+        truncate: false,
+    },
+]);
+
+// Baris ringkasan di sidebar.
+const summaryRows = computed(() => [
+    {
+        key: "type",
+        label: t("detail.summary.job_type"),
+        icon: BriefcaseBusiness,
+        value: typeLabel.value,
+    },
+    {
+        key: "department",
+        label: t("detail.meta.department"),
+        icon: Building2,
+        value: localizedValue(props.lowongan, "departemen") || "-",
+    },
+    {
+        key: "location",
+        label: t("detail.meta.location"),
+        icon: MapPin,
+        value: localizedValue(props.lowongan, "lokasi") || "-",
+    },
+    {
+        key: "start",
+        label: t("detail.summary.start_registration"),
+        icon: CalendarDays,
+        value: formatDate(props.lowongan.tanggal_mulai),
+    },
+    {
+        key: "deadline",
+        label: t("detail.summary.deadline_registration"),
+        icon: Clock3,
+        value: formatDate(props.lowongan.tanggal_tutup),
+    },
+]);
+
+// Class Tailwind ditulis utuh agar tidak dibuang oleh purge.
+const contentSections = computed(() =>
+    [
+        {
+            key: "description",
+            eyebrow: t("detail.sections.about.eyebrow"),
+            title: t("detail.sections.about.title"),
+            icon: BriefcaseBusiness,
+            iconClass:
+                "bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400",
+            eyebrowClass: "text-blue-600 dark:text-blue-400",
+            html: localizedValue(props.lowongan, "deskripsi"),
+            delay: 160,
+        },
+        {
+            key: "responsibilities",
+            eyebrow: t("detail.sections.responsibilities.eyebrow"),
+            title: t("detail.sections.responsibilities.title"),
+            icon: CheckCircle2,
+            iconClass:
+                "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400",
+            eyebrowClass: "text-indigo-600 dark:text-indigo-400",
+            html: localizedValue(props.lowongan, "tanggung_jawab"),
+            delay: 220,
+        },
+        {
+            key: "qualifications",
+            eyebrow: t("detail.sections.qualifications.eyebrow"),
+            title: t("detail.sections.qualifications.title"),
+            icon: Users,
+            iconClass:
+                "bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400",
+            eyebrowClass: "text-sky-600 dark:text-sky-400",
+            html: localizedValue(props.lowongan, "kualifikasi"),
+            delay: 280,
+        },
+        {
+            key: "benefits",
+            eyebrow: t("detail.sections.benefits.eyebrow"),
+            title: t("detail.sections.benefits.title"),
+            icon: Sparkles,
+            iconClass:
+                "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400",
+            eyebrowClass: "text-emerald-600 dark:text-emerald-400",
+            html: localizedValue(props.lowongan, "benefit"),
+            delay: 340,
+        },
+    ].filter((section) => Boolean(section.html?.trim())),
 );
 
-const hasResponsibilities = computed(() =>
-    Boolean(props.lowongan.tanggung_jawab?.trim()),
+const hasContent = computed(() => contentSections.value.length > 0);
+
+const proseClass =
+    "prose prose-slate max-w-none text-sm leading-8 prose-headings:text-slate-900 prose-p:text-slate-600 prose-strong:text-slate-900 prose-li:text-slate-600 dark:prose-invert dark:prose-p:text-slate-300 dark:prose-strong:text-white dark:prose-li:text-slate-300";
+
+/* ==========================================================================
+   SEO
+========================================================================== */
+
+const judul = computed(() => localizedValue(props.lowongan, "judul"));
+
+const pageTitle = computed(() => t("detail.seo.title", { title: judul.value }));
+
+const canonicalUrl = computed(
+    () => `https://tanjungbuton-industrial.co.id/karier/${props.lowongan.slug}`,
 );
 
-const hasQualifications = computed(() =>
-    Boolean(props.lowongan.kualifikasi?.trim()),
-);
-
-const hasBenefits = computed(() => Boolean(props.lowongan.benefit?.trim()));
-
-const hasContent = computed(
-    () =>
-        hasDescription.value ||
-        hasResponsibilities.value ||
-        hasQualifications.value ||
-        hasBenefits.value,
-);
-
-const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
+const ogImage = "https://tanjungbuton-industrial.co.id/logoside.png";
 </script>
 
 <template>
@@ -178,57 +305,46 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
 
         <meta
             name="description"
-            :content="`Informasi lowongan ${lowongan.judul} di PT Kawasan Industri Tanjung Buton (KITB).`"
+            :content="t('detail.seo.description', { title: judul })"
         />
 
         <meta name="robots" content="index, follow" />
+        <link rel="canonical" :href="canonicalUrl" />
 
         <meta property="og:title" :content="pageTitle" />
-
         <meta
             property="og:description"
-            :content="`Lihat detail lowongan ${lowongan.judul} dan peluang berkarier bersama KITB.`"
+            :content="t('detail.seo.og_description', { title: judul })"
         />
-
         <meta property="og:type" content="website" />
-
-        <meta
-            property="og:url"
-            :content="`https://tanjungbuton-industrial.co.id/karier/${lowongan.slug}`"
-        />
+        <meta property="og:url" :content="canonicalUrl" />
+        <meta property="og:image" :content="ogImage" />
     </Head>
 
     <div
         class="relative min-h-screen overflow-x-clip bg-slate-50/70 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-white"
     >
-        <!-- =========================================================
-             BACKGROUND AMBIENT
-        ========================================================== -->
+        <!-- BACKGROUND AMBIENT -->
         <div
             class="pointer-events-none absolute inset-x-0 -top-28 h-[820px] overflow-hidden"
             aria-hidden="true"
         >
-            <!-- Top fade -->
             <div
                 class="absolute inset-x-0 top-0 h-60 bg-gradient-to-b from-blue-100/70 via-blue-50/40 to-transparent dark:from-blue-950/30 dark:via-blue-950/10"
             />
 
-            <!-- Blob kiri -->
             <div
                 class="blob blob-a absolute left-[2%] top-0 size-[26rem] rounded-full bg-gradient-to-br from-blue-400/35 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/15"
             />
 
-            <!-- Blob kanan -->
             <div
                 class="blob blob-b absolute right-[2%] top-4 size-[22rem] rounded-full bg-gradient-to-tr from-sky-300/35 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10"
             />
 
-            <!-- Blob tengah -->
             <div
                 class="blob blob-c absolute left-1/3 top-56 size-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/10"
             />
 
-            <!-- Grid -->
             <div
                 class="absolute inset-0 opacity-[0.18] dark:opacity-[0.08]"
                 style="
@@ -258,15 +374,12 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                 "
             />
 
-            <!-- Fade ke background -->
             <div
                 class="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-b from-transparent to-slate-50/90 dark:to-slate-950/90"
             />
         </div>
 
-        <!-- =========================================================
-             CONTENT
-        ========================================================== -->
+        <!-- CONTENT -->
         <main
             class="relative z-10 mx-auto w-full max-w-[1440px] px-4 pb-12 pt-24 sm:px-6 sm:pt-28 lg:px-8 lg:pb-16 lg:pt-32"
         >
@@ -274,29 +387,27 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
             <div class="reveal mb-6" style="--d: 0">
                 <Link
                     href="/karier"
-                    class="group inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-white/80 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-x-0.5 hover:border-blue-300 hover:bg-white hover:shadow-md dark:border-blue-900/60 dark:bg-slate-900/70 dark:text-blue-300 dark:hover:border-blue-800 dark:hover:bg-slate-900"
+                    class="group inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-white/80 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-x-0.5 hover:border-blue-300 hover:bg-white hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:border-blue-900/60 dark:bg-slate-900/70 dark:text-blue-300 dark:hover:border-blue-800 dark:hover:bg-slate-900"
                 >
                     <ArrowLeft
                         class="size-4 transition-transform duration-300 group-hover:-translate-x-0.5"
+                        aria-hidden="true"
                     />
 
-                    Kembali ke Karier
+                    {{ t("detail.navigation.back") }}
                 </Link>
             </div>
 
-            <!-- =====================================================
-                 HERO
-            ====================================================== -->
+            <!-- HERO -->
             <section
                 class="reveal relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/90 shadow-xl shadow-slate-900/[0.05] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90"
                 style="--d: 80"
             >
-                <!-- Accent -->
                 <div
                     class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400"
+                    aria-hidden="true"
                 />
 
-                <!-- Internal glow -->
                 <div
                     aria-hidden="true"
                     class="pointer-events-none absolute -right-28 -top-28 size-72 rounded-full bg-blue-400/10 blur-3xl dark:bg-blue-500/10"
@@ -308,18 +419,21 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                         <span
                             class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300"
                         >
-                            <BriefcaseBusiness class="size-3.5" />
+                            <BriefcaseBusiness
+                                class="size-3.5"
+                                aria-hidden="true"
+                            />
 
-                            {{ getTypeLabel(lowongan.tipe_pekerjaan) }}
+                            {{ typeLabel }}
                         </span>
 
                         <span
                             v-if="lowongan.unggulan"
                             class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-xs font-semibold text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"
                         >
-                            <Sparkles class="size-3.5" />
+                            <Sparkles class="size-3.5" aria-hidden="true" />
 
-                            Posisi Unggulan
+                            {{ t("detail.badges.featured") }}
                         </span>
 
                         <span
@@ -337,6 +451,7 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                                         ? 'animate-pulse bg-emerald-500'
                                         : 'bg-slate-400'
                                 "
+                                aria-hidden="true"
                             />
 
                             {{ recruitmentStatus.label }}
@@ -348,129 +463,73 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                         <h1
                             class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl dark:text-white"
                         >
-                            {{ lowongan.judul }}
+                            {{ judul }}
                         </h1>
 
                         <p
                             class="mt-5 text-sm leading-7 text-slate-600 sm:text-base sm:leading-8 dark:text-slate-400"
                         >
-                            Bergabung bersama
+                            {{ t("detail.hero.prefix") }}
                             <strong
                                 class="font-semibold text-slate-900 dark:text-white"
                             >
-                                PT Kawasan Industri Tanjung Buton (KITB)
+                                {{ t("detail.hero.company") }}
                             </strong>
-                            untuk berkembang, berkolaborasi, dan memberikan
-                            kontribusi nyata dalam pengembangan kawasan industri
-                            yang berkelanjutan.
+                            {{ t("detail.hero.suffix") }}
                         </p>
+
+                        <!-- Apply (mobile/tablet; di desktop ada di sidebar) -->
+                        <div class="mt-6 lg:hidden">
+                            <Link
+                                v-if="!isClosed"
+                                :href="`/karier/${lowongan.slug}/lamar`"
+                                class="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition duration-300 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                            >
+                                {{ t("detail.apply.now") }}
+
+                                <ArrowRight
+                                    class="size-4 transition-transform duration-300 group-hover:translate-x-1"
+                                    aria-hidden="true"
+                                />
+                            </Link>
+                        </div>
                     </div>
 
                     <!-- Metadata -->
                     <div class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <!-- Department -->
                         <div
+                            v-for="item in heroMeta"
+                            :key="item.key"
                             class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 transition hover:border-blue-200 hover:bg-blue-50/40 dark:border-slate-800 dark:bg-slate-950/50 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/20"
                         >
                             <div class="flex items-start gap-3">
                                 <div
                                     class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400"
                                 >
-                                    <Building2 class="size-5" />
+                                    <component
+                                        :is="item.icon"
+                                        class="size-5"
+                                        aria-hidden="true"
+                                    />
                                 </div>
 
                                 <div class="min-w-0">
                                     <p
                                         class="text-[11px] font-semibold uppercase tracking-wider text-slate-400"
                                     >
-                                        Departemen
-                                    </p>
-
-                                    <p
-                                        class="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-200"
-                                    >
-                                        {{ lowongan.departemen || "-" }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Location -->
-                        <div
-                            class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 transition hover:border-blue-200 hover:bg-blue-50/40 dark:border-slate-800 dark:bg-slate-950/50 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/20"
-                        >
-                            <div class="flex items-start gap-3">
-                                <div
-                                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400"
-                                >
-                                    <MapPin class="size-5" />
-                                </div>
-
-                                <div class="min-w-0">
-                                    <p
-                                        class="text-[11px] font-semibold uppercase tracking-wider text-slate-400"
-                                    >
-                                        Lokasi
-                                    </p>
-
-                                    <p
-                                        class="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-200"
-                                    >
-                                        {{ lowongan.lokasi || "-" }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Start -->
-                        <div
-                            class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 transition hover:border-blue-200 hover:bg-blue-50/40 dark:border-slate-800 dark:bg-slate-950/50 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/20"
-                        >
-                            <div class="flex items-start gap-3">
-                                <div
-                                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400"
-                                >
-                                    <CalendarDays class="size-5" />
-                                </div>
-
-                                <div>
-                                    <p
-                                        class="text-[11px] font-semibold uppercase tracking-wider text-slate-400"
-                                    >
-                                        Mulai
+                                        {{ item.label }}
                                     </p>
 
                                     <p
                                         class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
+                                        :class="item.truncate ? 'truncate' : ''"
+                                        :title="
+                                            item.truncate
+                                                ? item.value
+                                                : undefined
+                                        "
                                     >
-                                        {{ formatDate(lowongan.tanggal_mulai) }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Deadline -->
-                        <div
-                            class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 transition hover:border-blue-200 hover:bg-blue-50/40 dark:border-slate-800 dark:bg-slate-950/50 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/20"
-                        >
-                            <div class="flex items-start gap-3">
-                                <div
-                                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-400"
-                                >
-                                    <Clock3 class="size-5" />
-                                </div>
-
-                                <div>
-                                    <p
-                                        class="text-[11px] font-semibold uppercase tracking-wider text-slate-400"
-                                    >
-                                        Batas Lamaran
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
-                                    >
-                                        {{ formatDate(lowongan.tanggal_tutup) }}
+                                        {{ item.value }}
                                     </p>
                                 </div>
                             </div>
@@ -479,148 +538,52 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                 </div>
             </section>
 
-            <!-- =====================================================
-                 CONTENT
-            ====================================================== -->
+            <!-- BODY -->
             <div
                 class="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]"
             >
                 <!-- Main -->
-                <div class="space-y-6">
-                    <!-- Description -->
+                <div class="min-w-0 space-y-6">
+                    <!--
+                        Catatan keamanan: konten di bawah dirender dengan v-html.
+                        Pastikan HTML sudah disanitasi di server (mis. mews/purifier)
+                        atau dengan DOMPurify sebelum disimpan / dikirim ke sini.
+                    -->
                     <section
-                        v-if="hasDescription"
+                        v-for="section in contentSections"
+                        :key="section.key"
                         class="reveal rounded-[1.75rem] border border-slate-200/80 bg-white/90 p-6 shadow-lg shadow-slate-900/[0.04] backdrop-blur-xl sm:p-8 dark:border-slate-800 dark:bg-slate-900/90"
-                        style="--d: 160"
+                        :style="{ '--d': section.delay }"
                     >
                         <div class="mb-6 flex items-center gap-4">
                             <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+                                class="flex size-12 shrink-0 items-center justify-center rounded-2xl"
+                                :class="section.iconClass"
                             >
-                                <BriefcaseBusiness class="size-6" />
+                                <component
+                                    :is="section.icon"
+                                    class="size-6"
+                                    aria-hidden="true"
+                                />
                             </div>
 
                             <div>
                                 <p
-                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400"
+                                    class="text-xs font-semibold uppercase tracking-[0.18em]"
+                                    :class="section.eyebrowClass"
                                 >
-                                    Tentang Posisi
+                                    {{ section.eyebrow }}
                                 </p>
 
                                 <h2
                                     class="mt-1 text-xl font-bold text-slate-900 dark:text-white"
                                 >
-                                    Deskripsi Pekerjaan
+                                    {{ section.title }}
                                 </h2>
                             </div>
                         </div>
 
-                        <div
-                            class="prose prose-slate max-w-none text-sm leading-8 prose-headings:text-slate-900 prose-p:text-slate-600 prose-strong:text-slate-900 prose-li:text-slate-600 dark:prose-invert dark:prose-p:text-slate-300 dark:prose-strong:text-white dark:prose-li:text-slate-300"
-                            v-html="lowongan.deskripsi"
-                        />
-                    </section>
-
-                    <!-- Responsibilities -->
-                    <section
-                        v-if="hasResponsibilities"
-                        class="reveal rounded-[1.75rem] border border-slate-200/80 bg-white/90 p-6 shadow-lg shadow-slate-900/[0.04] backdrop-blur-xl sm:p-8 dark:border-slate-800 dark:bg-slate-900/90"
-                        style="--d: 220"
-                    >
-                        <div class="mb-6 flex items-center gap-4">
-                            <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
-                            >
-                                <CheckCircle2 class="size-6" />
-                            </div>
-
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-400"
-                                >
-                                    Peran & Tanggung Jawab
-                                </p>
-
-                                <h2
-                                    class="mt-1 text-xl font-bold text-slate-900 dark:text-white"
-                                >
-                                    Tanggung Jawab
-                                </h2>
-                            </div>
-                        </div>
-
-                        <div
-                            class="prose prose-slate max-w-none text-sm leading-8 prose-headings:text-slate-900 prose-p:text-slate-600 prose-strong:text-slate-900 prose-li:text-slate-600 dark:prose-invert dark:prose-p:text-slate-300 dark:prose-strong:text-white dark:prose-li:text-slate-300"
-                            v-html="lowongan.tanggung_jawab"
-                        />
-                    </section>
-
-                    <!-- Qualifications -->
-                    <section
-                        v-if="hasQualifications"
-                        class="reveal rounded-[1.75rem] border border-slate-200/80 bg-white/90 p-6 shadow-lg shadow-slate-900/[0.04] backdrop-blur-xl sm:p-8 dark:border-slate-800 dark:bg-slate-900/90"
-                        style="--d: 280"
-                    >
-                        <div class="mb-6 flex items-center gap-4">
-                            <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400"
-                            >
-                                <Users class="size-6" />
-                            </div>
-
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600 dark:text-sky-400"
-                                >
-                                    Persyaratan
-                                </p>
-
-                                <h2
-                                    class="mt-1 text-xl font-bold text-slate-900 dark:text-white"
-                                >
-                                    Kualifikasi
-                                </h2>
-                            </div>
-                        </div>
-
-                        <div
-                            class="prose prose-slate max-w-none text-sm leading-8 prose-headings:text-slate-900 prose-p:text-slate-600 prose-strong:text-slate-900 prose-li:text-slate-600 dark:prose-invert dark:prose-p:text-slate-300 dark:prose-strong:text-white dark:prose-li:text-slate-300"
-                            v-html="lowongan.kualifikasi"
-                        />
-                    </section>
-
-                    <!-- Benefits -->
-                    <section
-                        v-if="hasBenefits"
-                        class="reveal rounded-[1.75rem] border border-slate-200/80 bg-white/90 p-6 shadow-lg shadow-slate-900/[0.04] backdrop-blur-xl sm:p-8 dark:border-slate-800 dark:bg-slate-900/90"
-                        style="--d: 340"
-                    >
-                        <div class="mb-6 flex items-center gap-4">
-                            <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
-                            >
-                                <Sparkles class="size-6" />
-                            </div>
-
-                            <div>
-                                <p
-                                    class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400"
-                                >
-                                    Apa yang Anda Dapatkan
-                                </p>
-
-                                <h2
-                                    class="mt-1 text-xl font-bold text-slate-900 dark:text-white"
-                                >
-                                    Benefit
-                                </h2>
-                            </div>
-                        </div>
-
-                        <div
-                            class="prose prose-slate max-w-none text-sm leading-8 prose-headings:text-slate-900 prose-p:text-slate-600 prose-strong:text-slate-900 prose-li:text-slate-600 dark:prose-invert dark:prose-p:text-slate-300 dark:prose-strong:text-white dark:prose-li:text-slate-300"
-                            v-html="lowongan.benefit"
-                        />
+                        <div :class="proseClass" v-html="section.html" />
                     </section>
 
                     <!-- Empty -->
@@ -631,6 +594,7 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                     >
                         <div
                             class="mx-auto flex size-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                            aria-hidden="true"
                         >
                             <BriefcaseBusiness class="size-7" />
                         </div>
@@ -638,28 +602,24 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                         <h2
                             class="mt-5 text-lg font-bold text-slate-900 dark:text-white"
                         >
-                            Informasi belum tersedia
+                            {{ t("detail.empty.title") }}
                         </h2>
 
                         <p
                             class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400"
                         >
-                            Detail untuk posisi ini belum dilengkapi. Silakan
-                            kembali ke halaman karier untuk melihat posisi
-                            lainnya.
+                            {{ t("detail.empty.description") }}
                         </p>
                     </section>
                 </div>
 
-                <!-- =================================================
-                     SIDEBAR
-                ================================================== -->
+                <!-- SIDEBAR -->
                 <aside class="lg:sticky lg:top-28">
                     <div
                         class="reveal overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white/90 shadow-xl shadow-slate-900/[0.05] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90"
                         style="--d: 220"
                     >
-                        <!-- Sidebar Header -->
+                        <!-- Header -->
                         <div
                             class="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-6 text-white"
                         >
@@ -676,6 +636,7 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                             <div class="relative">
                                 <div
                                     class="mb-4 flex size-11 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20"
+                                    aria-hidden="true"
                                 >
                                     <BriefcaseBusiness class="size-5" />
                                 </div>
@@ -683,16 +644,15 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                                 <p
                                     class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-100"
                                 >
-                                    Job Overview
+                                    {{ t("detail.summary.eyebrow") }}
                                 </p>
 
                                 <h2 class="mt-2 text-xl font-bold">
-                                    Ringkasan Lowongan
+                                    {{ t("detail.summary.title") }}
                                 </h2>
 
                                 <p class="mt-2 text-sm leading-6 text-blue-100">
-                                    Informasi penting mengenai posisi yang
-                                    sedang Anda lihat.
+                                    {{ t("detail.summary.description") }}
                                 </p>
                             </div>
                         </div>
@@ -701,111 +661,30 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                             <!-- Summary -->
                             <div class="space-y-4">
                                 <div
-                                    class="flex items-start gap-3 border-b border-slate-100 pb-4 dark:border-slate-800"
+                                    v-for="(row, index) in summaryRows"
+                                    :key="row.key"
+                                    class="flex items-start gap-3"
+                                    :class="
+                                        index < summaryRows.length - 1
+                                            ? 'border-b border-slate-100 pb-4 dark:border-slate-800'
+                                            : ''
+                                    "
                                 >
-                                    <BriefcaseBusiness
+                                    <component
+                                        :is="row.icon"
                                         class="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
+                                        aria-hidden="true"
                                     />
 
-                                    <div>
+                                    <div class="min-w-0">
                                         <p class="text-xs text-slate-400">
-                                            Tipe Pekerjaan
+                                            {{ row.label }}
                                         </p>
 
                                         <p
-                                            class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
+                                            class="mt-1 break-words text-sm font-semibold text-slate-800 dark:text-slate-200"
                                         >
-                                            {{
-                                                getTypeLabel(
-                                                    lowongan.tipe_pekerjaan,
-                                                )
-                                            }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    class="flex items-start gap-3 border-b border-slate-100 pb-4 dark:border-slate-800"
-                                >
-                                    <Building2
-                                        class="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
-                                    />
-
-                                    <div>
-                                        <p class="text-xs text-slate-400">
-                                            Departemen
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
-                                        >
-                                            {{ lowongan.departemen || "-" }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    class="flex items-start gap-3 border-b border-slate-100 pb-4 dark:border-slate-800"
-                                >
-                                    <MapPin
-                                        class="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
-                                    />
-
-                                    <div>
-                                        <p class="text-xs text-slate-400">
-                                            Lokasi
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
-                                        >
-                                            {{ lowongan.lokasi || "-" }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    class="flex items-start gap-3 border-b border-slate-100 pb-4 dark:border-slate-800"
-                                >
-                                    <CalendarDays
-                                        class="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
-                                    />
-
-                                    <div>
-                                        <p class="text-xs text-slate-400">
-                                            Mulai Pendaftaran
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
-                                        >
-                                            {{
-                                                formatDate(
-                                                    lowongan.tanggal_mulai,
-                                                )
-                                            }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-start gap-3">
-                                    <Clock3
-                                        class="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400"
-                                    />
-
-                                    <div>
-                                        <p class="text-xs text-slate-400">
-                                            Batas Pendaftaran
-                                        </p>
-
-                                        <p
-                                            class="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200"
-                                        >
-                                            {{
-                                                formatDate(
-                                                    lowongan.tanggal_tutup,
-                                                )
-                                            }}
+                                            {{ row.value }}
                                         </p>
                                     </div>
                                 </div>
@@ -828,6 +707,7 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                                                 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400'
                                                 : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                                         "
+                                        aria-hidden="true"
                                     >
                                         <CheckCircle2
                                             v-if="!isClosed"
@@ -865,20 +745,22 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                                     :href="`/karier/${lowongan.slug}/lamar`"
                                     class="group flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition duration-300 hover:-translate-y-0.5 hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl hover:shadow-blue-600/25 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
                                 >
-                                    Lamar Sekarang
+                                    {{ t("detail.apply.now") }}
 
                                     <ArrowRight
                                         class="size-4 transition-transform duration-300 group-hover:translate-x-1"
+                                        aria-hidden="true"
                                     />
                                 </Link>
 
                                 <div
                                     v-else
                                     class="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 px-5 py-3.5 text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"
+                                    role="status"
                                 >
-                                    <Clock3 class="size-4" />
+                                    <Clock3 class="size-4" aria-hidden="true" />
 
-                                    Lamaran Ditutup
+                                    {{ t("detail.apply.closed") }}
                                 </div>
                             </div>
 
@@ -889,33 +771,32 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                                 <p
                                     class="text-xs leading-5 text-slate-500 dark:text-slate-400"
                                 >
-                                    Pastikan CV dan dokumen pendukung yang
-                                    diperlukan telah disiapkan sebelum
-                                    mengajukan lamaran.
+                                    {{ t("detail.apply.note") }}
                                 </p>
                             </div>
 
                             <!-- Other positions -->
                             <Link
                                 href="/karier"
-                                class="group mt-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition duration-300 hover:border-blue-200 hover:bg-blue-50/50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/20"
+                                class="group mt-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3.5 transition duration-300 hover:border-blue-200 hover:bg-blue-50/50 focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-900/60 dark:hover:bg-blue-950/20"
                             >
                                 <div>
                                     <p
                                         class="text-xs font-medium text-slate-400"
                                     >
-                                        Eksplorasi
+                                        {{ t("detail.explore.eyebrow") }}
                                     </p>
 
                                     <p
                                         class="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-200"
                                     >
-                                        Lihat posisi lainnya
+                                        {{ t("detail.explore.label") }}
                                     </p>
                                 </div>
 
                                 <ArrowRight
                                     class="size-4 text-slate-400 transition-transform duration-300 group-hover:translate-x-1 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                                    aria-hidden="true"
                                 />
                             </Link>
                         </div>
@@ -923,29 +804,30 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                 </aside>
             </div>
 
-            <!-- =====================================================
-                 BOTTOM CTA
-            ====================================================== -->
+            <!-- BOTTOM CTA -->
             <section
                 class="reveal relative mt-10 overflow-hidden rounded-[2rem] border border-blue-200/70 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 px-6 py-10 text-center shadow-xl shadow-blue-900/10 sm:px-10 lg:py-12 dark:border-blue-800/50"
                 style="--d: 420"
             >
-                <!-- CTA ambient -->
                 <div
                     class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full border border-white/10"
+                    aria-hidden="true"
                 />
 
                 <div
                     class="pointer-events-none absolute -bottom-32 -left-20 size-72 rounded-full border border-white/10"
+                    aria-hidden="true"
                 />
 
                 <div
                     class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(255,255,255,0.10),transparent_32%)]"
+                    aria-hidden="true"
                 />
 
                 <div class="relative">
                     <div
                         class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/20"
+                        aria-hidden="true"
                     >
                         <Sparkles class="size-5" />
                     </div>
@@ -953,30 +835,30 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
                     <p
                         class="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-blue-100"
                     >
-                        Grow With Us
+                        {{ t("detail.cta.eyebrow") }}
                     </p>
 
                     <h2
                         class="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl"
                     >
-                        Siap berkembang bersama KITB?
+                        {{ t("detail.cta.title") }}
                     </h2>
 
                     <p
                         class="mx-auto mt-3 max-w-2xl text-sm leading-7 text-blue-100 sm:text-base"
                     >
-                        Temukan peluang karier lainnya dan jadilah bagian dari
-                        perjalanan pengembangan kawasan industri Tanjung Buton.
+                        {{ t("detail.cta.description") }}
                     </p>
 
                     <Link
                         href="/karier"
-                        class="group mt-6 inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/10 transition duration-300 hover:-translate-y-0.5 hover:bg-blue-50"
+                        class="group mt-6 inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/10 transition duration-300 hover:-translate-y-0.5 hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-white/40"
                     >
-                        Lihat Semua Lowongan
+                        {{ t("detail.cta.button") }}
 
                         <ArrowRight
                             class="size-4 transition-transform duration-300 group-hover:translate-x-1"
+                            aria-hidden="true"
                         />
                     </Link>
                 </div>
@@ -986,10 +868,6 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
 </template>
 
 <style scoped>
-/* ==========================================================================
-   Fade In
-========================================================================== */
-
 .reveal {
     opacity: 0;
     transform: translateY(14px);
@@ -1003,10 +881,6 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
         transform: translateY(0);
     }
 }
-
-/* ==========================================================================
-   Blobs
-========================================================================== */
 
 .blob {
     will-change: transform;
@@ -1066,14 +940,8 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
     }
 }
 
-/* ==========================================================================
-   Rich Text
-========================================================================== */
-
-:deep(.prose ul) {
-    padding-left: 1.4rem;
-}
-
+/* Rich text */
+:deep(.prose ul),
 :deep(.prose ol) {
     padding-left: 1.4rem;
 }
@@ -1098,10 +966,6 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
     border-radius: 1rem;
 }
 
-/* ==========================================================================
-   Accessibility
-========================================================================== */
-
 @media (prefers-reduced-motion: reduce) {
     .reveal {
         opacity: 1;
@@ -1115,10 +979,6 @@ const pageTitle = computed(() => `${props.lowongan.judul} - Karier KITB`);
         animation: none;
     }
 }
-
-/* ==========================================================================
-   Mobile
-========================================================================== */
 
 @media (max-width: 640px) {
     .blob-a {
