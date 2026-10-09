@@ -1,0 +1,32 @@
+
+<?php
+
+return [
+  'page_title' => 'Kontak - KITB',
+  'meta_description' => 'Hubungi :company untuk informasi kawasan industri, investasi, layanan, dan kebutuhan bisnis Anda.',
+  'home' => 'Beranda',
+  'contact' => 'Kontak',
+  'contact_us' => 'Hubungi Kami',
+  'hero_title' => 'Mari Terhubung dengan KITB',
+  'hero_description' => 'Sampaikan pertanyaan, kebutuhan informasi, atau peluang kerja sama kepada tim kami. Kami siap membantu Anda mendapatkan informasi yang dibutuhkan.',
+  'contact_information' => 'Informasi Kontak',
+  'ready_to_help' => 'Kami siap membantu',
+  'location' => 'Lokasi',
+  'open_google_maps' => 'Buka lokasi di Google Maps',
+  'email' => 'Email',
+  'investor_email' => 'Email Investor',
+  'phone_whatsapp' => 'Telepon & WhatsApp',
+  'operating_hours' => 'Jam Operasional',
+  'map_title' => 'Peta Lokasi',
+  'send_message' => 'Kirim Pesan',
+  'form_intro' => 'Isi formulir berikut dan tim kami akan menindaklanjutinya.',
+  'full_name' => 'Nama Lengkap',
+  'phone' => 'Nomor Telepon',
+  'company' => 'Perusahaan',
+  'subject' => 'Subjek',
+  'message' => 'Pesan',
+  'sending' => 'Mengirim...',
+  'success_title' => 'Pesan Berhasil Dikirim',
+  'success_description' => 'Terima kasih telah menghubungi kami. Tim KITB akan membalas melalui email Anda.',
+  'close' => 'Tutup',
+];

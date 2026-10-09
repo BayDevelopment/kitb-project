@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\PengaturanKontak;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -37,16 +38,23 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+
             'locale' => app()->getLocale(),
             'name' => config('app.name'),
+
             'auth' => [
                 'user' => $request->user(),
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state')
+                || $request->cookie('sidebar_state') === 'true',
 
             'flash' => [
                 'toast' => fn() => $request->session()->get('toast'),
             ],
+
+            // Pengaturan kontak dan media sosial untuk seluruh halaman publik.
+            'pengaturanKontak' => fn() => PengaturanKontak::query()->first(),
         ];
     }
 }

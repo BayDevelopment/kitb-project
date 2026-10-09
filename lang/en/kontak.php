@@ -1,0 +1,32 @@
+
+<?php
+
+return [
+  'page_title' => 'Contact - KITB',
+  'meta_description' => 'Contact :company for information about the industrial estate, investment, services, and business opportunities.',
+  'home' => 'Home',
+  'contact' => 'Contact',
+  'contact_us' => 'Contact Us',
+  'hero_title' => "Let's Connect with KITB",
+  'hero_description' => 'Send us your questions, information requests, or potential collaboration opportunities. Our team is ready to help you find the information you need.',
+  'contact_information' => 'Contact Information',
+  'ready_to_help' => "We're here to help",
+  'location' => 'Location',
+  'open_google_maps' => 'Open location in Google Maps',
+  'email' => 'Email',
+  'investor_email' => 'Investor Email',
+  'phone_whatsapp' => 'Phone & WhatsApp',
+  'operating_hours' => 'Operating Hours',
+  'map_title' => 'Location Map',
+  'send_message' => 'Send a Message',
+  'form_intro' => 'Complete the form below and our team will follow up with you.',
+  'full_name' => 'Full Name',
+  'phone' => 'Phone Number',
+  'company' => 'Company',
+  'subject' => 'Subject',
+  'message' => 'Message',
+  'sending' => 'Sending...',
+  'success_title' => 'Message Sent Successfully',
+  'success_description' => 'Thank you for contacting us. The KITB team will reply to you by email.',
+  'close' => 'Close',
+];

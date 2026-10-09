@@ -24,6 +24,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import PublicLayout from "@/layouts/PublicLayout.vue";
+import { currentLanguage } from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
@@ -55,6 +56,184 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+/* =========================================================
+   Static UI Translations
+   ========================================================= */
+
+const translations = {
+    id: {
+        pageTitle: "Kontak - KITB",
+        metaDescription:
+            "Hubungi :company untuk informasi kawasan industri, investasi, layanan, dan kebutuhan bisnis Anda.",
+        home: "Beranda",
+        breadcrumbAria: "Navigasi breadcrumb",
+        contact: "Kontak",
+        contactUs: "Hubungi Kami",
+        heroTitle: "Mari Terhubung dengan KITB",
+        heroDescription:
+            "Sampaikan pertanyaan, kebutuhan informasi, atau peluang kerja sama kepada tim kami. Kami siap membantu Anda mendapatkan informasi yang dibutuhkan.",
+        contactInformation: "Informasi Kontak",
+        readyToHelp: "Kami siap membantu",
+        contactIntro:
+            "Gunakan informasi di bawah ini untuk menghubungi tim :company.",
+        location: "Lokasi",
+        openGoogleMaps: "Buka lokasi di Google Maps",
+        email: "Email",
+        investorEmail: "Email Investor",
+        phoneWhatsapp: "Telepon & WhatsApp",
+        whatsapp: "WhatsApp",
+        operatingHours: "Jam Operasional",
+        mapTitle: "Peta Lokasi",
+        mapSubtitle: "Lokasi kawasan KITB",
+        mapAria: "Peta lokasi KITB",
+        sendMessage: "Kirim Pesan",
+        formIntro: "Isi formulir berikut dan tim kami akan menindaklanjutinya.",
+        formErrorTitle: "Formulir belum dapat dikirim",
+        formErrorDescription:
+            "Terdapat beberapa data yang perlu diperbaiki. Silakan periksa keterangan berwarna merah pada setiap kolom.",
+        fullName: "Nama Lengkap",
+        fullNamePlaceholder: "Nama lengkap",
+        emailPlaceholder: "nama@perusahaan.com",
+        phone: "Nomor Telepon",
+        company: "Perusahaan",
+        companyPlaceholder: "Nama perusahaan",
+        subject: "Subjek",
+        subjectPlaceholder: "Contoh: Informasi investasi kawasan",
+        message: "Pesan",
+        messagePlaceholder: "Tuliskan kebutuhan atau pertanyaan Anda...",
+        consent:
+            "Dengan mengirim pesan ini, Anda memberikan informasi yang diperlukan agar tim KITB dapat menghubungi Anda kembali.",
+        sending: "Mengirim...",
+        bottomTitle: "Ingin mengetahui lebih banyak tentang :company?",
+        bottomDescription:
+            "Sampaikan kebutuhan Anda melalui formulir di atas dan kami akan membantu mengarahkan informasi yang sesuai.",
+        closeDialog: "Tutup dialog",
+        successTitle: "Pesan Berhasil Dikirim",
+        successDescription:
+            "Terima kasih telah menghubungi kami. Tim KITB akan membalas melalui email Anda.",
+        successEmailNote:
+            "Silakan periksa inbox email Anda. Tim kami akan menindaklanjuti pesan yang telah Anda kirimkan.",
+        close: "Tutup",
+    },
+    en: {
+        pageTitle: "Contact - KITB",
+        metaDescription:
+            "Contact :company for information about the industrial estate, investment, services, and business opportunities.",
+        home: "Home",
+        breadcrumbAria: "Breadcrumb navigation",
+        contact: "Contact",
+        contactUs: "Contact Us",
+        heroTitle: "Let's Connect with KITB",
+        heroDescription:
+            "Send us your questions, information requests, or potential collaboration opportunities. Our team is ready to help you find the information you need.",
+        contactInformation: "Contact Information",
+        readyToHelp: "We're here to help",
+        contactIntro: "Use the information below to contact the :company team.",
+        location: "Location",
+        openGoogleMaps: "Open location in Google Maps",
+        email: "Email",
+        investorEmail: "Investor Email",
+        phoneWhatsapp: "Phone & WhatsApp",
+        whatsapp: "WhatsApp",
+        operatingHours: "Operating Hours",
+        mapTitle: "Location Map",
+        mapSubtitle: "KITB industrial estate location",
+        mapAria: "Map showing the KITB location",
+        sendMessage: "Send a Message",
+        formIntro:
+            "Complete the form below and our team will follow up with you.",
+        formErrorTitle: "Your message could not be submitted",
+        formErrorDescription:
+            "Some information needs to be corrected. Please check the red messages shown under the relevant fields.",
+        fullName: "Full Name",
+        fullNamePlaceholder: "Your full name",
+        emailPlaceholder: "name@company.com",
+        phone: "Phone Number",
+        company: "Company",
+        companyPlaceholder: "Company name",
+        subject: "Subject",
+        subjectPlaceholder: "Example: Industrial estate investment information",
+        message: "Message",
+        messagePlaceholder: "Tell us what you need or ask us a question...",
+        consent:
+            "By sending this message, you provide the information needed for the KITB team to contact you.",
+        sending: "Sending...",
+        bottomTitle: "Want to learn more about :company?",
+        bottomDescription:
+            "Tell us what you need using the form above, and we will help direct you to the relevant information.",
+        closeDialog: "Close dialog",
+        successTitle: "Message Sent Successfully",
+        successDescription:
+            "Thank you for contacting us. The KITB team will reply to you by email.",
+        successEmailNote:
+            "Please check your email inbox. Our team will follow up on the message you sent.",
+        close: "Close",
+    },
+    zh: {
+        pageTitle: "联系 KITB",
+        metaDescription:
+            "联系 :company，了解工业园区、投资、服务及商业合作机会。",
+        home: "首页",
+        breadcrumbAria: "面包屑导航",
+        contact: "联系我们",
+        contactUs: "联系我们",
+        heroTitle: "与 KITB 建立联系",
+        heroDescription:
+            "欢迎向我们提出问题、咨询相关信息或探讨合作机会。我们的团队将竭诚协助您获取所需信息。",
+        contactInformation: "联系信息",
+        readyToHelp: "我们随时为您提供帮助",
+        contactIntro: "您可以通过以下信息联系 :company 团队。",
+        location: "地址",
+        openGoogleMaps: "在 Google 地图中查看位置",
+        email: "电子邮箱",
+        investorEmail: "投资者邮箱",
+        phoneWhatsapp: "电话与 WhatsApp",
+        whatsapp: "WhatsApp",
+        operatingHours: "办公时间",
+        mapTitle: "位置地图",
+        mapSubtitle: "KITB 工业园区位置",
+        mapAria: "KITB 位置地图",
+        sendMessage: "发送消息",
+        formIntro: "请填写以下表格，我们的团队将尽快跟进。",
+        formErrorTitle: "消息暂时无法提交",
+        formErrorDescription:
+            "部分信息需要修改。请检查相关输入框下方的红色提示。",
+        fullName: "姓名",
+        fullNamePlaceholder: "请输入姓名",
+        emailPlaceholder: "name@company.com",
+        phone: "电话号码",
+        company: "公司名称",
+        companyPlaceholder: "请输入公司名称",
+        subject: "主题",
+        subjectPlaceholder: "例如：工业园区投资信息咨询",
+        message: "消息内容",
+        messagePlaceholder: "请填写您的需求或问题……",
+        consent: "发送此消息即表示您提供必要的信息，以便 KITB 团队与您联系。",
+        sending: "正在发送……",
+        bottomTitle: "想进一步了解 :company？",
+        bottomDescription:
+            "请通过上方表格告诉我们您的需求，我们将协助您获取相关信息。",
+        closeDialog: "关闭对话框",
+        successTitle: "消息发送成功",
+        successDescription: "感谢您与我们联系。KITB 团队将通过电子邮件回复您。",
+        successEmailNote:
+            "请查看您的电子邮箱收件箱。我们的团队将跟进您发送的消息。",
+        close: "关闭",
+    },
+} as const;
+
+const t = computed(() => {
+    const language = currentLanguage.value as string;
+    const normalizedLanguage = language === "zh_CN" ? "zh" : language;
+    return (
+        translations[normalizedLanguage as keyof typeof translations] ??
+        translations.id
+    );
+});
+
+const withCompany = (template: string) =>
+    template.replaceAll(":company", companyName.value);
 
 /* =========================================================
    Contact Helpers
@@ -435,12 +614,9 @@ onBeforeUnmount(() => {
 
 <template>
     <Head>
-        <title>Kontak - KITB</title>
+        <title>{{ t.pageTitle }}</title>
 
-        <meta
-            name="description"
-            :content="`Hubungi ${companyName} untuk informasi kawasan industri, investasi, layanan, dan kebutuhan bisnis Anda.`"
-        />
+        <meta name="description" :content="withCompany(t.metaDescription)" />
 
         <meta name="robots" content="index, follow" />
     </Head>
@@ -582,7 +758,7 @@ onBeforeUnmount(() => {
 
                     <div data-reveal class="reveal mb-6" style="--d: 0ms">
                         <nav
-                            aria-label="Breadcrumb"
+                            :aria-label="t.breadcrumbAria"
                             class="flex flex-wrap items-center gap-2 text-sm"
                         >
                             <Link
@@ -594,7 +770,7 @@ onBeforeUnmount(() => {
                                     aria-hidden="true"
                                 />
 
-                                <span>Beranda</span>
+                                <span>{{ t.home }}</span>
                             </Link>
 
                             <ChevronRight
@@ -611,7 +787,7 @@ onBeforeUnmount(() => {
                                     aria-hidden="true"
                                 />
 
-                                <span>Kontak</span>
+                                <span>{{ t.contact }}</span>
                             </span>
                         </nav>
                     </div>
@@ -630,21 +806,19 @@ onBeforeUnmount(() => {
                         >
                             <MessageSquare class="h-4 w-4" aria-hidden="true" />
 
-                            Hubungi Kami
+                            {{ t.contactUs }}
                         </div>
 
                         <h1
                             class="text-3xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-4xl lg:text-5xl"
                         >
-                            Mari Terhubung dengan KITB
+                            {{ t.heroTitle }}
                         </h1>
 
                         <p
                             class="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-400 sm:text-lg"
                         >
-                            Sampaikan pertanyaan, kebutuhan informasi, atau
-                            peluang kerja sama kepada tim kami. Kami siap
-                            membantu Anda mendapatkan informasi yang dibutuhkan.
+                            {{ t.heroDescription }}
                         </p>
                     </section>
 
@@ -667,22 +841,20 @@ onBeforeUnmount(() => {
                                 <p
                                     class="text-sm font-semibold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-400"
                                 >
-                                    Informasi Kontak
+                                    {{ t.contactInformation }}
                                 </p>
 
                                 <h2
                                     id="contact-information-title"
                                     class="mt-2 text-2xl font-bold tracking-tight text-slate-950 dark:text-white"
                                 >
-                                    Kami siap membantu
+                                    {{ t.readyToHelp }}
                                 </h2>
 
                                 <p
                                     class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400"
                                 >
-                                    Gunakan informasi di bawah ini untuk
-                                    menghubungi tim
-                                    {{ companyName }}.
+                                    {{ withCompany(t.contactIntro) }}
                                 </p>
                             </div>
 
@@ -706,7 +878,7 @@ onBeforeUnmount(() => {
                                         <h3
                                             class="font-semibold text-slate-950 dark:text-white"
                                         >
-                                            Lokasi
+                                            {{ t.location }}
                                         </h3>
 
                                         <p
@@ -728,7 +900,7 @@ onBeforeUnmount(() => {
                                             />
 
                                             <span>
-                                                Buka lokasi di Google Maps
+                                                {{ t.openGoogleMaps }}
                                             </span>
 
                                             <ExternalLink
@@ -760,7 +932,7 @@ onBeforeUnmount(() => {
                                         <h3
                                             class="font-semibold text-slate-950 dark:text-white"
                                         >
-                                            Email
+                                            {{ t.email }}
                                         </h3>
 
                                         <a
@@ -793,7 +965,7 @@ onBeforeUnmount(() => {
                                         <h3
                                             class="font-semibold text-slate-950 dark:text-white"
                                         >
-                                            Email Investor
+                                            {{ t.investorEmail }}
                                         </h3>
 
                                         <a
@@ -829,7 +1001,7 @@ onBeforeUnmount(() => {
                                         <h3
                                             class="font-semibold text-slate-950 dark:text-white"
                                         >
-                                            Telepon & WhatsApp
+                                            {{ t.phoneWhatsapp }}
                                         </h3>
 
                                         <div class="mt-2 space-y-2">
@@ -853,7 +1025,7 @@ onBeforeUnmount(() => {
                                                     aria-hidden="true"
                                                 />
 
-                                                WhatsApp
+                                                {{ t.whatsapp }}
 
                                                 <ExternalLink
                                                     class="size-3"
@@ -883,7 +1055,7 @@ onBeforeUnmount(() => {
 
                                     <div>
                                         <h3 class="font-semibold">
-                                            Jam Operasional
+                                            {{ t.operatingHours }}
                                         </h3>
 
                                         <p
@@ -918,13 +1090,13 @@ onBeforeUnmount(() => {
                                             <h3
                                                 class="text-sm font-semibold text-slate-950 dark:text-white"
                                             >
-                                                Peta Lokasi
+                                                Peta {{ t.location }}
                                             </h3>
 
                                             <p
                                                 class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
                                             >
-                                                Lokasi kawasan KITB
+                                                {{ t.location }} kawasan KITB
                                             </p>
                                         </div>
                                     </div>
@@ -940,7 +1112,7 @@ onBeforeUnmount(() => {
                                     ref="mapContainer"
                                     class="h-72 w-full sm:h-80"
                                     role="img"
-                                    aria-label="Peta lokasi KITB"
+                                    :aria-label="t.mapAria"
                                 />
                             </div>
                         </section>
@@ -971,14 +1143,13 @@ onBeforeUnmount(() => {
                                         id="contact-form-title"
                                         class="text-2xl font-bold tracking-tight text-slate-950 dark:text-white"
                                     >
-                                        Kirim Pesan
+                                        {{ t.sendMessage }}
                                     </h2>
 
                                     <p
                                         class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400"
                                     >
-                                        Isi formulir berikut dan tim kami akan
-                                        menindaklanjutinya.
+                                        {{ t.formIntro }}
                                     </p>
                                 </div>
 
@@ -999,14 +1170,11 @@ onBeforeUnmount(() => {
 
                                     <div>
                                         <p class="font-semibold">
-                                            Formulir belum dapat dikirim
+                                            {{ t.formErrorTitle }}
                                         </p>
 
                                         <p class="mt-1 leading-5">
-                                            Terdapat beberapa data yang perlu
-                                            diperbaiki. Silakan periksa
-                                            keterangan berwarna merah pada
-                                            setiap kolom.
+                                            {{ t.formErrorDescription }}
                                         </p>
                                     </div>
                                 </div>
@@ -1026,7 +1194,7 @@ onBeforeUnmount(() => {
                                                 for="nama"
                                                 class="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200"
                                             >
-                                                Nama Lengkap
+                                                {{ t.fullName }}
 
                                                 <span
                                                     class="text-red-500"
@@ -1045,7 +1213,9 @@ onBeforeUnmount(() => {
                                                 autocomplete="name"
                                                 required
                                                 maxlength="100"
-                                                placeholder="Nama lengkap"
+                                                :placeholder="
+                                                    t.fullNamePlaceholder
+                                                "
                                                 :aria-invalid="
                                                     !!form.errors.nama
                                                 "
@@ -1095,7 +1265,9 @@ onBeforeUnmount(() => {
                                                 autocomplete="email"
                                                 required
                                                 maxlength="150"
-                                                placeholder="nama@perusahaan.com"
+                                                :placeholder="
+                                                    t.emailPlaceholder
+                                                "
                                                 :aria-invalid="
                                                     !!form.errors.email
                                                 "
@@ -1127,7 +1299,7 @@ onBeforeUnmount(() => {
                                                 for="telepon"
                                                 class="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200"
                                             >
-                                                Nomor Telepon
+                                                {{ t.phone }}
                                             </label>
 
                                             <input
@@ -1169,7 +1341,7 @@ onBeforeUnmount(() => {
                                                 for="perusahaan"
                                                 class="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200"
                                             >
-                                                Perusahaan
+                                                {{ t.company }}
                                             </label>
 
                                             <input
@@ -1179,7 +1351,9 @@ onBeforeUnmount(() => {
                                                 name="perusahaan"
                                                 autocomplete="organization"
                                                 maxlength="150"
-                                                placeholder="Nama perusahaan"
+                                                :placeholder="
+                                                    t.companyPlaceholder
+                                                "
                                                 :aria-invalid="
                                                     !!form.errors.perusahaan
                                                 "
@@ -1212,7 +1386,7 @@ onBeforeUnmount(() => {
                                             for="subjek"
                                             class="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-200"
                                         >
-                                            Subjek
+                                            {{ t.subject }}
 
                                             <span
                                                 class="text-red-500"
@@ -1229,7 +1403,7 @@ onBeforeUnmount(() => {
                                             name="subjek"
                                             required
                                             maxlength="150"
-                                            placeholder="Contoh: Informasi investasi kawasan"
+                                            :placeholder="t.subjectPlaceholder"
                                             :aria-invalid="!!form.errors.subjek"
                                             :aria-describedby="
                                                 form.errors.subjek
@@ -1262,7 +1436,7 @@ onBeforeUnmount(() => {
                                                 for="pesan"
                                                 class="block text-sm font-semibold text-slate-800 dark:text-slate-200"
                                             >
-                                                Pesan
+                                                {{ t.message }}
 
                                                 <span
                                                     class="text-red-500"
@@ -1292,7 +1466,7 @@ onBeforeUnmount(() => {
                                             required
                                             minlength="10"
                                             maxlength="3000"
-                                            placeholder="Tuliskan kebutuhan atau pertanyaan Anda..."
+                                            :placeholder="t.messagePlaceholder"
                                             :aria-invalid="!!form.errors.pesan"
                                             :aria-describedby="
                                                 form.errors.pesan
@@ -1353,10 +1527,7 @@ onBeforeUnmount(() => {
                                         <p
                                             class="max-w-md text-xs leading-5 text-slate-500 dark:text-slate-500"
                                         >
-                                            Dengan mengirim pesan ini, Anda
-                                            memberikan informasi yang diperlukan
-                                            agar tim KITB dapat menghubungi Anda
-                                            kembali.
+                                            {{ t.consent }}
                                         </p>
 
                                         <button
@@ -1397,8 +1568,8 @@ onBeforeUnmount(() => {
 
                                             {{
                                                 form.processing
-                                                    ? "Mengirim..."
-                                                    : "Kirim Pesan"
+                                                    ? t.sending
+                                                    : t.sendMessage
                                             }}
                                         </button>
                                     </div>
@@ -1425,16 +1596,13 @@ onBeforeUnmount(() => {
                                 <h2
                                     class="font-semibold text-slate-950 dark:text-white"
                                 >
-                                    Ingin mengetahui lebih banyak tentang
-                                    {{ companyName }}?
+                                    {{ withCompany(t.bottomTitle) }}
                                 </h2>
 
                                 <p
                                     class="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-400"
                                 >
-                                    Sampaikan kebutuhan Anda melalui formulir di
-                                    atas dan kami akan membantu mengarahkan
-                                    informasi yang sesuai.
+                                    {{ t.bottomDescription }}
                                 </p>
                             </div>
                         </div>
@@ -1465,7 +1633,7 @@ onBeforeUnmount(() => {
                 <button
                     type="button"
                     tabindex="-1"
-                    aria-label="Tutup dialog"
+                    aria-label="{{ t.close }} dialog"
                     class="absolute inset-0 cursor-default bg-slate-950/60 backdrop-blur-sm"
                     @click="closeSuccessModal"
                 />
@@ -1501,7 +1669,7 @@ onBeforeUnmount(() => {
 
                             <button
                                 type="button"
-                                aria-label="Tutup dialog"
+                                aria-label="{{ t.close }} dialog"
                                 class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                                 @click="closeSuccessModal"
                             >
@@ -1524,15 +1692,14 @@ onBeforeUnmount(() => {
                                     id="success-modal-title"
                                     class="text-xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-2xl"
                                 >
-                                    Pesan Berhasil Dikirim
+                                    {{ t.successTitle }}
                                 </h2>
 
                                 <p
                                     id="success-modal-description"
                                     class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400"
                                 >
-                                    Terima kasih telah menghubungi kami. Tim
-                                    KITB akan membalas melalui email Anda.
+                                    {{ t.successDescription }}
                                 </p>
                             </div>
 
@@ -1550,9 +1717,7 @@ onBeforeUnmount(() => {
                                     <p
                                         class="text-sm leading-6 text-emerald-800 dark:text-emerald-300"
                                     >
-                                        Silakan periksa inbox email Anda. Tim
-                                        kami akan menindaklanjuti pesan yang
-                                        telah Anda kirimkan.
+                                        {{ t.successEmailNote }}
                                     </p>
                                 </div>
                             </div>
@@ -1565,7 +1730,7 @@ onBeforeUnmount(() => {
                                 class="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500/20 dark:bg-white dark:text-slate-950 dark:hover:bg-blue-400"
                                 @click="closeSuccessModal"
                             >
-                                Tutup
+                                {{ t.close }}
                             </button>
                         </div>
                     </div>

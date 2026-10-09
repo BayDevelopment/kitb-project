@@ -1,0 +1,32 @@
+
+<?php
+
+return [
+  'page_title' => '联系 KITB',
+  'meta_description' => '联系 :company，了解工业园区、投资、服务及商业合作机会。',
+  'home' => '首页',
+  'contact' => '联系我们',
+  'contact_us' => '联系我们',
+  'hero_title' => '与 KITB 建立联系',
+  'hero_description' => '欢迎向我们提出问题、咨询相关信息或探讨合作机会。我们的团队将竭诚协助您获取所需信息。',
+  'contact_information' => '联系信息',
+  'ready_to_help' => '我们随时为您提供帮助',
+  'location' => '地址',
+  'open_google_maps' => '在 Google 地图中查看位置',
+  'email' => '电子邮箱',
+  'investor_email' => '投资者邮箱',
+  'phone_whatsapp' => '电话与 WhatsApp',
+  'operating_hours' => '办公时间',
+  'map_title' => '位置地图',
+  'send_message' => '发送消息',
+  'form_intro' => '请填写以下表格，我们的团队将尽快跟进。',
+  'full_name' => '姓名',
+  'phone' => '电话号码',
+  'company' => '公司名称',
+  'subject' => '主题',
+  'message' => '消息内容',
+  'sending' => '正在发送……',
+  'success_title' => '消息发送成功',
+  'success_description' => '感谢您与我们联系。KITB 团队将通过电子邮件回复您。',
+  'close' => '关闭',
+];
