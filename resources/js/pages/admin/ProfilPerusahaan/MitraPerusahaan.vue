@@ -33,6 +33,8 @@ defineOptions({
 interface MitraPerusahaan {
     id: number;
     nama_perusahaan: string;
+    nama_perusahaan_en: string | null;
+    nama_perusahaan_zh: string | null;
     slug: string;
     logo: string | null;
     website: string | null;
@@ -81,6 +83,7 @@ let removeRouterFinishListener: (() => void) | null = null;
 
 const search = ref("");
 const statusFilter = ref<"all" | "active" | "inactive">("all");
+const activeLanguage = ref<"id" | "en" | "zh">("id");
 
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
@@ -104,6 +107,8 @@ const objectUrl = ref<string | null>(null);
 
 const form = useForm({
     nama_perusahaan: "",
+    nama_perusahaan_en: "",
+    nama_perusahaan_zh: "",
     website: "",
     logo: null as File | null,
     aktif: true,
@@ -122,6 +127,12 @@ const displayedData = computed(() => {
         data = data.filter((item) => {
             return (
                 item.nama_perusahaan.toLowerCase().includes(keyword) ||
+                (item.nama_perusahaan_en ?? "")
+                    .toLowerCase()
+                    .includes(keyword) ||
+                (item.nama_perusahaan_zh ?? "")
+                    .toLowerCase()
+                    .includes(keyword) ||
                 item.slug.toLowerCase().includes(keyword) ||
                 (item.website ?? "").toLowerCase().includes(keyword)
             );
@@ -192,6 +203,9 @@ const resetForm = () => {
     form.clearErrors();
 
     form.nama_perusahaan = "";
+    form.nama_perusahaan_en = "";
+    form.nama_perusahaan_zh = "";
+    activeLanguage.value = "id";
     form.website = "";
     form.logo = null;
     form.aktif = true;
@@ -262,6 +276,9 @@ const openEditModal = (mitra: MitraPerusahaan) => {
     form.clearErrors();
 
     form.nama_perusahaan = mitra.nama_perusahaan;
+    form.nama_perusahaan_en = mitra.nama_perusahaan_en ?? "";
+    form.nama_perusahaan_zh = mitra.nama_perusahaan_zh ?? "";
+    activeLanguage.value = "id";
     form.website = mitra.website ?? "";
     form.logo = null;
     form.aktif = mitra.aktif;
@@ -354,6 +371,8 @@ const submitForm = () => {
     const formData = new FormData();
 
     formData.append("nama_perusahaan", form.nama_perusahaan.trim());
+    formData.append("nama_perusahaan_en", form.nama_perusahaan_en.trim());
+    formData.append("nama_perusahaan_zh", form.nama_perusahaan_zh.trim());
 
     formData.append("website", form.website.trim());
 
@@ -1365,36 +1384,167 @@ onBeforeUnmount(() => {
                         class="space-y-6 p-5 sm:p-6"
                         @submit.prevent="submitForm"
                     >
-                        <!-- COMPANY NAME -->
+                        <!-- COMPANY NAME: MULTILINGUAL -->
 
-                        <div>
-                            <label
-                                for="nama_perusahaan"
-                                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                        <div class="space-y-3">
+                            <div>
+                                <label
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Nama Perusahaan
+                                    <span class="text-red-500">*</span>
+                                </label>
+                                <p class="text-xs leading-5 text-slate-400">
+                                    Isi nama perusahaan dalam Bahasa Indonesia,
+                                    English, dan 中文. Bahasa Indonesia wajib
+                                    diisi.
+                                </p>
+                            </div>
+
+                            <div
+                                class="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-slate-50/80 p-1.5 dark:border-slate-700 dark:bg-slate-800/50"
                             >
-                                Nama Perusahaan
-                                <span class="text-red-500"> * </span>
-                            </label>
+                                <button
+                                    type="button"
+                                    class="flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition sm:flex-none"
+                                    :class="
+                                        activeLanguage === 'id'
+                                            ? 'bg-blue-600 text-white shadow-sm'
+                                            : 'text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
+                                    "
+                                    @click="activeLanguage = 'id'"
+                                >
+                                    Indonesia
+                                    <span
+                                        v-if="form.errors.nama_perusahaan"
+                                        class="ml-1 text-red-300"
+                                        >•</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition sm:flex-none"
+                                    :class="
+                                        activeLanguage === 'en'
+                                            ? 'bg-blue-600 text-white shadow-sm'
+                                            : 'text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
+                                    "
+                                    @click="activeLanguage = 'en'"
+                                >
+                                    English
+                                    <span
+                                        v-if="form.errors.nama_perusahaan_en"
+                                        class="ml-1 text-red-500"
+                                        >•</span
+                                    >
+                                </button>
+                                <button
+                                    type="button"
+                                    class="flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition sm:flex-none"
+                                    :class="
+                                        activeLanguage === 'zh'
+                                            ? 'bg-blue-600 text-white shadow-sm'
+                                            : 'text-slate-500 hover:bg-white hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
+                                    "
+                                    @click="activeLanguage = 'zh'"
+                                >
+                                    中文
+                                    <span
+                                        v-if="form.errors.nama_perusahaan_zh"
+                                        class="ml-1 text-red-500"
+                                        >•</span
+                                    >
+                                </button>
+                            </div>
 
-                            <input
-                                id="nama_perusahaan"
-                                v-model="form.nama_perusahaan"
-                                type="text"
-                                autocomplete="organization"
-                                placeholder="Contoh: PT Kawasan Industri Tanjung Buton"
-                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
-                                :class="{
-                                    'border-red-300 focus:border-red-500 focus:ring-red-500/10':
-                                        form.errors.nama_perusahaan,
-                                }"
-                            />
+                            <div v-if="activeLanguage === 'id'">
+                                <label
+                                    for="nama_perusahaan"
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Nama Perusahaan (Indonesia)
+                                    <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    id="nama_perusahaan"
+                                    v-model="form.nama_perusahaan"
+                                    type="text"
+                                    autocomplete="organization"
+                                    placeholder="Contoh: PT Kawasan Industri Tanjung Buton"
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                    :class="{
+                                        'border-red-300 focus:border-red-500 focus:ring-red-500/10':
+                                            form.errors.nama_perusahaan,
+                                    }"
+                                />
+                                <p
+                                    v-if="form.errors.nama_perusahaan"
+                                    class="mt-1.5 text-xs text-red-500"
+                                >
+                                    {{ form.errors.nama_perusahaan }}
+                                </p>
+                            </div>
 
-                            <p
-                                v-if="form.errors.nama_perusahaan"
-                                class="mt-1.5 text-xs text-red-500"
-                            >
-                                {{ form.errors.nama_perusahaan }}
-                            </p>
+                            <div v-else-if="activeLanguage === 'en'">
+                                <label
+                                    for="nama_perusahaan_en"
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    Company Name (English)
+                                </label>
+                                <input
+                                    id="nama_perusahaan_en"
+                                    v-model="form.nama_perusahaan_en"
+                                    type="text"
+                                    autocomplete="organization"
+                                    placeholder="Enter company name in English"
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                    :class="{
+                                        'border-red-300 focus:border-red-500 focus:ring-red-500/10':
+                                            form.errors.nama_perusahaan_en,
+                                    }"
+                                />
+                                <p
+                                    v-if="form.errors.nama_perusahaan_en"
+                                    class="mt-1.5 text-xs text-red-500"
+                                >
+                                    {{ form.errors.nama_perusahaan_en }}
+                                </p>
+                                <p v-else class="mt-1.5 text-xs text-slate-400">
+                                    Optional. If empty, the public page can fall
+                                    back to Indonesian.
+                                </p>
+                            </div>
+
+                            <div v-else>
+                                <label
+                                    for="nama_perusahaan_zh"
+                                    class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                >
+                                    公司名称（中文）
+                                </label>
+                                <input
+                                    id="nama_perusahaan_zh"
+                                    v-model="form.nama_perusahaan_zh"
+                                    type="text"
+                                    autocomplete="organization"
+                                    placeholder="请输入中文公司名称"
+                                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
+                                    :class="{
+                                        'border-red-300 focus:border-red-500 focus:ring-red-500/10':
+                                            form.errors.nama_perusahaan_zh,
+                                    }"
+                                />
+                                <p
+                                    v-if="form.errors.nama_perusahaan_zh"
+                                    class="mt-1.5 text-xs text-red-500"
+                                >
+                                    {{ form.errors.nama_perusahaan_zh }}
+                                </p>
+                                <p v-else class="mt-1.5 text-xs text-slate-400">
+                                    选填。未填写时，公开页面可回退显示印度尼西亚语名称。
+                                </p>
+                            </div>
                         </div>
 
                         <!-- WEBSITE -->
@@ -1699,6 +1849,18 @@ onBeforeUnmount(() => {
                                 >
                                     {{ selectedMitra.nama_perusahaan }}
                                 </h3>
+                                <p
+                                    v-if="selectedMitra.nama_perusahaan_en"
+                                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ selectedMitra.nama_perusahaan_en }}
+                                </p>
+                                <p
+                                    v-if="selectedMitra.nama_perusahaan_zh"
+                                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                                >
+                                    {{ selectedMitra.nama_perusahaan_zh }}
+                                </p>
 
                                 <p class="mt-1 text-xs text-slate-400">
                                     Slug:

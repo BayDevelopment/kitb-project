@@ -27,6 +27,8 @@ class MitraPerusahaanController extends Controller
                 $query->where(function ($query) use ($search): void {
                     $query
                         ->where('nama_perusahaan', 'like', "%{$search}%")
+                        ->orWhere('nama_perusahaan_en', 'like', "%{$search}%")
+                        ->orWhere('nama_perusahaan_zh', 'like', "%{$search}%")
                         ->orWhere('slug', 'like', "%{$search}%")
                         ->orWhere('website', 'like', "%{$search}%");
                 });
@@ -55,6 +57,16 @@ class MitraPerusahaanController extends Controller
         $validated = $request->validate([
             'nama_perusahaan' => [
                 'required',
+                'string',
+                'max:255',
+            ],
+            'nama_perusahaan_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'nama_perusahaan_zh' => [
+                'nullable',
                 'string',
                 'max:255',
             ],
@@ -99,9 +111,15 @@ class MitraPerusahaanController extends Controller
                     ->max('urutan');
 
                 MitraPerusahaan::create([
-                    'nama_perusahaan' => $validated['nama_perusahaan'],
+                    'nama_perusahaan' => trim($validated['nama_perusahaan']),
+                    'nama_perusahaan_en' => isset($validated['nama_perusahaan_en'])
+                        ? trim($validated['nama_perusahaan_en'])
+                        : null,
+                    'nama_perusahaan_zh' => isset($validated['nama_perusahaan_zh'])
+                        ? trim($validated['nama_perusahaan_zh'])
+                        : null,
                     'slug' => MitraPerusahaan::generateUniqueSlug(
-                        $validated['nama_perusahaan']
+                        trim($validated['nama_perusahaan'])
                     ),
                     'logo' => $logoPath,
                     'website' => $validated['website'] ?? null,
@@ -133,6 +151,16 @@ class MitraPerusahaanController extends Controller
         $validated = $request->validate([
             'nama_perusahaan' => [
                 'required',
+                'string',
+                'max:255',
+            ],
+            'nama_perusahaan_en' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'nama_perusahaan_zh' => [
+                'nullable',
                 'string',
                 'max:255',
             ],
@@ -174,7 +202,17 @@ class MitraPerusahaanController extends Controller
                 $newLogoPath
             ): void {
                 $mitraPerusahaan->nama_perusahaan =
-                    $validated['nama_perusahaan'];
+                    trim($validated['nama_perusahaan']);
+
+                $mitraPerusahaan->nama_perusahaan_en =
+                    isset($validated['nama_perusahaan_en'])
+                    ? trim($validated['nama_perusahaan_en'])
+                    : null;
+
+                $mitraPerusahaan->nama_perusahaan_zh =
+                    isset($validated['nama_perusahaan_zh'])
+                    ? trim($validated['nama_perusahaan_zh'])
+                    : null;
 
                 $mitraPerusahaan->website =
                     $validated['website'] ?? null;
@@ -183,7 +221,7 @@ class MitraPerusahaanController extends Controller
                     $request->boolean('aktif');
 
                 /*
-                 * Generate ulang slug hanya jika nama perusahaan berubah.
+                 * Generate ulang slug hanya jika nama perusahaan Indonesia berubah.
                  */
                 if ($mitraPerusahaan->isDirty('nama_perusahaan')) {
                     $mitraPerusahaan->slug =

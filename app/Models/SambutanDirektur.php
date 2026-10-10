@@ -13,8 +13,14 @@ class SambutanDirektur extends Model
 
     protected $fillable = [
         'nama_direktur',
+        'nama_direktur_en',
+        'nama_direktur_zh',
         'jabatan_direktur',
+        'jabatan_direktur_en',
+        'jabatan_direktur_zh',
         'sambutan_direktur',
+        'sambutan_direktur_en',
+        'sambutan_direktur_zh',
         'foto_direktur',
         'status',
     ];

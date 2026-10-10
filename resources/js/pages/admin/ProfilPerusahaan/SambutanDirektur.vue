@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from "vue";
+import { router, useForm } from "@inertiajs/vue3";
+import {
     ArrowLeft,
     Bold,
     ImagePlus,
@@ -13,26 +22,24 @@ import {
     UserRound,
     X,
 } from "lucide-vue-next";
-import {
-    computed,
-    nextTick,
-    onBeforeUnmount,
-    onMounted,
-    ref,
-    watch,
-} from "vue";
-import { router, useForm } from "@inertiajs/vue3";
+import { toast } from "vue-sonner";
 import AppLayout from "@/layouts/AppLayout.vue";
 
-defineOptions({
-    layout: AppLayout,
-});
+defineOptions({ layout: AppLayout });
+
+type LanguageCode = "id" | "en" | "zh";
 
 interface SambutanDirektur {
     id: number;
     nama_direktur: string;
+    nama_direktur_en: string | null;
+    nama_direktur_zh: string | null;
     jabatan_direktur: string | null;
+    jabatan_direktur_en: string | null;
+    jabatan_direktur_zh: string | null;
     sambutan_direktur: string;
+    sambutan_direktur_en: string | null;
+    sambutan_direktur_zh: string | null;
     foto_direktur: string | null;
     status: boolean;
     created_at?: string;
@@ -45,68 +52,50 @@ interface Props {
 
 const props = defineProps<Props>();
 
-/*
-|--------------------------------------------------------------------------
-| Page Loading
-|--------------------------------------------------------------------------
-*/
+const languageOptions: Array<{
+    code: LanguageCode;
+    label: string;
+    short: string;
+    flag: string;
+}> = [
+    { code: "id", label: "Bahasa Indonesia", short: "ID", flag: "🇮🇩" },
+    { code: "en", label: "English", short: "EN", flag: "🇬🇧" },
+    { code: "zh", label: "中文", short: "中文", flag: "🇨🇳" },
+];
 
+const activeLanguage = ref<LanguageCode>("id");
 const isPageLoading = ref(true);
+const isSubmitting = ref(false);
+const isProcessingFoto = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
+const editorRef = ref<HTMLDivElement | null>(null);
+const previewUrl = ref<string | null>(null);
+const objectUrl = ref<string | null>(null);
+const MAX_FOTO_SIZE = 1024 * 1024;
+const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
 let initialLoadingTimer: ReturnType<typeof setTimeout> | null = null;
 let removeRouterStartListener: (() => void) | null = null;
 let removeRouterFinishListener: (() => void) | null = null;
 
-/*
-|--------------------------------------------------------------------------
-| Form
-|--------------------------------------------------------------------------
-*/
-
-const fileInput = ref<HTMLInputElement | null>(null);
-const editorRef = ref<HTMLDivElement | null>(null);
-
-const previewUrl = ref<string | null>(null);
-const objectUrl = ref<string | null>(null);
-
-const DASHBOARD_URL = "/dashboard";
-
-const goToDashboard = () => {
-    router.visit(DASHBOARD_URL);
-};
-
-const isSubmitting = ref(false);
-const isProcessingFoto = ref(false);
-
-const MAX_FOTO_SIZE = 1024 * 1024; // 1 MB
-
 const form = useForm({
     nama_direktur: props.sambutanDirektur?.nama_direktur ?? "",
-
+    nama_direktur_en: props.sambutanDirektur?.nama_direktur_en ?? "",
+    nama_direktur_zh: props.sambutanDirektur?.nama_direktur_zh ?? "",
     jabatan_direktur: props.sambutanDirektur?.jabatan_direktur ?? "Direktur",
-
+    jabatan_direktur_en: props.sambutanDirektur?.jabatan_direktur_en ?? "",
+    jabatan_direktur_zh: props.sambutanDirektur?.jabatan_direktur_zh ?? "",
     sambutan_direktur: props.sambutanDirektur?.sambutan_direktur ?? "",
-
+    sambutan_direktur_en: props.sambutanDirektur?.sambutan_direktur_en ?? "",
+    sambutan_direktur_zh: props.sambutanDirektur?.sambutan_direktur_zh ?? "",
     foto_direktur: null as File | null,
-
     status: props.sambutanDirektur?.status ?? false,
-
     remove_foto_direktur: false,
 });
 
-/*
-|--------------------------------------------------------------------------
-| Computed
-|--------------------------------------------------------------------------
-*/
-
 const existingFotoUrl = computed(() => {
     const foto = props.sambutanDirektur?.foto_direktur;
-
-    if (!foto) {
-        return null;
-    }
-
+    if (!foto) return null;
     if (
         foto.startsWith("http://") ||
         foto.startsWith("https://") ||
@@ -114,56 +103,61 @@ const existingFotoUrl = computed(() => {
     ) {
         return foto;
     }
-
     return `/storage/${foto}`;
 });
 
-const displayedFoto = computed(() => {
-    return previewUrl.value || existingFotoUrl.value;
+const displayedFoto = computed(
+    () =>
+        previewUrl.value ||
+        (form.remove_foto_direktur ? null : existingFotoUrl.value),
+);
+
+const languageLabel = computed(
+    () =>
+        languageOptions.find((item) => item.code === activeLanguage.value)
+            ?.label ?? "Bahasa Indonesia",
+);
+
+const currentSambutan = computed(() => {
+    if (activeLanguage.value === "en") return form.sambutan_direktur_en;
+    if (activeLanguage.value === "zh") return form.sambutan_direktur_zh;
+    return form.sambutan_direktur;
 });
 
-const hasExistingFoto = computed(() => {
-    return !!existingFotoUrl.value;
+const currentSambutanError = computed(() => {
+    if (activeLanguage.value === "en") return form.errors.sambutan_direktur_en;
+    if (activeLanguage.value === "zh") return form.errors.sambutan_direktur_zh;
+    return form.errors.sambutan_direktur;
 });
 
-const hasSambutanContent = computed(() => {
-    const text = form.sambutan_direktur
-        .replace(/<br\s*\/?>/gi, "")
-        .replace(/<[^>]*>/g, "")
-        .replace(/&nbsp;/gi, " ")
-        .trim();
+const goToDashboard = () => router.visit("/dashboard");
 
-    return text.length > 0;
-});
-
-/*
-|--------------------------------------------------------------------------
-| Editor
-|--------------------------------------------------------------------------
-*/
-
-/*
-| Editor berada di dalam blok v-else (muncul setelah skeleton hilang),
-| jadi isinya harus diisi saat elemen benar-benar sudah dirender.
-| Watch ini berjalan setiap kali editor muncul/dibuat ulang.
-*/
+const setLanguage = async (language: LanguageCode) => {
+    syncEditor();
+    activeLanguage.value = language;
+    await nextTick();
+    if (editorRef.value) editorRef.value.innerHTML = currentSambutan.value;
+};
 
 watch(
     editorRef,
     (el) => {
-        if (el) {
-            el.innerHTML = form.sambutan_direktur;
-        }
+        if (el) el.innerHTML = currentSambutan.value;
     },
     { flush: "post" },
 );
 
-const syncEditor = () => {
-    if (!editorRef.value) {
-        return;
-    }
+watch(activeLanguage, async () => {
+    await nextTick();
+    if (editorRef.value) editorRef.value.innerHTML = currentSambutan.value;
+});
 
-    form.sambutan_direktur = editorRef.value.innerHTML;
+const syncEditor = () => {
+    if (!editorRef.value) return;
+    const value = editorRef.value.innerHTML;
+    if (activeLanguage.value === "en") form.sambutan_direktur_en = value;
+    else if (activeLanguage.value === "zh") form.sambutan_direktur_zh = value;
+    else form.sambutan_direktur = value;
 };
 
 const execCommand = (
@@ -175,94 +169,63 @@ const execCommand = (
         | "insertOrderedList",
 ) => {
     editorRef.value?.focus();
-
     document.execCommand(command, false);
-
     syncEditor();
 };
 
 const formatParagraph = () => {
     editorRef.value?.focus();
-
     document.execCommand("formatBlock", false, "p");
-
     syncEditor();
 };
 
 const formatQuote = () => {
     editorRef.value?.focus();
-
     document.execCommand("formatBlock", false, "blockquote");
-
     syncEditor();
 };
 
 const clearFormatting = () => {
     editorRef.value?.focus();
-
     document.execCommand("removeFormat", false);
-
     syncEditor();
 };
 
 const handleEditorKeydown = (event: KeyboardEvent) => {
-    if (event.key === "Enter") {
-        window.setTimeout(() => {
-            syncEditor();
-        }, 0);
-    }
+    if (event.key === "Enter") window.setTimeout(syncEditor, 0);
 };
 
 const handleEditorPaste = (event: ClipboardEvent) => {
     event.preventDefault();
-
     const text = event.clipboardData?.getData("text/plain") ?? "";
-
-    const escape = (s: string) =>
-        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
+    const escapeHtml = (value: string) =>
+        value
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
     const html = text
         .replace(/\r\n/g, "\n")
         .split(/\n+/)
         .map((line) => line.trim())
         .filter(Boolean)
-        .map((line) => `<p>${escape(line)}</p>`)
+        .map((line) => `<p>${escapeHtml(line)}</p>`)
         .join("");
-
     document.execCommand("insertHTML", false, html);
-
     syncEditor();
 };
-
-/*
-|--------------------------------------------------------------------------
-| File Upload
-|--------------------------------------------------------------------------
-*/
-
-const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-
-/*
-| Kompres & konversi gambar di browser.
-| Foto dari kamera HP biasanya 2-8 MB (atau HEIC di iPhone),
-| jadi diperkecil dulu sebelum dicek batas ukuran.
-*/
 
 const loadImage = (file: File): Promise<HTMLImageElement> =>
     new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
         const img = new Image();
-
         img.onload = () => {
             URL.revokeObjectURL(url);
             resolve(img);
         };
-
         img.onerror = () => {
             URL.revokeObjectURL(url);
             reject(new Error("Gagal membaca gambar."));
         };
-
         img.src = url;
     });
 
@@ -274,51 +237,35 @@ const canvasToBlob = (
     new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 
 const compressImage = async (file: File): Promise<File> => {
-    const needsConversion = !allowedTypes.includes(file.type);
-
-    // Sudah kecil dan formatnya valid → tidak perlu diproses.
-    if (!needsConversion && file.size <= MAX_FOTO_SIZE) {
+    if (allowedTypes.includes(file.type) && file.size <= MAX_FOTO_SIZE)
         return file;
-    }
-
     try {
         const img = await loadImage(file);
-
         let maxWidth = 1200;
         let quality = 0.85;
-
         for (let attempt = 0; attempt < 5; attempt++) {
             const scale = Math.min(1, maxWidth / img.width);
-
             const canvas = document.createElement("canvas");
             canvas.width = Math.round(img.width * scale);
             canvas.height = Math.round(img.height * scale);
-
             const ctx = canvas.getContext("2d");
-
-            if (!ctx) {
-                return file;
-            }
-
-            // Latar putih agar PNG transparan tidak menjadi hitam di JPEG.
+            if (!ctx) return file;
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
             const blob = await canvasToBlob(canvas, "image/jpeg", quality);
-
             if (blob && blob.size <= MAX_FOTO_SIZE) {
                 return new File(
                     [blob],
                     file.name.replace(/\.\w+$/, "") + ".jpg",
-                    { type: "image/jpeg" },
+                    {
+                        type: "image/jpeg",
+                    },
                 );
             }
-
             maxWidth = Math.round(maxWidth * 0.8);
             quality = Math.max(0.6, quality - 0.08);
         }
-
         return file;
     } catch {
         return file;
@@ -327,204 +274,144 @@ const compressImage = async (file: File): Promise<File> => {
 
 const handleFile = async (event: Event) => {
     const target = event.target as HTMLInputElement;
-
     const selected = target.files?.[0] ?? null;
-
-    if (!selected) {
-        return;
-    }
+    if (!selected) return;
 
     isProcessingFoto.value = true;
-
     const file = await compressImage(selected);
-
     isProcessingFoto.value = false;
 
     if (file.size > MAX_FOTO_SIZE) {
         target.value = "";
         form.foto_direktur = null;
-
         form.setError("foto_direktur", "Ukuran foto maksimal 1 MB.");
-
+        toast.error("Ukuran foto maksimal 1 MB.");
         return;
     }
 
     if (!allowedTypes.includes(file.type)) {
         target.value = "";
         form.foto_direktur = null;
-
         form.setError(
             "foto_direktur",
             "Format foto harus JPG, JPEG, PNG, atau WEBP.",
         );
-
+        toast.error("Format foto harus JPG, JPEG, PNG, atau WEBP.");
         return;
     }
 
     form.clearErrors("foto_direktur");
-
-    if (objectUrl.value) {
-        URL.revokeObjectURL(objectUrl.value);
-    }
-
+    if (objectUrl.value) URL.revokeObjectURL(objectUrl.value);
     form.foto_direktur = file;
-
     objectUrl.value = URL.createObjectURL(file);
-
     previewUrl.value = objectUrl.value;
-
-    /*
-    | Foto baru otomatis membatalkan flag hapus foto.
-    */
-
     form.remove_foto_direktur = false;
 };
 
 const removePreview = () => {
     if (objectUrl.value) {
         URL.revokeObjectURL(objectUrl.value);
-
         objectUrl.value = null;
     }
-
     previewUrl.value = null;
-
     form.foto_direktur = null;
-
-    if (fileInput.value) {
-        fileInput.value.value = "";
-    }
-
+    if (fileInput.value) fileInput.value.value = "";
     form.clearErrors("foto_direktur");
 };
 
 const removeExistingFoto = () => {
-    if (previewUrl.value) {
-        removePreview();
-    }
-
+    if (previewUrl.value) removePreview();
     form.remove_foto_direktur = true;
 };
 
-/*
-|--------------------------------------------------------------------------
-| Submit
-|--------------------------------------------------------------------------
-*/
+const plainText = (html: string) =>
+    html
+        .replace(/<br\s*\/?>/gi, "")
+        .replace(/<[^>]*>/g, "")
+        .replace(/&nbsp;/gi, " ")
+        .trim();
 
 const submitForm = () => {
-    if (isSubmitting.value || isProcessingFoto.value) {
-        return;
-    }
-
+    if (isSubmitting.value || isProcessingFoto.value) return;
     syncEditor();
-
     form.clearErrors();
-
-    let hasError = false;
 
     if (!form.nama_direktur.trim()) {
         form.setError("nama_direktur", "Nama direktur wajib diisi.");
-        hasError = true;
-    }
-
-    if (!form.jabatan_direktur.trim()) {
-        form.setError("jabatan_direktur", "Jabatan wajib diisi.");
-        hasError = true;
-    }
-
-    if (!hasSambutanContent.value) {
-        form.setError("sambutan_direktur", "Isi sambutan wajib diisi.");
-        hasError = true;
-    }
-
-    if (hasError) {
+        activeLanguage.value = "id";
+        toast.error("Nama direktur Bahasa Indonesia wajib diisi.");
         return;
     }
 
-    const formData = new FormData();
-
-    formData.append("nama_direktur", form.nama_direktur.trim());
-
-    formData.append("jabatan_direktur", form.jabatan_direktur.trim());
-
-    formData.append("sambutan_direktur", form.sambutan_direktur);
-
-    formData.append("status", form.status ? "1" : "0");
-
-    formData.append(
-        "remove_foto_direktur",
-        form.remove_foto_direktur ? "1" : "0",
-    );
-
-    if (form.foto_direktur) {
-        formData.append("foto_direktur", form.foto_direktur);
+    if (!plainText(form.sambutan_direktur)) {
+        form.setError(
+            "sambutan_direktur",
+            "Isi sambutan Bahasa Indonesia wajib diisi.",
+        );
+        activeLanguage.value = "id";
+        toast.error("Isi sambutan Bahasa Indonesia wajib diisi.");
+        return;
     }
 
-    formData.append("_method", "PUT");
+    const data = new FormData();
+    data.append("nama_direktur", form.nama_direktur.trim());
+    data.append("nama_direktur_en", form.nama_direktur_en.trim());
+    data.append("nama_direktur_zh", form.nama_direktur_zh.trim());
+    data.append("jabatan_direktur", form.jabatan_direktur.trim());
+    data.append("jabatan_direktur_en", form.jabatan_direktur_en.trim());
+    data.append("jabatan_direktur_zh", form.jabatan_direktur_zh.trim());
+    data.append("sambutan_direktur", form.sambutan_direktur);
+    data.append("sambutan_direktur_en", form.sambutan_direktur_en);
+    data.append("sambutan_direktur_zh", form.sambutan_direktur_zh);
+    data.append("status", form.status ? "1" : "0");
+    data.append("remove_foto_direktur", form.remove_foto_direktur ? "1" : "0");
+    if (form.foto_direktur) data.append("foto_direktur", form.foto_direktur);
+    data.append("_method", "PUT");
 
-    router.post("/admin/profil-perusahaan/sambutan", formData, {
+    router.post("/admin/profil-perusahaan/sambutan", data, {
         forceFormData: true,
         preserveScroll: true,
-
         onStart: () => {
             isSubmitting.value = true;
         },
-
         onError: (errors) => {
             console.error("Gagal memperbarui sambutan direktur:", errors);
-
-            // Tampilkan error dari server pada field terkait.
+            const firstError = Object.values(errors)[0];
+            if (firstError)
+                toast.error(
+                    Array.isArray(firstError)
+                        ? firstError[0]
+                        : String(firstError),
+                );
             Object.entries(errors).forEach(([key, message]) => {
                 form.setError(key as keyof typeof form.data, message as string);
             });
         },
-
         onSuccess: () => {
-            /*
-            | Reset file baru setelah berhasil.
-            */
-
             if (objectUrl.value) {
                 URL.revokeObjectURL(objectUrl.value);
-
                 objectUrl.value = null;
             }
-
             previewUrl.value = null;
             form.foto_direktur = null;
             form.remove_foto_direktur = false;
-
-            if (fileInput.value) {
-                fileInput.value.value = "";
-            }
+            if (fileInput.value) fileInput.value.value = "";
+            toast.success("Sambutan Direktur berhasil disimpan.");
         },
-
         onFinish: () => {
             isSubmitting.value = false;
         },
     });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Loading
-|--------------------------------------------------------------------------
-*/
-
 onMounted(async () => {
     await nextTick();
-
     removeRouterStartListener = router.on("start", (event) => {
-        if (!event.detail.visit.preserveState) {
-            isPageLoading.value = true;
-        }
+        if (!event.detail.visit.preserveState) isPageLoading.value = true;
     });
-
     removeRouterFinishListener = router.on("finish", () => {
         isPageLoading.value = false;
     });
-
     initialLoadingTimer = setTimeout(() => {
         isPageLoading.value = false;
     }, 500);
@@ -533,797 +420,704 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     removeRouterStartListener?.();
     removeRouterFinishListener?.();
-
-    if (initialLoadingTimer) {
-        clearTimeout(initialLoadingTimer);
-    }
-
-    if (objectUrl.value) {
-        URL.revokeObjectURL(objectUrl.value);
-    }
+    if (initialLoadingTimer) clearTimeout(initialLoadingTimer);
+    if (objectUrl.value) URL.revokeObjectURL(objectUrl.value);
 });
 </script>
 
 <template>
     <div
-        class="relative min-h-full overflow-hidden bg-slate-50 transition-colors duration-300 dark:bg-[#07111f]"
+        class="relative min-h-full overflow-hidden bg-slate-50/50 transition-colors duration-300 dark:bg-slate-950/50"
     >
-        <!-- ===================================================== -->
-        <!-- DECORATIVE BACKGROUND -->
-        <!-- ===================================================== -->
-
+        <!-- Decorative background, matching the Galeri admin page -->
         <div
-            class="pointer-events-none absolute -left-24 -top-24 z-0 size-72 rounded-full bg-gradient-to-br from-blue-400/25 to-indigo-500/15 blur-3xl dark:from-blue-500/15 dark:to-indigo-600/10"
-            aria-hidden="true"
-        />
-
-        <div
-            class="pointer-events-none absolute -right-28 top-40 z-0 size-80 rounded-full bg-gradient-to-br from-sky-400/20 to-blue-500/10 blur-3xl dark:from-sky-500/10 dark:to-blue-600/10"
-            aria-hidden="true"
-        />
-
-        <div
-            class="pointer-events-none absolute -bottom-40 left-1/3 z-0 size-96 rounded-full bg-gradient-to-br from-indigo-400/10 to-cyan-400/10 blur-3xl dark:from-indigo-500/10 dark:to-cyan-500/5"
-            aria-hidden="true"
-        />
-
-        <!-- GRID -->
-
-        <div
-            class="pointer-events-none absolute inset-0 z-0 opacity-[0.35] dark:opacity-[0.08]"
+            class="pointer-events-none absolute inset-x-0 top-0 z-0 h-96 overflow-hidden"
             aria-hidden="true"
         >
             <div
-                class="absolute inset-0"
-                style="
-                    background-image:
-                        linear-gradient(
-                            rgba(100, 116, 139, 0.08) 1px,
-                            transparent 1px
-                        ),
-                        linear-gradient(
-                            90deg,
-                            rgba(100, 116, 139, 0.08) 1px,
-                            transparent 1px
-                        );
-                    background-size: 32px 32px;
-                    mask-image: linear-gradient(
-                        to bottom,
-                        black,
-                        transparent 75%
-                    );
-                "
-            />
+                class="absolute -left-24 -top-32 size-96 rounded-full bg-gradient-to-br from-blue-400/30 via-indigo-400/20 to-transparent blur-3xl dark:from-blue-500/20 dark:via-indigo-500/15"
+            ></div>
+            <div
+                class="absolute -right-20 top-4 size-80 rounded-full bg-gradient-to-tr from-sky-300/30 via-blue-400/20 to-transparent blur-3xl dark:from-sky-500/15 dark:via-blue-500/10"
+            ></div>
+            <div
+                class="absolute left-1/3 -top-40 size-72 rounded-full bg-gradient-to-br from-indigo-300/20 via-blue-300/15 to-transparent blur-3xl dark:from-indigo-500/10 dark:via-blue-500/10"
+            ></div>
+            <div class="absolute inset-0 opacity-40 dark:opacity-20">
+                <div
+                    class="h-full w-full bg-[linear-gradient(to_right,#64748b12_1px,transparent_1px),linear-gradient(to_bottom,#64748b12_1px,transparent_1px)] bg-[size:32px_32px]"
+                ></div>
+            </div>
+            <div
+                class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-slate-50/90 dark:to-slate-950/90"
+            ></div>
         </div>
 
-        <div class="relative z-10">
-            <Transition name="page-fade" mode="out-in">
-                <!-- ===================================================== -->
-                <!-- SKELETON -->
-                <!-- ===================================================== -->
-
-                <div
-                    v-if="isPageLoading"
-                    key="skeleton"
-                    class="mx-auto w-full max-w-[1200px] animate-pulse space-y-5 p-4 sm:p-5 lg:p-6 xl:p-8"
-                >
+        <div
+            class="relative z-10 mx-auto w-full max-w-[1600px] p-4 sm:p-5 lg:p-6 xl:p-8"
+        >
+            <!-- Header -->
+            <div
+                class="mb-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"
+            >
+                <div class="flex items-center gap-3">
                     <div
-                        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                        class="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 shadow-sm dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-400"
                     >
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="size-11 rounded-2xl bg-slate-200 dark:bg-slate-800"
-                            />
-
-                            <div class="space-y-2">
-                                <div
-                                    class="h-5 w-48 rounded-lg bg-slate-200 dark:bg-slate-800"
-                                />
-
-                                <div
-                                    class="h-4 w-72 max-w-[70vw] rounded-lg bg-slate-200 dark:bg-slate-800"
-                                />
-                            </div>
-                        </div>
-
-                        <div
-                            class="h-10 w-full rounded-xl bg-slate-200 sm:w-28 dark:bg-slate-800"
-                        />
+                        <UserRound class="size-5" />
                     </div>
-
-                    <div
-                        class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                    >
-                        <div
-                            class="border-b border-slate-200 px-5 py-5 dark:border-slate-800"
+                    <div class="min-w-0">
+                        <p
+                            class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400"
                         >
-                            <div
-                                class="h-5 w-48 rounded-lg bg-slate-200 dark:bg-slate-800"
-                            />
-
-                            <div
-                                class="mt-2 h-4 w-72 max-w-full rounded-lg bg-slate-200 dark:bg-slate-800"
-                            />
-                        </div>
-
-                        <div
-                            class="grid gap-8 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_260px]"
+                            Profil Perusahaan
+                        </p>
+                        <h1
+                            class="mt-0.5 text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl"
                         >
-                            <div class="space-y-5">
-                                <div class="grid gap-5 sm:grid-cols-2">
-                                    <div class="space-y-2">
-                                        <div
-                                            class="h-4 w-28 rounded bg-slate-200 dark:bg-slate-800"
-                                        />
-
-                                        <div
-                                            class="h-11 rounded-xl bg-slate-100 dark:bg-slate-800"
-                                        />
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <div
-                                            class="h-4 w-20 rounded bg-slate-200 dark:bg-slate-800"
-                                        />
-
-                                        <div
-                                            class="h-11 rounded-xl bg-slate-100 dark:bg-slate-800"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div class="space-y-2">
-                                    <div
-                                        class="h-4 w-28 rounded bg-slate-200 dark:bg-slate-800"
-                                    />
-
-                                    <div
-                                        class="h-64 rounded-xl bg-slate-100 dark:bg-slate-800"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="space-y-3">
-                                <div
-                                    class="h-4 w-28 rounded bg-slate-200 dark:bg-slate-800"
-                                />
-
-                                <div
-                                    class="mx-auto size-24 rounded-2xl bg-slate-200 dark:bg-slate-800"
-                                />
-
-                                <div
-                                    class="h-12 rounded-xl bg-slate-100 dark:bg-slate-800"
-                                />
-                            </div>
-                        </div>
+                            Sambutan Direktur
+                        </h1>
+                        <p
+                            class="mt-0.5 text-sm text-slate-500 dark:text-slate-400"
+                        >
+                            Kelola sambutan Direktur dalam tiga bahasa.
+                        </p>
                     </div>
                 </div>
-
-                <!-- ===================================================== -->
-                <!-- CONTENT -->
-                <!-- ===================================================== -->
-
-                <div
-                    v-else
-                    key="content"
-                    class="mx-auto w-full max-w-[1200px] space-y-5 p-4 sm:p-5 lg:p-6 xl:p-8"
+                <button
+                    type="button"
+                    class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:bg-slate-800"
+                    @click="goToDashboard"
                 >
-                    <!-- HEADER -->
+                    <ArrowLeft class="size-4" />
+                    Kembali
+                </button>
+            </div>
 
+            <!-- Language info -->
+            <div
+                class="mb-5 flex items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300"
+            >
+                <span
+                    class="flex size-7 items-center justify-center rounded-lg bg-white/80 dark:bg-slate-900/60"
+                >
+                    {{
+                        languageOptions.find(
+                            (item) => item.code === activeLanguage,
+                        )?.flag
+                    }}
+                </span>
+                <span
+                    >Bahasa yang sedang diedit:
+                    <strong>{{ languageLabel }}</strong></span
+                >
+            </div>
+
+            <!-- Loading skeleton -->
+            <div v-if="isPageLoading" class="animate-pulse space-y-5">
+                <div
+                    class="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+                >
                     <div
-                        class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                        <div class="flex min-w-0 items-center gap-3">
+                        class="mb-5 h-5 w-48 rounded-lg bg-slate-200 dark:bg-slate-800"
+                    ></div>
+                    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+                        <div class="space-y-5">
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div
+                                    class="h-12 rounded-xl bg-slate-100 dark:bg-slate-800"
+                                ></div>
+                                <div
+                                    class="h-12 rounded-xl bg-slate-100 dark:bg-slate-800"
+                                ></div>
+                            </div>
                             <div
-                                class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-500/20"
-                            >
-                                <UserRound class="size-5" />
-                            </div>
-
-                            <div class="min-w-0">
-                                <h1
-                                    class="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl dark:text-white"
-                                >
-                                    Sambutan Direktur
-                                </h1>
-
-                                <p
-                                    class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-                                >
-                                    Kelola informasi sambutan dan foto Direktur
-                                    perusahaan.
-                                </p>
-                            </div>
+                                class="h-64 rounded-xl bg-slate-100 dark:bg-slate-800"
+                            ></div>
                         </div>
-
-                        <button
-                            type="button"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:w-auto dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-950"
-                            @click="goToDashboard"
-                        >
-                            <ArrowLeft class="size-4" />
-                            Kembali
-                        </button>
-                    </div>
-
-                    <!-- MAIN CARD -->
-
-                    <div
-                        class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-black/10"
-                    >
-                        <!-- CARD HEADER -->
-
                         <div
-                            class="border-b border-slate-200 px-5 py-5 sm:px-6 dark:border-slate-800"
-                        >
-                            <h2
-                                class="font-semibold text-slate-900 dark:text-white"
-                            >
-                                Informasi Sambutan
-                            </h2>
+                            class="h-72 rounded-2xl bg-slate-100 dark:bg-slate-800"
+                        ></div>
+                    </div>
+                </div>
+            </div>
 
-                            <p
-                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-                            >
-                                Konten ini bersifat tunggal dan digunakan pada
-                                halaman profil perusahaan.
-                            </p>
+            <div
+                v-else
+                class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-slate-200/50 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-black/10"
+            >
+                <div
+                    class="border-b border-slate-100 px-5 py-5 sm:px-6 dark:border-slate-800"
+                >
+                    <h2
+                        class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                    >
+                        Informasi Sambutan
+                    </h2>
+                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                        Isi konten Indonesia, Inggris, dan Mandarin secara
+                        terpisah. Foto dan status berlaku untuk semua bahasa.
+                    </p>
+                </div>
+
+                <form
+                    class="grid gap-8 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_300px]"
+                    @submit.prevent="submitForm"
+                >
+                    <div class="min-w-0 space-y-6">
+                        <!-- Language tabs -->
+                        <div
+                            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-1.5 dark:border-slate-800 dark:bg-slate-800/40"
+                        >
+                            <div class="grid grid-cols-3 gap-1">
+                                <button
+                                    v-for="language in languageOptions"
+                                    :key="language.code"
+                                    type="button"
+                                    class="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all"
+                                    :class="
+                                        activeLanguage === language.code
+                                            ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-blue-400 dark:ring-slate-700'
+                                            : 'text-slate-500 hover:bg-white/70 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-900/60 dark:hover:text-white'
+                                    "
+                                    @click="setLanguage(language.code)"
+                                >
+                                    <span>{{ language.flag }}</span
+                                    ><span>{{ language.label }}</span>
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- FORM -->
-
-                        <form
-                            class="grid gap-8 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_260px]"
-                            @submit.prevent="submitForm"
+                        <!-- Language-specific fields -->
+                        <div
+                            class="rounded-2xl border border-blue-100 bg-blue-50/30 p-5 dark:border-blue-900/30 dark:bg-blue-950/10"
                         >
-                            <!-- ===================================================== -->
-                            <!-- LEFT -->
-                            <!-- ===================================================== -->
-
-                            <div class="min-w-0 space-y-5">
-                                <!-- NAMA + JABATAN -->
-
-                                <div class="grid gap-5 sm:grid-cols-2">
-                                    <!-- NAMA -->
-
-                                    <div>
-                                        <label
-                                            for="nama_direktur"
-                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                        >
-                                            Nama Direktur
-                                            <span class="text-red-500">
-                                                *
-                                            </span>
-                                        </label>
-
-                                        <input
-                                            id="nama_direktur"
-                                            v-model="form.nama_direktur"
-                                            type="text"
-                                            autocomplete="name"
-                                            placeholder="Contoh: Budi Santoso"
-                                            class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
-                                            :class="{
-                                                'border-red-300 focus:border-red-500 focus:ring-red-500/10':
-                                                    form.errors.nama_direktur,
-                                            }"
-                                        />
-
-                                        <p
-                                            v-if="form.errors.nama_direktur"
-                                            class="mt-1.5 text-xs text-red-500"
-                                        >
-                                            {{ form.errors.nama_direktur }}
-                                        </p>
-                                    </div>
-
-                                    <!-- JABATAN -->
-
-                                    <div>
-                                        <label
-                                            for="jabatan_direktur"
-                                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                                        >
-                                            Jabatan
-                                            <span class="text-red-500">
-                                                *
-                                            </span>
-                                        </label>
-
-                                        <input
-                                            id="jabatan_direktur"
-                                            v-model="form.jabatan_direktur"
-                                            type="text"
-                                            placeholder="Contoh: Direktur Utama"
-                                            class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
-                                            :class="{
-                                                'border-red-300 focus:border-red-500 focus:ring-red-500/10':
-                                                    form.errors
-                                                        .jabatan_direktur,
-                                            }"
-                                        />
-
-                                        <p
-                                            v-if="form.errors.jabatan_direktur"
-                                            class="mt-1.5 text-xs text-red-500"
-                                        >
-                                            {{ form.errors.jabatan_direktur }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <!-- SAMBUTAN -->
-
+                            <div
+                                v-if="activeLanguage === 'id'"
+                                class="space-y-5"
+                            >
                                 <div>
                                     <label
-                                        for="sambutan-editor"
-                                        class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        for="nama_direktur"
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                        >Nama Direktur
+                                        <span class="text-red-500"
+                                            >*</span
+                                        ></label
                                     >
-                                        Isi Sambutan
-                                        <span class="text-red-500"> * </span>
-                                    </label>
-
-                                    <!-- TOOLBAR -->
-
-                                    <div
-                                        class="flex flex-wrap items-center gap-1 rounded-t-xl border border-b-0 border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800/70"
-                                    >
-                                        <button
-                                            type="button"
-                                            title="Paragraf"
-                                            class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-white hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-blue-400"
-                                            @mousedown.prevent
-                                            @click="formatParagraph"
-                                        >
-                                            ¶ Paragraf
-                                        </button>
-
-                                        <div
-                                            class="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700"
-                                        />
-
-                                        <button
-                                            type="button"
-                                            title="Tebal"
-                                            aria-label="Tebal"
-                                            class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-blue-400"
-                                            @mousedown.prevent
-                                            @click="execCommand('bold')"
-                                        >
-                                            <Bold class="size-4" />
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            title="Miring"
-                                            aria-label="Miring"
-                                            class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-blue-400"
-                                            @mousedown.prevent
-                                            @click="execCommand('italic')"
-                                        >
-                                            <Italic class="size-4" />
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            title="Garis bawah"
-                                            aria-label="Garis bawah"
-                                            class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-blue-400"
-                                            @mousedown.prevent
-                                            @click="execCommand('underline')"
-                                        >
-                                            <Underline class="size-4" />
-                                        </button>
-
-                                        <div
-                                            class="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700"
-                                        />
-
-                                        <button
-                                            type="button"
-                                            title="Bullet"
-                                            aria-label="Bullet list"
-                                            class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-blue-400"
-                                            @mousedown.prevent
-                                            @click="
-                                                execCommand(
-                                                    'insertUnorderedList',
-                                                )
-                                            "
-                                        >
-                                            <List class="size-4" />
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            title="Numbering"
-                                            aria-label="Numbered list"
-                                            class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-blue-400"
-                                            @mousedown.prevent
-                                            @click="
-                                                execCommand('insertOrderedList')
-                                            "
-                                        >
-                                            <ListOrdered class="size-4" />
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            title="Quote"
-                                            aria-label="Quote"
-                                            class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-blue-400"
-                                            @mousedown.prevent
-                                            @click="formatQuote"
-                                        >
-                                            <Quote class="size-4" />
-                                        </button>
-
-                                        <div
-                                            class="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700"
-                                        />
-
-                                        <button
-                                            type="button"
-                                            title="Hapus format"
-                                            class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-red-500 dark:text-slate-400 dark:hover:bg-slate-700"
-                                            @mousedown.prevent
-                                            @click="clearFormatting"
-                                        >
-                                            Bersihkan
-                                        </button>
-                                    </div>
-
-                                    <!-- EDITOR -->
-
-                                    <div
-                                        id="sambutan-editor"
-                                        ref="editorRef"
-                                        contenteditable="true"
-                                        role="textbox"
-                                        aria-multiline="true"
-                                        aria-label="Isi Sambutan Direktur"
-                                        data-placeholder="Tulis sambutan Direktur di sini..."
-                                        class="min-h-[260px] w-full rounded-b-xl border border-slate-200 bg-white px-4 py-4 text-sm leading-7 text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                    <input
+                                        id="nama_direktur"
+                                        v-model="form.nama_direktur"
+                                        type="text"
+                                        maxlength="255"
+                                        autocomplete="name"
+                                        placeholder="Masukkan nama Direktur"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                                         :class="{
-                                            'border-red-300 focus:border-red-500 focus:ring-red-500/10':
-                                                form.errors.sambutan_direktur,
+                                            'border-red-300':
+                                                form.errors.nama_direktur,
                                         }"
-                                        @input="syncEditor"
-                                        @keydown="handleEditorKeydown"
-                                        @paste="handleEditorPaste"
                                     />
-
-                                    <div
-                                        class="mt-1.5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+                                    <p
+                                        v-if="form.errors.nama_direktur"
+                                        class="mt-1.5 text-xs text-red-500"
                                     >
-                                        <p
-                                            v-if="form.errors.sambutan_direktur"
-                                            class="text-xs text-red-500"
-                                        >
-                                            {{ form.errors.sambutan_direktur }}
-                                        </p>
-
-                                        <p
-                                            v-else
-                                            class="text-xs text-slate-400"
-                                        >
-                                            Mendukung
-                                            <strong> tebal </strong>,
-                                            <em> miring </em>, underline,
-                                            paragraf, dan daftar.
-                                        </p>
-
-                                        <span class="text-xs text-slate-400">
-                                            HTML rich text
-                                        </span>
-                                    </div>
+                                        {{ form.errors.nama_direktur }}
+                                    </p>
                                 </div>
-
-                                <!-- STATUS -->
-
-                                <div
-                                    class="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/40"
-                                >
-                                    <div>
-                                        <p
-                                            class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                                        >
-                                            Tampilkan di halaman publik
-                                        </p>
-
-                                        <p
-                                            class="mt-0.5 text-xs text-slate-400"
-                                        >
-                                            Aktifkan agar sambutan dapat
-                                            ditampilkan kepada pengunjung.
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        :aria-checked="form.status"
-                                        class="relative h-6 w-11 shrink-0 rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
-                                        :class="
-                                            form.status
-                                                ? 'bg-blue-600'
-                                                : 'bg-slate-300 dark:bg-slate-700'
-                                        "
-                                        @click="form.status = !form.status"
+                                <div>
+                                    <label
+                                        for="jabatan_direktur"
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                        >Jabatan Direktur</label
                                     >
-                                        <span
-                                            class="absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition"
-                                            :class="
-                                                form.status
-                                                    ? 'left-[22px]'
-                                                    : 'left-0.5'
-                                            "
-                                        />
-                                    </button>
+                                    <input
+                                        id="jabatan_direktur"
+                                        v-model="form.jabatan_direktur"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="Contoh: Direktur Utama"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                    <p
+                                        v-if="form.errors.jabatan_direktur"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ form.errors.jabatan_direktur }}
+                                    </p>
                                 </div>
                             </div>
-
-                            <!-- ===================================================== -->
-                            <!-- RIGHT : FOTO -->
-                            <!-- ===================================================== -->
-
-                            <div class="min-w-0">
-                                <div
-                                    class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/40"
-                                >
-                                    <!-- TITLE -->
-
-                                    <div class="mb-4">
-                                        <div class="flex items-center gap-2">
-                                            <ImagePlus
-                                                class="size-4 text-blue-600"
-                                            />
-
-                                            <h3
-                                                class="text-sm font-semibold text-slate-800 dark:text-slate-200"
-                                            >
-                                                Foto Direktur
-                                            </h3>
-                                        </div>
-
-                                        <p
-                                            class="mt-1 text-xs leading-5 text-slate-400"
-                                        >
-                                            Foto portrait untuk ditampilkan pada
-                                            halaman publik.
-                                        </p>
-                                    </div>
-
-                                    <!-- PHOTO -->
-
-                                    <div class="flex justify-center">
-                                        <div
-                                            class="relative size-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
-                                        >
-                                            <img
-                                                v-if="displayedFoto"
-                                                :src="displayedFoto"
-                                                alt="Foto Direktur"
-                                                class="size-full object-cover object-top"
-                                            />
-
-                                            <div
-                                                v-else
-                                                class="flex size-full items-center justify-center text-slate-300 dark:text-slate-600"
-                                            >
-                                                <UserRound
-                                                    class="size-8"
-                                                    stroke-width="1.5"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- UPLOAD -->
-
-                                    <div class="mt-4">
-                                        <label
-                                            class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-3 text-xs font-medium text-slate-600 transition hover:border-blue-400 hover:bg-blue-50/30 hover:text-blue-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:bg-blue-950/20"
-                                            :class="{
-                                                'pointer-events-none opacity-60':
-                                                    isProcessingFoto,
-                                            }"
-                                        >
-                                            <Upload class="size-4" />
-
-                                            <span>
-                                                {{
-                                                    isProcessingFoto
-                                                        ? "Memproses foto..."
-                                                        : previewUrl
-                                                          ? "Ganti Foto"
-                                                          : "Pilih Foto"
-                                                }}
-                                            </span>
-
-                                            <input
-                                                ref="fileInput"
-                                                type="file"
-                                                accept="image/jpeg,image/png,image/webp"
-                                                class="hidden"
-                                                @change="handleFile"
-                                            />
-                                        </label>
-
-                                        <p
-                                            class="mt-2 text-center text-[10px] leading-4 text-slate-400"
-                                        >
-                                            JPG, JPEG, PNG, WEBP · Maksimal 1 MB
-                                            (foto besar dikompres otomatis)
-                                        </p>
-
-                                        <p
-                                            v-if="form.errors.foto_direktur"
-                                            class="mt-2 text-center text-xs text-red-500"
-                                        >
-                                            {{ form.errors.foto_direktur }}
-                                        </p>
-
-                                        <!-- REMOVE NEW -->
-
-                                        <button
-                                            v-if="previewUrl"
-                                            type="button"
-                                            class="mt-2 w-full text-center text-[11px] font-medium text-red-500 transition hover:text-red-600"
-                                            @click="removePreview"
-                                        >
-                                            Batalkan foto baru
-                                        </button>
-
-                                        <!-- REMOVE EXISTING -->
-
-                                        <button
-                                            v-else-if="
-                                                hasExistingFoto &&
-                                                !form.remove_foto_direktur
-                                            "
-                                            type="button"
-                                            class="mt-2 w-full text-center text-[11px] font-medium text-red-500 transition hover:text-red-600"
-                                            @click="removeExistingFoto"
-                                        >
-                                            Hapus foto saat ini
-                                        </button>
-
-                                        <div
-                                            v-if="form.remove_foto_direktur"
-                                            class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-[11px] leading-4 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-400"
-                                        >
-                                            Foto akan dihapus setelah perubahan
-                                            disimpan.
-                                        </div>
-                                    </div>
-
-                                    <!-- REMOVE BG INFO -->
-
-                                    <div
-                                        class="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2.5 dark:border-blue-900/40 dark:bg-blue-950/20"
-                                    >
-                                        <p
-                                            class="text-[11px] font-medium text-blue-700 dark:text-blue-400"
-                                        >
-                                            Background removal
-                                        </p>
-
-                                        <p
-                                            class="mt-0.5 text-[10px] leading-4 text-blue-600/80 dark:text-blue-400/70"
-                                        >
-                                            Foto akan mencoba diproses otomatis
-                                            tanpa background. Fitur ini
-                                            menggunakan kuota layanan. Jika
-                                            kuota atau layanan tidak tersedia,
-                                            foto tetap disimpan dengan
-                                            background asli.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- ===================================================== -->
-                            <!-- BUTTON -->
-                            <!-- ===================================================== -->
 
                             <div
-                                class="flex flex-col-reverse gap-2 border-t border-slate-200 pt-5 sm:col-span-2 sm:flex-row sm:justify-end sm:gap-3 dark:border-slate-800"
+                                v-else-if="activeLanguage === 'en'"
+                                class="space-y-5"
+                            >
+                                <div>
+                                    <label
+                                        for="nama_direktur_en"
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                        >Director's Name</label
+                                    >
+                                    <input
+                                        id="nama_direktur_en"
+                                        v-model="form.nama_direktur_en"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="Enter director's name"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                    <p
+                                        v-if="form.errors.nama_direktur_en"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ form.errors.nama_direktur_en }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label
+                                        for="jabatan_direktur_en"
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                        >Director's Position</label
+                                    >
+                                    <input
+                                        id="jabatan_direktur_en"
+                                        v-model="form.jabatan_direktur_en"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="Example: President Director"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                    <p
+                                        v-if="form.errors.jabatan_direktur_en"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ form.errors.jabatan_direktur_en }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div v-else class="space-y-5">
+                                <div>
+                                    <label
+                                        for="nama_direktur_zh"
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                        >董事姓名</label
+                                    >
+                                    <input
+                                        id="nama_direktur_zh"
+                                        v-model="form.nama_direktur_zh"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="请输入董事姓名"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                    <p
+                                        v-if="form.errors.nama_direktur_zh"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ form.errors.nama_direktur_zh }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label
+                                        for="jabatan_direktur_zh"
+                                        class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                                        >董事职位</label
+                                    >
+                                    <input
+                                        id="jabatan_direktur_zh"
+                                        v-model="form.jabatan_direktur_zh"
+                                        type="text"
+                                        maxlength="255"
+                                        placeholder="例如：董事总经理"
+                                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                    <p
+                                        v-if="form.errors.jabatan_direktur_zh"
+                                        class="mt-1.5 text-xs text-red-500"
+                                    >
+                                        {{ form.errors.jabatan_direktur_zh }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rich text editor -->
+                        <div>
+                            <label
+                                for="sambutan-editor"
+                                class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                            >
+                                {{
+                                    activeLanguage === "id"
+                                        ? "Isi Sambutan"
+                                        : activeLanguage === "en"
+                                          ? "Director's Message"
+                                          : "董事致辞"
+                                }}
+                                <span
+                                    v-if="activeLanguage === 'id'"
+                                    class="text-red-500"
+                                    >*</span
+                                >
+                            </label>
+                            <div
+                                class="flex flex-wrap items-center gap-1 rounded-t-xl border border-b-0 border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800/70"
                             >
                                 <button
                                     type="button"
-                                    :disabled="isSubmitting"
-                                    class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                                    @click="goToDashboard"
+                                    title="Paragraf"
+                                    class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-white hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                                    @mousedown.prevent
+                                    @click="formatParagraph"
                                 >
-                                    <X class="size-4" />
-                                    Batal
+                                    ¶ Paragraf
                                 </button>
-
+                                <span
+                                    class="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700"
+                                ></span>
                                 <button
-                                    type="submit"
-                                    :disabled="isSubmitting || isProcessingFoto"
-                                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-500/10 transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-950"
+                                    type="button"
+                                    title="Tebal"
+                                    aria-label="Tebal"
+                                    class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                    @mousedown.prevent
+                                    @click="execCommand('bold')"
                                 >
-                                    <Save
-                                        class="size-4"
-                                        :class="{
-                                            'animate-pulse': isSubmitting,
-                                        }"
-                                    />
-
-                                    {{
-                                        isSubmitting
-                                            ? "Menyimpan..."
-                                            : "Simpan Perubahan"
-                                    }}
+                                    <Bold class="size-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    title="Miring"
+                                    aria-label="Miring"
+                                    class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                    @mousedown.prevent
+                                    @click="execCommand('italic')"
+                                >
+                                    <Italic class="size-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    title="Garis bawah"
+                                    aria-label="Garis bawah"
+                                    class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                    @mousedown.prevent
+                                    @click="execCommand('underline')"
+                                >
+                                    <Underline class="size-4" />
+                                </button>
+                                <span
+                                    class="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700"
+                                ></span>
+                                <button
+                                    type="button"
+                                    title="Bullet list"
+                                    aria-label="Bullet list"
+                                    class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                    @mousedown.prevent
+                                    @click="execCommand('insertUnorderedList')"
+                                >
+                                    <List class="size-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    title="Numbered list"
+                                    aria-label="Numbered list"
+                                    class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                    @mousedown.prevent
+                                    @click="execCommand('insertOrderedList')"
+                                >
+                                    <ListOrdered class="size-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    title="Kutipan"
+                                    aria-label="Kutipan"
+                                    class="rounded-lg p-2 text-slate-700 transition hover:bg-white hover:text-blue-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                                    @mousedown.prevent
+                                    @click="formatQuote"
+                                >
+                                    <Quote class="size-4" />
+                                </button>
+                                <span
+                                    class="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700"
+                                ></span>
+                                <button
+                                    type="button"
+                                    class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-red-500 dark:text-slate-400 dark:hover:bg-slate-700"
+                                    @mousedown.prevent
+                                    @click="clearFormatting"
+                                >
+                                    Bersihkan format
                                 </button>
                             </div>
-                        </form>
+                            <div
+                                id="sambutan-editor"
+                                ref="editorRef"
+                                contenteditable="true"
+                                role="textbox"
+                                aria-multiline="true"
+                                :aria-label="languageLabel"
+                                :data-placeholder="
+                                    activeLanguage === 'id'
+                                        ? 'Tulis sambutan Direktur dalam Bahasa Indonesia...'
+                                        : activeLanguage === 'en'
+                                          ? 'Write the director’s message in English...'
+                                          : '请在此填写董事致辞...'
+                                "
+                                class="min-h-[280px] w-full rounded-b-xl border border-slate-200 bg-white px-4 py-4 text-sm leading-7 text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                                :class="{
+                                    'border-red-300': currentSambutanError,
+                                }"
+                                @input="syncEditor"
+                                @keydown="handleEditorKeydown"
+                                @paste="handleEditorPaste"
+                            ></div>
+                            <div
+                                class="mt-1.5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <p
+                                    v-if="currentSambutanError"
+                                    class="text-xs text-red-500"
+                                >
+                                    {{ currentSambutanError }}
+                                </p>
+                                <p v-else class="text-xs text-slate-400">
+                                    Mendukung teks tebal, miring, garis bawah,
+                                    paragraf, dan daftar.
+                                </p>
+                                <span class="text-xs text-slate-400"
+                                    >HTML rich text</span
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Status -->
+                        <div
+                            class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 dark:border-slate-800 dark:bg-slate-800/40"
+                        >
+                            <div>
+                                <p
+                                    class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                                >
+                                    Tampilkan di halaman publik
+                                </p>
+                                <p
+                                    class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                                >
+                                    Aktifkan agar sambutan dapat dilihat
+                                    pengunjung.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                role="switch"
+                                :aria-checked="form.status"
+                                class="relative h-6 w-11 shrink-0 rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                                :class="
+                                    form.status
+                                        ? 'bg-blue-600'
+                                        : 'bg-slate-300 dark:bg-slate-700'
+                                "
+                                @click="form.status = !form.status"
+                            >
+                                <span
+                                    class="absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition"
+                                    :class="
+                                        form.status ? 'left-[22px]' : 'left-0.5'
+                                    "
+                                ></span>
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </Transition>
+
+                    <!-- Photo panel -->
+                    <aside class="min-w-0">
+                        <div
+                            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-800/40"
+                        >
+                            <div class="mb-4">
+                                <div class="flex items-center gap-2">
+                                    <ImagePlus
+                                        class="size-4 text-blue-600 dark:text-blue-400"
+                                    />
+                                    <h3
+                                        class="text-sm font-semibold text-slate-800 dark:text-slate-200"
+                                    >
+                                        Foto Direktur
+                                    </h3>
+                                </div>
+                                <p
+                                    class="mt-1 text-xs leading-5 text-slate-400"
+                                >
+                                    Foto yang sama digunakan untuk ketiga
+                                    bahasa.
+                                </p>
+                            </div>
+
+                            <div class="flex justify-center">
+                                <div
+                                    class="relative size-36 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                                >
+                                    <img
+                                        v-if="displayedFoto"
+                                        :src="displayedFoto"
+                                        alt="Foto Direktur"
+                                        class="size-full object-cover object-top"
+                                    />
+                                    <div
+                                        v-else
+                                        class="flex size-full items-center justify-center text-slate-300 dark:text-slate-600"
+                                    >
+                                        <UserRound
+                                            class="size-10"
+                                            stroke-width="1.5"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <label
+                                class="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-3 text-xs font-semibold text-slate-600 transition hover:border-blue-400 hover:bg-blue-50/30 hover:text-blue-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-500"
+                            >
+                                <Upload class="size-4" />
+                                <span>{{
+                                    isProcessingFoto
+                                        ? "Memproses foto..."
+                                        : previewUrl
+                                          ? "Ganti Foto"
+                                          : "Pilih Foto"
+                                }}</span>
+                                <input
+                                    ref="fileInput"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    class="hidden"
+                                    :disabled="isProcessingFoto"
+                                    @change="handleFile"
+                                />
+                            </label>
+                            <p
+                                class="mt-2 text-center text-[10px] leading-4 text-slate-400"
+                            >
+                                JPG, JPEG, PNG, WEBP · Maksimal 1 MB. Foto besar
+                                dikompres otomatis.
+                            </p>
+                            <p
+                                v-if="form.errors.foto_direktur"
+                                class="mt-2 text-center text-xs text-red-500"
+                            >
+                                {{ form.errors.foto_direktur }}
+                            </p>
+
+                            <button
+                                v-if="previewUrl"
+                                type="button"
+                                class="mt-3 w-full text-center text-xs font-semibold text-red-500 transition hover:text-red-600"
+                                @click="removePreview"
+                            >
+                                Batalkan foto baru
+                            </button>
+                            <button
+                                v-else-if="
+                                    existingFotoUrl &&
+                                    !form.remove_foto_direktur
+                                "
+                                type="button"
+                                class="mt-3 w-full text-center text-xs font-semibold text-red-500 transition hover:text-red-600"
+                                @click="removeExistingFoto"
+                            >
+                                Hapus foto saat ini
+                            </button>
+                            <div
+                                v-if="form.remove_foto_direktur"
+                                class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-[11px] leading-4 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-400"
+                            >
+                                Foto akan dihapus setelah perubahan disimpan.
+                            </div>
+
+                            <div
+                                class="mt-5 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-3 dark:border-blue-900/40 dark:bg-blue-950/20"
+                            >
+                                <p
+                                    class="text-xs font-semibold text-blue-700 dark:text-blue-400"
+                                >
+                                    Catatan gambar
+                                </p>
+                                <p
+                                    class="mt-1 text-[11px] leading-5 text-blue-600/80 dark:text-blue-400/70"
+                                >
+                                    Gunakan foto portrait dengan pencahayaan
+                                    yang baik agar tampil optimal pada halaman
+                                    profil perusahaan.
+                                </p>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- Footer buttons -->
+                    <div
+                        class="flex flex-col-reverse gap-2 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end sm:gap-3 lg:col-span-2 dark:border-slate-800"
+                    >
+                        <button
+                            type="button"
+                            :disabled="isSubmitting"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                            @click="goToDashboard"
+                        >
+                            <X class="size-4" /> Batal
+                        </button>
+                        <button
+                            type="submit"
+                            :disabled="isSubmitting || isProcessingFoto"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Save
+                                class="size-4"
+                                :class="{ 'animate-pulse': isSubmitting }"
+                            />
+                            {{
+                                isSubmitting
+                                    ? "Menyimpan..."
+                                    : "Simpan Perubahan"
+                            }}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </template>
 
 <style scoped>
-.page-fade-enter-active,
-.page-fade-leave-active {
-    transition:
-        opacity 0.25s ease,
-        transform 0.25s ease;
-}
-
-.page-fade-enter-from,
-.page-fade-leave-to {
-    opacity: 0;
-    transform: translateY(6px);
-}
-
 [contenteditable="true"]:empty::before {
     content: attr(data-placeholder);
     color: rgb(148 163 184);
     pointer-events: none;
 }
-
 .dark [contenteditable="true"]:empty::before {
     color: rgb(100 116 139);
 }
-
 [contenteditable="true"] p {
     margin: 0 0 0.75rem;
 }
-
 [contenteditable="true"] p:last-child {
     margin-bottom: 0;
 }
-
 [contenteditable="true"] ul {
     list-style-type: disc;
     padding-left: 1.5rem;
     margin: 0.5rem 0;
 }
-
 [contenteditable="true"] ol {
     list-style-type: decimal;
     padding-left: 1.5rem;
     margin: 0.5rem 0;
 }
-
 [contenteditable="true"] blockquote {
     margin: 0.75rem 0;
     border-left: 3px solid rgb(59 130 246 / 0.5);
     padding-left: 1rem;
     color: rgb(100 116 139);
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .page-fade-enter-active,
-    .page-fade-leave-active {
-        transition: none;
-    }
 }
 </style>

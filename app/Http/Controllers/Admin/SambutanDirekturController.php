@@ -23,8 +23,14 @@ class SambutanDirekturController extends Controller
             ['id' => 1],
             [
                 'nama_direktur' => '',
+                'nama_direktur_en' => '',
+                'nama_direktur_zh' => '',
                 'jabatan_direktur' => 'Direktur',
+                'jabatan_direktur_en' => '',
+                'jabatan_direktur_zh' => '',
                 'sambutan_direktur' => '',
+                'sambutan_direktur_en' => '',
+                'sambutan_direktur_zh' => '',
                 'status' => false,
             ]
         );
@@ -46,29 +52,30 @@ class SambutanDirekturController extends Controller
             ['id' => 1],
             [
                 'nama_direktur' => '',
+                'nama_direktur_en' => '',
+                'nama_direktur_zh' => '',
                 'jabatan_direktur' => 'Direktur',
+                'jabatan_direktur_en' => '',
+                'jabatan_direktur_zh' => '',
                 'sambutan_direktur' => '',
+                'sambutan_direktur_en' => '',
+                'sambutan_direktur_zh' => '',
                 'status' => false,
             ]
         );
 
         $validated = $request->validate([
-            'nama_direktur' => [
-                'required',
-                'string',
-                'max:255',
-            ],
+            'nama_direktur' => ['required', 'string', 'max:255'],
+            'nama_direktur_en' => ['nullable', 'string', 'max:255'],
+            'nama_direktur_zh' => ['nullable', 'string', 'max:255'],
 
-            'jabatan_direktur' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
+            'jabatan_direktur' => ['nullable', 'string', 'max:255'],
+            'jabatan_direktur_en' => ['nullable', 'string', 'max:255'],
+            'jabatan_direktur_zh' => ['nullable', 'string', 'max:255'],
 
-            'sambutan_direktur' => [
-                'required',
-                'string',
-            ],
+            'sambutan_direktur' => ['required', 'string'],
+            'sambutan_direktur_en' => ['nullable', 'string'],
+            'sambutan_direktur_zh' => ['nullable', 'string'],
 
             'foto_direktur' => [
                 'nullable',
@@ -77,57 +84,29 @@ class SambutanDirekturController extends Controller
                 'max:1024',
             ],
 
-            'status' => [
-                'required',
-                'boolean',
-            ],
-
-            'remove_foto_direktur' => [
-                'nullable',
-                'boolean',
-            ],
+            'status' => ['required', 'boolean'],
+            'remove_foto_direktur' => ['nullable', 'boolean'],
         ]);
 
         /*
-        |--------------------------------------------------------------------------
-        | Foto lama
-        |--------------------------------------------------------------------------
-        */
-
+         * Foto lama.
+         */
         $oldFoto = $sambutanDirektur->foto_direktur;
 
         $toastType = 'success';
         $photoMessage = null;
 
         /*
-        |--------------------------------------------------------------------------
-        | Upload Foto Baru
-        |--------------------------------------------------------------------------
-        |
-        | Remove.bg hanya sebagai enhancement.
-        |
-        | Jika:
-        | - API berhasil       → PNG transparan
-        | - quota habis        → foto asli
-        | - API error          → foto asli
-        | - timeout            → foto asli
-        | - API key kosong     → foto asli
-        |
-        */
-
+         * Upload foto baru.
+         * Remove.bg hanya sebagai enhancement. Jika API tidak tersedia,
+         * foto asli tetap disimpan.
+         */
         if ($request->hasFile('foto_direktur')) {
             $file = $request->file('foto_direktur');
-
             $apiKey = config('services.removebg.key');
 
             $newPath = null;
             $backgroundRemoved = false;
-
-            /*
-            |--------------------------------------------------------------------------
-            | Coba Remove.bg
-            |--------------------------------------------------------------------------
-            */
 
             if ($apiKey) {
                 try {
@@ -149,19 +128,14 @@ class SambutanDirekturController extends Controller
                             ]
                         );
 
-                    if (
-                        $response->successful() &&
-                        $response->body()
-                    ) {
-                        $filename =
-                            'direktur-' .
-                            now()->format('YmdHis') .
-                            '-' .
-                            Str::lower(Str::random(12)) .
-                            '.png';
+                    if ($response->successful() && $response->body()) {
+                        $filename = 'direktur-'
+                            . now()->format('YmdHis')
+                            . '-'
+                            . Str::lower(Str::random(12))
+                            . '.png';
 
-                        $newPath =
-                            'sambutan-direktur/' . $filename;
+                        $newPath = 'sambutan-direktur/' . $filename;
 
                         $stored = Storage::disk('public')->put(
                             $newPath,
@@ -175,32 +149,22 @@ class SambutanDirekturController extends Controller
                         }
                     }
                 } catch (\Throwable $e) {
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Jangan gagalkan upload jika API bermasalah.
-                    |--------------------------------------------------------------------------
-                    */
+                    // Jangan gagalkan upload jika API Remove.bg bermasalah.
                 }
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | Fallback: Foto Asli
-            |--------------------------------------------------------------------------
-            */
-
+             * Fallback: simpan foto asli jika Remove.bg gagal/tidak tersedia.
+             */
             if (! $newPath) {
-                $extension = strtolower(
-                    $file->getClientOriginalExtension()
-                );
+                $extension = strtolower($file->getClientOriginalExtension());
 
-                $filename =
-                    'direktur-' .
-                    now()->format('YmdHis') .
-                    '-' .
-                    Str::lower(Str::random(12)) .
-                    '.' .
-                    $extension;
+                $filename = 'direktur-'
+                    . now()->format('YmdHis')
+                    . '-'
+                    . Str::lower(Str::random(12))
+                    . '.'
+                    . $extension;
 
                 $newPath = $file->storeAs(
                     'sambutan-direktur',
@@ -211,8 +175,7 @@ class SambutanDirekturController extends Controller
                 if (! $newPath) {
                     return back()->with('toast', [
                         'type' => 'error',
-                        'message' =>
-                        'Foto direktur gagal disimpan. Silakan coba kembali.',
+                        'message' => 'Foto direktur gagal disimpan. Silakan coba kembali.',
                     ]);
                 }
 
@@ -224,96 +187,75 @@ class SambutanDirekturController extends Controller
             }
 
             /*
-            |--------------------------------------------------------------------------
-            | Hapus Foto Lama
-            |--------------------------------------------------------------------------
-            |
-            | Baru dilakukan setelah foto baru berhasil tersimpan.
-            |
-            */
-
-            if (
-                $oldFoto &&
-                Storage::disk('public')->exists($oldFoto)
-            ) {
+             * Hapus foto lama setelah foto baru berhasil disimpan.
+             */
+            if ($oldFoto && Storage::disk('public')->exists($oldFoto)) {
                 Storage::disk('public')->delete($oldFoto);
             }
 
             $sambutanDirektur->foto_direktur = $newPath;
 
-            /*
-            |--------------------------------------------------------------------------
-            | Pesan Remove.bg Berhasil
-            |--------------------------------------------------------------------------
-            */
-
             if ($backgroundRemoved) {
-                $photoMessage =
-                    'Foto berhasil diproses dan background telah dihapus.';
+                $photoMessage = 'Foto berhasil diproses dan background telah dihapus.';
             }
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Hapus Foto Lama
-        |--------------------------------------------------------------------------
-        |
-        | Hanya jika tidak ada upload foto baru.
-        |
-        */
-
+         * Hapus foto lama hanya jika tidak ada upload foto baru.
+         */
         if (
-            ! $request->hasFile('foto_direktur') &&
-            $request->boolean('remove_foto_direktur') &&
-            $sambutanDirektur->foto_direktur
+            ! $request->hasFile('foto_direktur')
+            && $request->boolean('remove_foto_direktur')
+            && $sambutanDirektur->foto_direktur
         ) {
-            if (
-                Storage::disk('public')->exists(
-                    $sambutanDirektur->foto_direktur
-                )
-            ) {
-                Storage::disk('public')->delete(
-                    $sambutanDirektur->foto_direktur
-                );
+            if (Storage::disk('public')->exists($sambutanDirektur->foto_direktur)) {
+                Storage::disk('public')->delete($sambutanDirektur->foto_direktur);
             }
 
             $sambutanDirektur->foto_direktur = null;
-
             $photoMessage = 'Foto direktur berhasil dihapus.';
         }
 
         /*
-        |--------------------------------------------------------------------------
-        | Update Data
-        |--------------------------------------------------------------------------
-        */
-
+         * Update data dalam tiga bahasa.
+         */
         $sambutanDirektur->fill([
-            'nama_direktur' =>
-            trim($validated['nama_direktur']),
+            'nama_direktur' => trim($validated['nama_direktur']),
+            'nama_direktur_en' => trim($validated['nama_direktur_en'] ?? ''),
+            'nama_direktur_zh' => trim($validated['nama_direktur_zh'] ?? ''),
 
-            'jabatan_direktur' =>
-            $validated['jabatan_direktur']
+            'jabatan_direktur' => isset($validated['jabatan_direktur'])
+                && $validated['jabatan_direktur'] !== null
+                && trim($validated['jabatan_direktur']) !== ''
                 ? trim($validated['jabatan_direktur'])
                 : null,
+            'jabatan_direktur_en' => isset($validated['jabatan_direktur_en'])
+                && trim($validated['jabatan_direktur_en']) !== ''
+                ? trim($validated['jabatan_direktur_en'])
+                : null,
+            'jabatan_direktur_zh' => isset($validated['jabatan_direktur_zh'])
+                && trim($validated['jabatan_direktur_zh']) !== ''
+                ? trim($validated['jabatan_direktur_zh'])
+                : null,
 
-            'sambutan_direktur' =>
-            $this->sanitizeSambutan(
+            'sambutan_direktur' => $this->sanitizeSambutan(
                 $validated['sambutan_direktur']
             ),
+            'sambutan_direktur_en' => $this->sanitizeSambutan(
+                $validated['sambutan_direktur_en'] ?? ''
+            ),
+            'sambutan_direktur_zh' => $this->sanitizeSambutan(
+                $validated['sambutan_direktur_zh'] ?? ''
+            ),
 
-            'status' =>
-            (bool) $validated['status'],
+            'status' => (bool) $validated['status'],
         ]);
 
         $sambutanDirektur->save();
 
         /*
-        |--------------------------------------------------------------------------
-        | Toast
-        |--------------------------------------------------------------------------
-        */
-
+         * Toast.
+         */
         $message = $photoMessage
             ? 'Sambutan direktur berhasil diperbarui. ' . $photoMessage
             : 'Sambutan direktur berhasil diperbarui.';
@@ -326,7 +268,6 @@ class SambutanDirekturController extends Controller
 
     /**
      * Sanitasi HTML rich text.
-     *
      * Hanya tag formatting yang diperlukan yang diperbolehkan.
      */
     private function sanitizeSambutan(?string $html): string
@@ -355,18 +296,9 @@ class SambutanDirekturController extends Controller
         );
 
         /*
-        |--------------------------------------------------------------------------
-        | Hapus seluruh attribute dari tag yang diizinkan.
-        |--------------------------------------------------------------------------
-        |
-        | Contoh:
-        | <p onclick="..."> → <p>
-        |
-        | Jadi editor tidak bisa menyimpan event handler
-        | atau attribute HTML berbahaya.
-        |
-        */
-
+         * Hapus seluruh attribute dari tag yang diizinkan.
+         * Ini mencegah penyimpanan event handler atau attribute berbahaya.
+         */
         $html = preg_replace_callback(
             '/<\s*([a-z0-9]+)(?:\s+[^>]*)?>/i',
             function ($matches) use ($allowedTags) {
@@ -380,12 +312,6 @@ class SambutanDirekturController extends Controller
             },
             $html
         );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Rapikan whitespace berlebihan
-        |--------------------------------------------------------------------------
-        */
 
         return trim($html ?? '');
     }

@@ -1705,6 +1705,38 @@ class DatabaseSeeder extends Seeder
             |--------------------------------------------------------------------------
             */
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | 28. SAMBUTAN DIREKTUR
+            |--------------------------------------------------------------------------
+            */
+            DB::table('sambutan_direkturs')->updateOrInsert(
+                ['id' => 1],
+                [
+                    // Bahasa Indonesia
+                    'nama_direktur' => 'Budi Santoso',
+                    'jabatan_direktur' => 'Direktur Utama',
+                    'sambutan_direktur' => '<p>Selamat datang di situs resmi PT Kawasan Industri Tanjung Buton.</p><p>Kami berkomitmen untuk mengembangkan kawasan industri yang terintegrasi, kompetitif, dan berkelanjutan. Melalui dukungan infrastruktur, pelayanan profesional, serta kolaborasi dengan para mitra, kami berharap dapat menciptakan nilai tambah bagi investor, masyarakat, dan perekonomian Indonesia.</p><p>Terima kasih atas kepercayaan dan dukungan Anda terhadap pengembangan Kawasan Industri Tanjung Buton.</p>',
+
+                    // Bahasa Inggris
+                    'nama_direktur_en' => 'Budi Santoso',
+                    'jabatan_direktur_en' => 'President Director',
+                    'sambutan_direktur_en' => '<p>Welcome to the official website of PT Kawasan Industri Tanjung Buton.</p><p>We are committed to developing an integrated, competitive, and sustainable industrial estate. Through reliable infrastructure, professional services, and collaboration with our partners, we aim to create added value for investors, communities, and the Indonesian economy.</p><p>Thank you for your trust and support in the development of Tanjung Buton Industrial Estate.</p>',
+
+                    // Bahasa Mandarin
+                    'nama_direktur_zh' => '布迪·桑托索',
+                    'jabatan_direktur_zh' => '总裁董事',
+                    'sambutan_direktur_zh' => '<p>欢迎访问 PT Kawasan Industri Tanjung Buton 官方网站。</p><p>我们致力于打造一体化、具有竞争力且可持续发展的工业园区。通过可靠的基础设施、专业的服务以及与合作伙伴的协作，我们希望为投资者、当地社区和印度尼西亚经济创造更多价值。</p><p>感谢您对丹绒布顿工业园区发展的信任与支持。</p>',
+
+                    // Data umum
+                    'foto_direktur' => null,
+                    'status' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+
             /*
             |--------------------------------------------------------------------------
             | 27. PESAN INFO

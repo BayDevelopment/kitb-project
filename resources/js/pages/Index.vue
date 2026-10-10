@@ -25,6 +25,7 @@ import {
 
 import PublicLayout from "@/layouts/PublicLayout.vue";
 import { visitUrl } from "@/data/publicNavigation";
+import { currentLanguage } from "@/composables/useLocale";
 
 defineOptions({
     layout: PublicLayout,
@@ -256,6 +257,52 @@ function firstValue<T extends Record<string, any>>(
     return fallback;
 }
 
+/**
+ * Mengambil field sesuai bahasa aktif dengan fallback ke Bahasa Indonesia.
+ * Mendukung struktur field seperti judul_id/judul_en/judul_zh maupun
+ * field dasar berbahasa Indonesia seperti nama_perusahaan.
+ */
+function localizedFirstValue<T extends object>(
+    object: T | null | undefined,
+    keys: string[],
+    fallback = "",
+): string {
+    if (!object) {
+        return fallback;
+    }
+
+    const record = object as unknown as Record<string, unknown>;
+    const language = currentLanguage.value;
+    const suffix = language === "en" ? "en" : language === "zh" ? "zh" : "id";
+
+    for (const key of keys) {
+        const candidates = [`${key}_${suffix}`, key];
+
+        for (const candidate of candidates) {
+            const value = record[candidate];
+
+            if (
+                value !== null &&
+                value !== undefined &&
+                String(value).trim() !== ""
+            ) {
+                return String(value);
+            }
+        }
+    }
+
+    return fallback;
+}
+
+function currentIntlLocale(): string {
+    const language = currentLanguage.value;
+
+    if (language === "en") return "en-US";
+    if (language === "zh") return "zh-CN";
+
+    return "id-ID";
+}
+
 function numericValue(value: unknown, fallback = 0): number {
     if (typeof value === "number" && Number.isFinite(value)) {
         return value;
@@ -277,7 +324,7 @@ function formatNumber(
 ): string {
     const number = numericValue(value);
 
-    return new Intl.NumberFormat("id-ID", {
+    return new Intl.NumberFormat(currentIntlLocale(), {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
     }).format(number);
@@ -308,7 +355,7 @@ function formatDate(value: string | null | undefined): string {
         return value;
     }
 
-    return new Intl.DateTimeFormat("id-ID", {
+    return new Intl.DateTimeFormat(currentIntlLocale(), {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -382,17 +429,53 @@ function jobTypeLabel(value: string | null | undefined): string {
         return trans("home.career.position_available");
     }
 
+    const normalized = value.trim().toLowerCase().replace(/[ -]/g, "_");
     const labels: Record<string, string> = {
-        full_time: "Full Time",
-        part_time: "Part Time",
-        contract: "Contract",
-        internship: "Internship",
-        freelance: "Freelance",
-        remote: "Remote",
-        hybrid: "Hybrid",
+        full_time:
+            currentLanguage.value === "id"
+                ? "Penuh waktu"
+                : currentLanguage.value === "zh"
+                  ? "全职"
+                  : "Full Time",
+        part_time:
+            currentLanguage.value === "id"
+                ? "Paruh waktu"
+                : currentLanguage.value === "zh"
+                  ? "兼职"
+                  : "Part Time",
+        contract:
+            currentLanguage.value === "id"
+                ? "Kontrak"
+                : currentLanguage.value === "zh"
+                  ? "合同制"
+                  : "Contract",
+        internship:
+            currentLanguage.value === "id"
+                ? "Magang"
+                : currentLanguage.value === "zh"
+                  ? "实习"
+                  : "Internship",
+        freelance:
+            currentLanguage.value === "id"
+                ? "Pekerja lepas"
+                : currentLanguage.value === "zh"
+                  ? "自由职业"
+                  : "Freelance",
+        remote:
+            currentLanguage.value === "id"
+                ? "Jarak jauh"
+                : currentLanguage.value === "zh"
+                  ? "远程办公"
+                  : "Remote",
+        hybrid:
+            currentLanguage.value === "id"
+                ? "Hybrid"
+                : currentLanguage.value === "zh"
+                  ? "混合办公"
+                  : "Hybrid",
     };
 
-    return labels[value] ?? value;
+    return labels[normalized] ?? value;
 }
 
 /* =========================================================
@@ -569,7 +652,7 @@ const vCountUp = {
  * ========================================================= */
 
 const companyName = computed(() =>
-    firstValue(
+    localizedFirstValue(
         props.companyProfile,
         ["nama_perusahaan", "nama", "judul"],
         "PT Kawasan Industri Tanjung Buton",
@@ -577,10 +660,12 @@ const companyName = computed(() =>
 );
 
 const companyDescription = computed(() =>
-    firstValue(
+    localizedFirstValue(
         props.companyProfile,
         ["deskripsi", "tentang"],
-        "PT Kawasan Industri Tanjung Buton mengintegrasikan kawasan industri, pelabuhan, logistik, dan hilirisasi komoditas dalam satu ekosistem pertumbuhan yang terintegrasi.",
+        currentLanguage.value === "id"
+            ? `${trans("home.company.description")} ${trans("home.company.description_continuation")}`
+            : trans("home.company.description"),
     ),
 );
 
@@ -592,11 +677,11 @@ const isMounted = ref(false);
 const sambutanExpanded = ref(false);
 
 const direkturName = computed(() =>
-    firstValue(props.sambutanDirektur, ["nama_direktur"]),
+    localizedFirstValue(props.sambutanDirektur, ["nama_direktur"]),
 );
 
 const direkturPosition = computed(() =>
-    firstValue(props.sambutanDirektur, ["jabatan_direktur"]),
+    localizedFirstValue(props.sambutanDirektur, ["jabatan_direktur"]),
 );
 
 const direkturPhoto = computed(() =>
@@ -604,7 +689,7 @@ const direkturPhoto = computed(() =>
 );
 
 const direkturRaw = computed(() =>
-    firstValue(props.sambutanDirektur, ["sambutan_direktur"]),
+    localizedFirstValue(props.sambutanDirektur, ["sambutan_direktur"]),
 );
 
 function stripTags(value: string): string {
@@ -768,7 +853,7 @@ const hasSambutanDirektur = computed(() => {
  * ========================================================= */
 
 const visionText = computed(() =>
-    firstValue(props.visi, ["visi", "deskripsi", "judul", "title"]),
+    localizedFirstValue(props.visi, ["visi", "deskripsi", "judul", "title"]),
 );
 
 const missions = computed<Misi[]>(() => props.visi?.misis ?? []);
@@ -784,11 +869,15 @@ const hasVisionMission = computed(
  * ========================================================= */
 
 const kawasanName = computed(() =>
-    firstValue(props.profilKawasan, ["judul"], trans("home.area.eyebrow")),
+    localizedFirstValue(
+        props.profilKawasan,
+        ["judul"],
+        trans("home.area.eyebrow"),
+    ),
 );
 
 const kawasanDescription = computed(() =>
-    firstValue(props.profilKawasan, ["deskripsi"]),
+    localizedFirstValue(props.profilKawasan, ["deskripsi"]),
 );
 
 const kawasanArea = computed(() =>
@@ -806,7 +895,7 @@ const kawasanAreaDecimals = computed(() => {
 });
 
 const kawasanLocation = computed(() =>
-    firstValue(props.profilKawasan, ["lokasi"]),
+    localizedFirstValue(props.profilKawasan, ["lokasi"]),
 );
 
 const kawasanYear = computed(() =>
@@ -822,7 +911,11 @@ const kawasanImage = computed(() =>
  * ========================================================= */
 
 const mapTitle = computed(() =>
-    firstValue(props.petaKawasan, ["judul"], trans("home.area.master_plan")),
+    localizedFirstValue(
+        props.petaKawasan,
+        ["judul"],
+        trans("home.area.master_plan"),
+    ),
 );
 
 const mapImage = computed(() =>
@@ -830,30 +923,70 @@ const mapImage = computed(() =>
 );
 
 const mapDescription = computed(() =>
-    firstValue(props.petaKawasan, ["deskripsi", "keterangan"]),
+    localizedFirstValue(props.petaKawasan, ["deskripsi", "keterangan"]),
 );
 
 /* =========================================================
  * DEVELOPMENT STAGES
  * ========================================================= */
 
-const developmentStages = [
-    {
-        number: "01",
-        title: "Kawasan Industri",
-        desc: "Kavling industri, fasilitas pendukung, perdagangan & jasa, area perkantoran, serta fasilitas penunjang dalam satu estate layout terpadu.",
-    },
-    {
-        number: "02",
-        title: "Kawasan Pelabuhan",
-        desc: "Area migas, CPO, dry bulk, kontainer & pergudangan, serta fasilitas galangan kapal untuk mendukung arus logistik ekspor-impor.",
-    },
-    {
-        number: "03",
-        title: "Pelabuhan Tanjung Buton",
-        desc: "Infrastruktur pelabuhan yang mendukung konektivitas kawasan dengan jaringan pelayaran dan jalur logistik regional.",
-    },
-];
+const developmentStages = computed(() => {
+    const translations = {
+        id: [
+            {
+                number: "01",
+                title: "Kawasan Industri",
+                desc: "Kavling industri, fasilitas pendukung, perdagangan dan jasa, area perkantoran, serta fasilitas penunjang dalam satu tata kawasan terpadu.",
+            },
+            {
+                number: "02",
+                title: "Kawasan Pelabuhan",
+                desc: "Area migas, CPO, curah kering, kontainer dan pergudangan, serta fasilitas galangan kapal untuk mendukung arus logistik ekspor-impor.",
+            },
+            {
+                number: "03",
+                title: "Pelabuhan Tanjung Buton",
+                desc: "Infrastruktur pelabuhan yang mendukung konektivitas kawasan dengan jaringan pelayaran dan jalur logistik regional.",
+            },
+        ],
+        en: [
+            {
+                number: "01",
+                title: "Industrial Estate",
+                desc: "Industrial plots, supporting facilities, trade and services, office areas, and complementary facilities within an integrated estate layout.",
+            },
+            {
+                number: "02",
+                title: "Port Area",
+                desc: "Oil and gas, CPO, dry bulk, container and warehousing areas, as well as shipyard facilities supporting export and import logistics.",
+            },
+            {
+                number: "03",
+                title: "Tanjung Buton Port",
+                desc: "Port infrastructure connecting the estate to shipping networks and regional logistics routes.",
+            },
+        ],
+        zh: [
+            {
+                number: "01",
+                title: "工业园区",
+                desc: "通过一体化园区规划整合工业地块、配套设施、贸易与服务、办公区域及其他辅助设施。",
+            },
+            {
+                number: "02",
+                title: "港口区域",
+                desc: "涵盖油气、棕榈油（CPO）、干散货、集装箱、仓储及船舶修造设施，支持进出口物流。",
+            },
+            {
+                number: "03",
+                title: "丹戎布通港口",
+                desc: "通过港口基础设施连接园区、航运网络及区域物流路线。",
+            },
+        ],
+    } as const;
+
+    return translations[currentLanguage.value] ?? translations.id;
+});
 
 /* =========================================================
  * STATS
@@ -924,15 +1057,15 @@ const hasLocationSection = computed(
 );
 
 function routePath(route: Rute): string {
-    const direct = firstValue(route, ["rute", "jalur"]);
+    const direct = localizedFirstValue(route, ["rute", "jalur"]);
 
     if (direct) {
         return direct;
     }
 
-    const asal = firstValue(route, ["asal"]);
+    const asal = localizedFirstValue(route, ["asal"]);
 
-    const tujuan = firstValue(route, ["tujuan"]);
+    const tujuan = localizedFirstValue(route, ["tujuan"]);
 
     if (asal && tujuan) {
         return `${asal} → ${tujuan}`;
@@ -942,7 +1075,7 @@ function routePath(route: Rute): string {
 }
 
 function routeName(route: Rute, index: number): string {
-    return firstValue(
+    return localizedFirstValue(
         route,
         ["nama", "judul"],
         `${trans("home.location.route")} ${String(index + 1).padStart(2, "0")}`,
@@ -978,7 +1111,7 @@ const mitraAutoplayPaused = ref(false);
 let mitraAutoplayTimer: number | null = null;
 
 function mitraPerusahaanName(mitra: MitraPerusahaan): string {
-    return firstValue(
+    return localizedFirstValue(
         mitra,
         ["nama_perusahaan", "slug"],
         trans("home.partners.title"),
@@ -1063,11 +1196,15 @@ function resumeMitraAutoplay(): void {
  * ========================================================= */
 
 function investmentTitle(item: PeluangInvestasi): string {
-    return firstValue(item, ["judul", "nama"], trans("home.investment.title"));
+    return localizedFirstValue(
+        item,
+        ["judul", "nama"],
+        trans("home.investment.title"),
+    );
 }
 
 function investmentDescription(item: PeluangInvestasi): string {
-    return firstValue(item, ["deskripsi"]);
+    return localizedFirstValue(item, ["deskripsi"]);
 }
 
 function investmentImage(item: PeluangInvestasi): string {
@@ -1079,11 +1216,15 @@ function investmentImage(item: PeluangInvestasi): string {
  * ========================================================= */
 
 function beritaTitle(item: Berita): string {
-    return firstValue(item, ["judul", "title"], trans("home.news.title"));
+    return localizedFirstValue(
+        item,
+        ["judul", "title"],
+        trans("home.news.title"),
+    );
 }
 
 function beritaExcerpt(item: Berita): string {
-    return firstValue(item, ["excerpt", "ringkasan", "deskripsi"]);
+    return localizedFirstValue(item, ["excerpt", "ringkasan", "deskripsi"]);
 }
 
 function beritaImage(item: Berita): string {
@@ -1095,7 +1236,7 @@ function beritaImage(item: Berita): string {
  * ========================================================= */
 
 function anakUsahaName(item: AnakUsaha): string {
-    return firstValue(
+    return localizedFirstValue(
         item,
         ["nama_perusahaan", "nama", "judul"],
         trans("home.subsidiaries.title"),
@@ -1695,7 +1836,7 @@ onBeforeUnmount(() => {
                                 class="mb-2.5 font-display text-lg font-semibold text-white sm:text-xl"
                             >
                                 {{
-                                    firstValue(
+                                    localizedFirstValue(
                                         m,
                                         ["judul", "title"],
                                         trans(
@@ -1713,12 +1854,20 @@ onBeforeUnmount(() => {
 
                             <p
                                 v-if="
-                                    firstValue(m, ['deskripsi', 'desc', 'isi'])
+                                    localizedFirstValue(m, [
+                                        'deskripsi',
+                                        'desc',
+                                        'isi',
+                                    ])
                                 "
                                 class="text-[15px] leading-[1.8] text-white/60"
                             >
                                 {{
-                                    firstValue(m, ["deskripsi", "desc", "isi"])
+                                    localizedFirstValue(m, [
+                                        "deskripsi",
+                                        "desc",
+                                        "isi",
+                                    ])
                                 }}
                             </p>
                         </div>
@@ -2395,10 +2544,15 @@ onBeforeUnmount(() => {
                         </h3>
 
                         <p
-                            v-if="anak.deskripsi"
+                            v-if="localizedFirstValue(anak, ['deskripsi'])"
                             class="mb-5 text-[14px] leading-[1.75] text-kitb-ink-900/60"
                         >
-                            {{ truncate(anak.deskripsi, 130) }}
+                            {{
+                                truncate(
+                                    localizedFirstValue(anak, ["deskripsi"]),
+                                    130,
+                                )
+                            }}
                         </p>
 
                         <a
@@ -2661,10 +2815,14 @@ onBeforeUnmount(() => {
 
                         <div class="p-5 sm:p-6">
                             <div
-                                v-if="investment.sektor"
+                                v-if="
+                                    localizedFirstValue(investment, ['sektor'])
+                                "
                                 class="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-kitb-teal-300"
                             >
-                                {{ investment.sektor }}
+                                {{
+                                    localizedFirstValue(investment, ["sektor"])
+                                }}
                             </div>
 
                             <h3
@@ -2921,7 +3079,13 @@ onBeforeUnmount(() => {
                                 <span
                                     class="rounded-full bg-kitb-green-700/10 px-2.5 py-1 text-[10px] font-medium text-kitb-green-800"
                                 >
-                                    {{ jobTypeLabel(job.tipe_pekerjaan) }}
+                                    {{
+                                        jobTypeLabel(
+                                            localizedFirstValue(job, [
+                                                "tipe_pekerjaan",
+                                            ]),
+                                        )
+                                    }}
                                 </span>
                             </div>
 
@@ -2929,7 +3093,7 @@ onBeforeUnmount(() => {
                                 class="mb-2 font-display text-lg font-semibold text-kitb-green-900 transition-colors group-hover:text-kitb-navy-900 sm:text-xl"
                             >
                                 {{
-                                    firstValue(
+                                    localizedFirstValue(
                                         job,
                                         ["judul"],
                                         trans("home.career.position_available"),
@@ -2939,28 +3103,32 @@ onBeforeUnmount(() => {
 
                             <div
                                 v-if="
-                                    job.departemen ||
-                                    job.lokasi ||
+                                    localizedFirstValue(job, ['departemen']) ||
+                                    localizedFirstValue(job, ['lokasi']) ||
                                     job.tanggal_tutup
                                 "
                                 class="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-kitb-ink-900/50"
                             >
                                 <span
-                                    v-if="job.departemen"
+                                    v-if="
+                                        localizedFirstValue(job, ['departemen'])
+                                    "
                                     class="inline-flex items-center gap-1.5"
                                 >
                                     <BriefcaseBusiness class="h-3.5 w-3.5" />
 
-                                    {{ job.departemen }}
+                                    {{
+                                        localizedFirstValue(job, ["departemen"])
+                                    }}
                                 </span>
 
                                 <span
-                                    v-if="job.lokasi"
+                                    v-if="localizedFirstValue(job, ['lokasi'])"
                                     class="inline-flex items-center gap-1.5"
                                 >
                                     <MapPin class="h-3.5 w-3.5" />
 
-                                    {{ job.lokasi }}
+                                    {{ localizedFirstValue(job, ["lokasi"]) }}
                                 </span>
 
                                 <span

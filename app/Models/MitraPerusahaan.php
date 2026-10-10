@@ -14,6 +14,8 @@ class MitraPerusahaan extends Model
 
     protected $fillable = [
         'nama_perusahaan',
+        'nama_perusahaan_en',
+        'nama_perusahaan_zh',
         'slug',
         'logo',
         'website',

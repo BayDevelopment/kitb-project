@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -13,12 +14,21 @@ return new class extends Migration
     {
         Schema::create('mitra_perusahaans', function (Blueprint $table) {
             $table->id();
+
+            // Nama perusahaan dalam tiga bahasa
             $table->string('nama_perusahaan');
+            $table->string('nama_perusahaan_en')->nullable();
+            $table->string('nama_perusahaan_zh')->nullable();
+
+            // Informasi perusahaan
             $table->string('slug')->unique();
             $table->string('logo')->nullable();
             $table->string('website')->nullable();
+
+            // Pengaturan tampilan
             $table->boolean('aktif')->default(true);
             $table->unsignedInteger('urutan')->default(0);
+
             $table->timestamps();
         });
     }
@@ -28,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('table_mitra_perusahaans');
+        Schema::dropIfExists('mitra_perusahaans');
     }
 };
