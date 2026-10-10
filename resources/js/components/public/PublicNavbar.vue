@@ -291,7 +291,7 @@ onBeforeUnmount(() => {
         <div class="relative z-50">
             <div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
                 <nav
-                    class="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between rounded-b-2xl border-x border-b border-white/70 bg-white/95 px-4 shadow-lg shadow-slate-900/5 backdrop-blur-xl sm:px-5 lg:h-[78px] lg:rounded-b-3xl lg:px-6"
+                    class="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between rounded-b-2xl border-x border-b border-white/70 bg-white/95 px-4 shadow-lg shadow-slate-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-card/95 dark:shadow-black/30 sm:px-5 lg:h-[78px] lg:rounded-b-3xl lg:px-6"
                     :aria-label="trans('navigation.main_navigation')"
                 >
                     <!-- Logo -->
@@ -301,7 +301,9 @@ onBeforeUnmount(() => {
                         :aria-label="trans('navigation.kitb_home')"
                         @click="handleNavItemClick"
                     >
-                        <div class="flex items-center gap-2">
+                        <div
+                            class="flex items-center gap-2 dark:rounded-xl dark:bg-white dark:px-2.5 dark:py-1"
+                        >
                             <img
                                 src="/images/siak-kabupaten.png"
                                 alt="Kabupaten Siak"
@@ -328,7 +330,7 @@ onBeforeUnmount(() => {
                             </p>
 
                             <p
-                                class="mt-1 text-[9px] font-medium uppercase tracking-[0.16em] text-kitb-green-700"
+                                class="mt-1 text-[9px] font-medium uppercase tracking-[0.16em] text-kitb-green-700 dark:text-kitb-teal-300"
                             >
                                 Industrial Estate
                             </p>
@@ -344,7 +346,7 @@ onBeforeUnmount(() => {
                         >
                             <button
                                 type="button"
-                                class="nav-trigger inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors duration-200 hover:bg-kitb-sand-100 hover:text-kitb-green-800 focus:outline-none focus:ring-2 focus:ring-kitb-green-700/20"
+                                class="nav-trigger inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors duration-200 hover:bg-kitb-sand-100 hover:text-kitb-green-800 focus:outline-none focus:ring-2 focus:ring-kitb-green-700/20 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white dark:focus:ring-kitb-teal-300/30"
                             >
                                 {{ trans(group.translationKey ?? group.label) }}
 
@@ -358,13 +360,13 @@ onBeforeUnmount(() => {
                                 class="pointer-events-none invisible absolute left-1/2 top-full w-72 -translate-x-1/2 translate-y-2 pt-3 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
                             >
                                 <div
-                                    class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-2 shadow-xl shadow-slate-900/10"
+                                    class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-2 shadow-xl shadow-slate-900/10 dark:border-white/10 dark:bg-card dark:shadow-black/40"
                                 >
                                     <Link
                                         v-for="item in group.items"
                                         :key="item.translationKey ?? item.label"
                                         :href="item.href"
-                                        class="group/item flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors duration-150 hover:bg-kitb-sand-50 hover:text-kitb-green-800"
+                                        class="group/item flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors duration-150 hover:bg-kitb-sand-50 hover:text-kitb-green-800 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white"
                                         @click="handleNavItemClick"
                                     >
                                         <span class="min-w-0 truncate">
@@ -378,7 +380,7 @@ onBeforeUnmount(() => {
 
                                         <span
                                             v-if="item.badge"
-                                            class="shrink-0 rounded-full bg-kitb-green-700/10 px-2 py-0.5 text-[10px] font-semibold text-kitb-green-800"
+                                            class="shrink-0 rounded-full bg-kitb-green-700/10 px-2 py-0.5 text-[10px] font-semibold text-kitb-green-800 dark:bg-kitb-teal-300/15 dark:text-kitb-teal-300"
                                         >
                                             {{
                                                 item.badgeTranslationKey
@@ -396,7 +398,7 @@ onBeforeUnmount(() => {
                         <!-- Contact -->
                         <Link
                             :href="kontakLink.href"
-                            class="nav-trigger inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors duration-200 hover:bg-kitb-sand-100 hover:text-kitb-green-800 focus:outline-none focus:ring-2 focus:ring-kitb-green-700/20"
+                            class="nav-trigger inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors duration-200 hover:bg-kitb-sand-100 hover:text-kitb-green-800 focus:outline-none focus:ring-2 focus:ring-kitb-green-700/20 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white dark:focus:ring-kitb-teal-300/30"
                             @click="handleNavItemClick"
                         >
                             <Phone class="size-3.5" />
@@ -419,7 +421,7 @@ onBeforeUnmount(() => {
                             <button
                                 type="button"
                                 :disabled="isChangingLanguage"
-                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] font-medium text-slate-700 transition-colors duration-200 hover:bg-kitb-sand-100 hover:text-kitb-green-800 focus:outline-none focus:ring-2 focus:ring-kitb-green-700/20 disabled:cursor-wait disabled:opacity-70"
+                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] font-medium text-slate-700 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white dark:focus:ring-kitb-teal-300/30 transition-colors duration-200 hover:bg-kitb-sand-100 hover:text-kitb-green-800 focus:outline-none focus:ring-2 focus:ring-kitb-green-700/20 disabled:cursor-wait disabled:opacity-70"
                                 :aria-expanded="languageOpen"
                                 aria-haspopup="true"
                                 :aria-label="trans('navigation.language')"
@@ -444,7 +446,7 @@ onBeforeUnmount(() => {
                             <Transition name="language-dropdown">
                                 <div
                                     v-if="languageOpen"
-                                    class="absolute right-0 top-full z-[60] mt-2 w-48 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-2 shadow-xl shadow-slate-900/10"
+                                    class="absolute right-0 top-full z-[60] mt-2 w-48 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-2 shadow-xl shadow-slate-900/10 dark:border-white/10 dark:bg-card dark:shadow-black/40"
                                 >
                                     <p
                                         class="px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
@@ -460,8 +462,8 @@ onBeforeUnmount(() => {
                                         class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors disabled:cursor-wait disabled:opacity-60"
                                         :class="
                                             currentLanguage === language.code
-                                                ? 'bg-kitb-sand-100 font-semibold text-kitb-green-800'
-                                                : 'text-slate-700 hover:bg-kitb-sand-50 hover:text-kitb-green-800'
+                                                ? 'bg-kitb-sand-100 font-semibold text-kitb-green-800 dark:bg-white/10 dark:text-white'
+                                                : 'text-slate-700 hover:bg-kitb-sand-50 hover:text-kitb-green-800 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white'
                                         "
                                         :aria-current="
                                             currentLanguage === language.code
@@ -487,7 +489,7 @@ onBeforeUnmount(() => {
                                                 currentLanguage ===
                                                 language.code
                                             "
-                                            class="text-xs text-kitb-green-700"
+                                            class="text-xs text-kitb-green-700 dark:text-kitb-teal-300"
                                             aria-hidden="true"
                                         >
                                             ✓
@@ -514,7 +516,7 @@ onBeforeUnmount(() => {
                     <!-- Mobile Trigger -->
                     <button
                         type="button"
-                        class="inline-flex size-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-kitb-sand-50 focus:outline-none focus:ring-2 focus:ring-kitb-green-700/20 lg:hidden"
+                        class="inline-flex size-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-kitb-sand-50 focus:outline-none focus:ring-2 focus:ring-kitb-green-700/20 lg:hidden dark:border-white/15 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10 dark:focus:ring-kitb-teal-300/30"
                         :aria-expanded="mobileMenuOpen"
                         aria-controls="public-mobile-menu"
                         :aria-label="
@@ -545,7 +547,7 @@ onBeforeUnmount(() => {
                     class="absolute inset-x-0 top-[calc(72px+env(safe-area-inset-top))] z-50 px-4 sm:px-6 lg:hidden"
                 >
                     <div
-                        class="mx-auto max-w-[1440px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/10"
+                        class="mx-auto max-w-[1440px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/10 dark:border-white/10 dark:bg-card dark:shadow-black/50"
                     >
                         <div
                             class="max-h-[calc(100vh-110px)] overflow-y-auto p-3"
@@ -554,11 +556,11 @@ onBeforeUnmount(() => {
                             <div
                                 v-for="group in navGroups"
                                 :key="group.translationKey ?? group.label"
-                                class="border-b border-slate-100 last:border-b-0"
+                                class="border-b border-slate-100 last:border-b-0 dark:border-white/10"
                             >
                                 <button
                                     type="button"
-                                    class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3.5 text-left text-sm font-semibold text-slate-800 transition-colors hover:bg-kitb-sand-50"
+                                    class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3.5 text-left text-sm font-semibold text-slate-800 transition-colors hover:bg-kitb-sand-50 dark:text-slate-100 dark:hover:bg-white/10"
                                     :aria-expanded="
                                         openMobileGroup ===
                                         (group.translationKey ?? group.label)
@@ -600,7 +602,7 @@ onBeforeUnmount(() => {
                                         v-for="item in group.items"
                                         :key="item.translationKey ?? item.label"
                                         :href="item.href"
-                                        class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-kitb-sand-50 hover:text-kitb-green-800"
+                                        class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-kitb-sand-50 hover:text-kitb-green-800 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
                                         @click="handleNavItemClick"
                                     >
                                         <span>
@@ -614,7 +616,7 @@ onBeforeUnmount(() => {
 
                                         <span
                                             v-if="item.badge"
-                                            class="shrink-0 rounded-full bg-kitb-green-700/10 px-2 py-0.5 text-[10px] font-semibold text-kitb-green-800"
+                                            class="shrink-0 rounded-full bg-kitb-green-700/10 px-2 py-0.5 text-[10px] font-semibold text-kitb-green-800 dark:bg-kitb-teal-300/15 dark:text-kitb-teal-300"
                                         >
                                             {{
                                                 item.badgeTranslationKey
@@ -629,9 +631,13 @@ onBeforeUnmount(() => {
                             </div>
 
                             <!-- Mobile Actions -->
-                            <div class="mt-3 border-t border-slate-100 pt-3">
+                            <div
+                                class="mt-3 border-t border-slate-100 pt-3 dark:border-white/10"
+                            >
                                 <!-- Mobile Language -->
-                                <div class="mb-2 rounded-2xl bg-slate-50 p-2">
+                                <div
+                                    class="mb-2 rounded-2xl bg-slate-50 p-2 dark:bg-white/5"
+                                >
                                     <p
                                         class="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
                                     >
@@ -648,8 +654,8 @@ onBeforeUnmount(() => {
                                             :class="
                                                 currentLanguage ===
                                                 language.code
-                                                    ? 'bg-white font-semibold text-kitb-green-800 shadow-sm'
-                                                    : 'text-slate-600 hover:bg-white hover:text-kitb-green-800'
+                                                    ? 'bg-white font-semibold text-kitb-green-800 shadow-sm dark:bg-white/10 dark:text-white dark:shadow-none'
+                                                    : 'text-slate-600 hover:bg-white hover:text-kitb-green-800 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white'
                                             "
                                             :aria-current="
                                                 currentLanguage ===
@@ -685,7 +691,7 @@ onBeforeUnmount(() => {
                                 <!-- Mobile Contact -->
                                 <Link
                                     :href="kontakLink.href"
-                                    class="flex items-center rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 transition-colors hover:bg-kitb-sand-50 hover:text-kitb-green-800"
+                                    class="flex items-center rounded-xl px-3 py-3 text-sm font-semibold text-slate-800 transition-colors hover:bg-kitb-sand-50 hover:text-kitb-green-800 dark:text-slate-100 dark:hover:bg-white/10 dark:hover:text-white"
                                     @click="handleNavItemClick"
                                 >
                                     {{
@@ -785,6 +791,16 @@ onBeforeUnmount(() => {
 .icon-fade-leave-to {
     opacity: 0;
     transform: scale(0.8) rotate(10deg);
+}
+
+:global(.dark) .btn-primary {
+    background: #2e6fbf;
+    box-shadow: 0 8px 20px rgba(46, 111, 191, 0.3);
+}
+
+:global(.dark) .btn-primary:hover {
+    background: #4c82c8;
+    box-shadow: 0 12px 24px rgba(46, 111, 191, 0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1291,7 +1291,7 @@ onBeforeUnmount(() => {
     <Head :title="companyName" />
 
     <div
-        class="kitb-landing relative min-h-screen overflow-x-clip bg-kitb-sand-50 text-kitb-ink-900 antialiased"
+        class="kitb-landing relative min-h-screen overflow-x-clip bg-kitb-sand-50 text-kitb-ink-900 antialiased transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100"
     >
         <!-- =====================================================
              HERO
@@ -2497,7 +2497,7 @@ onBeforeUnmount(() => {
                         </p>
 
                         <h2
-                            class="font-display font-bold leading-[1.08] text-kitb-green-900"
+                            class="font-display font-bold leading-[1.08] text-kitb-green-900 dark:text-slate-100"
                             style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
                         >
                             {{ trans("home.subsidiaries.title") }}
@@ -2505,7 +2505,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <Building2
-                        class="hidden h-10 w-10 text-kitb-green-700/20 md:block"
+                        class="hidden h-10 w-10 text-kitb-green-700/20 dark:text-slate-400/70 md:block"
                     />
                 </div>
 
@@ -2517,10 +2517,10 @@ onBeforeUnmount(() => {
                         :style="{
                             transitionDelay: `${index * 80}ms`,
                         }"
-                        class="group rounded-2xl border border-black/5 bg-white/60 p-5 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5 sm:p-6"
+                        class="group rounded-2xl border border-black/5 bg-white/60 p-5 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-xl hover:shadow-kitb-navy-900/5 dark:border-white/10 dark:bg-slate-900/80 dark:hover:bg-slate-800 sm:p-6"
                     >
                         <div
-                            class="mb-6 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-black/5 bg-kitb-sand-100"
+                            class="mb-6 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-black/5 bg-kitb-sand-100 dark:border-white/10 dark:bg-slate-800"
                         >
                             <img
                                 v-if="anakUsahaImage(anak)"
@@ -2533,19 +2533,19 @@ onBeforeUnmount(() => {
 
                             <Building2
                                 v-else
-                                class="h-7 w-7 text-kitb-green-700/40"
+                                class="h-7 w-7 text-kitb-green-700/40 dark:text-sky-300"
                             />
                         </div>
 
                         <h3
-                            class="mb-2 font-display text-lg font-semibold text-kitb-green-900"
+                            class="mb-2 font-display text-lg font-semibold text-kitb-green-900 dark:text-slate-100"
                         >
                             {{ anakUsahaName(anak) }}
                         </h3>
 
                         <p
                             v-if="localizedFirstValue(anak, ['deskripsi'])"
-                            class="mb-5 text-[14px] leading-[1.75] text-kitb-ink-900/60"
+                            class="mb-5 text-[14px] leading-[1.75] text-kitb-ink-900/60 dark:text-slate-300"
                         >
                             {{
                                 truncate(
@@ -2560,7 +2560,7 @@ onBeforeUnmount(() => {
                             :href="normalizeWebsite(anak.website)"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="inline-flex items-center gap-2 text-[13px] font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900"
+                            class="inline-flex items-center gap-2 text-[13px] font-semibold text-kitb-green-700 transition-colors hover:text-kitb-navy-900 dark:text-sky-300 dark:hover:text-sky-200"
                         >
                             {{ trans("home.subsidiaries.visit_website") }}
 
@@ -2603,7 +2603,7 @@ onBeforeUnmount(() => {
                         </p>
 
                         <h2
-                            class="font-display font-bold leading-[1.08] text-kitb-green-900"
+                            class="font-display font-bold leading-[1.08] text-kitb-green-900 dark:text-slate-100"
                             style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
                         >
                             {{ trans("home.partners.title") }}
@@ -2886,7 +2886,7 @@ onBeforeUnmount(() => {
                         </p>
 
                         <h2
-                            class="font-display font-bold leading-[1.08] text-kitb-green-900"
+                            class="font-display font-bold leading-[1.08] text-kitb-green-900 dark:text-slate-100"
                             style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
                         >
                             {{ trans("home.news.title") }}
@@ -3033,7 +3033,7 @@ onBeforeUnmount(() => {
                         </p>
 
                         <h2
-                            class="font-display font-bold leading-[1.08] text-kitb-green-900"
+                            class="font-display font-bold leading-[1.08] text-kitb-green-900 dark:text-slate-100"
                             style="font-size: clamp(1.8rem, 3.5vw, 2.8rem)"
                         >
                             {{ trans("home.career.title") }}
@@ -3647,6 +3647,267 @@ onBeforeUnmount(() => {
 
     .btn-primary:hover {
         transform: none;
+    }
+}
+
+/* =========================================================
+   DARK MODE COMPATIBILITY
+   Follows the app-level `html.dark` class (Laravel/Vue theme
+   manager). The page does not own or override the saved theme.
+   ========================================================= */
+
+:global(.dark) .kitb-landing {
+    color-scheme: dark;
+    background-color: #020617;
+    color: #e2e8f0;
+}
+
+/* Sections that used fixed light backgrounds */
+:global(.dark) .kitb-landing .bg-slate-50,
+:global(.dark) .kitb-landing .bg-kitb-sand-50 {
+    background-color: #0f172a;
+}
+
+:global(.dark) .kitb-landing .bg-white,
+:global(.dark) .kitb-landing .bg-white\/85,
+:global(.dark) .kitb-landing .bg-white\/60 {
+    background-color: #111c30;
+}
+
+:global(.dark) .kitb-landing .bg-slate-100 {
+    background-color: #1e293b;
+}
+
+/* Common fixed text colors */
+:global(.dark) .kitb-landing .text-slate-900,
+:global(.dark) .kitb-landing .text-slate-800,
+:global(.dark) .kitb-landing .text-kitb-ink-900,
+:global(.dark) .kitb-landing .text-kitb-green-900 {
+    color: #e2e8f0;
+}
+
+:global(.dark) .kitb-landing .text-slate-700,
+:global(.dark) .kitb-landing .text-slate-600,
+:global(.dark) .kitb-landing .text-slate-500,
+:global(.dark) .kitb-landing .text-kitb-ink-900\/70,
+:global(.dark) .kitb-landing .text-kitb-ink-900\/60,
+:global(.dark) .kitb-landing .text-kitb-ink-900\/55,
+:global(.dark) .kitb-landing .text-kitb-ink-900\/45 {
+    color: #cbd5e1;
+}
+
+/* Cards, separators, and controls */
+:global(.dark) .kitb-landing .border-slate-200,
+:global(.dark) .kitb-landing .border-slate-200\/80,
+:global(.dark) .kitb-landing .border-black\/10,
+:global(.dark) .kitb-landing .border-black\/15 {
+    border-color: rgb(148 163 184 / 0.22);
+}
+
+:global(.dark) .kitb-landing .shadow-sm,
+:global(.dark) .kitb-landing .shadow-md {
+    --tw-shadow-color: rgb(0 0 0 / 0.25);
+}
+
+:global(.dark) .kitb-landing .rich-content {
+    color: #cbd5e1;
+}
+
+:global(.dark) .kitb-landing .rich-content :deep(strong),
+:global(.dark) .kitb-landing .rich-content :deep(b),
+:global(.dark) .kitb-landing .rich-content :deep(h1),
+:global(.dark) .kitb-landing .rich-content :deep(h2),
+:global(.dark) .kitb-landing .rich-content :deep(h3),
+:global(.dark) .kitb-landing .rich-content :deep(h4),
+:global(.dark) .kitb-landing .rich-content :deep(h5),
+:global(.dark) .kitb-landing .rich-content :deep(h6) {
+    color: #f1f5f9;
+}
+
+:global(.dark) .kitb-landing .rich-content :deep(blockquote) {
+    background: rgb(148 163 184 / 0.08);
+    color: #cbd5e1;
+}
+
+:global(.dark) .kitb-landing .rich-content :deep(th) {
+    background: #1e293b;
+    color: #f1f5f9;
+}
+
+:global(.dark) .kitb-landing .rich-content :deep(th),
+:global(.dark) .kitb-landing .rich-content :deep(td),
+:global(.dark) .kitb-landing .rich-content :deep(hr) {
+    border-color: rgb(148 163 184 / 0.25);
+}
+
+/* Keep gradients readable when the director's message is collapsed. */
+:global(.dark) .kitb-landing .from-white {
+    --tw-gradient-from: #111c30 var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(17 28 48 / 0) var(--tw-gradient-to-position);
+}
+
+:global(.dark) .kitb-landing .via-white {
+    --tw-gradient-to: rgb(17 28 48 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops:
+        var(--tw-gradient-from), #111c30 var(--tw-gradient-via-position),
+        var(--tw-gradient-to);
+}
+
+/* Subsidiary cards: explicit theme colors avoid translucent white cards
+   appearing grey in dark mode and keep fallback Lucide icons visible. */
+:global(.dark) .kitb-landing #anak-usaha article {
+    background-color: rgb(15 23 42 / 0.92);
+    border-color: rgb(148 163 184 / 0.2);
+    color: #e2e8f0;
+}
+
+:global(.dark) .kitb-landing #anak-usaha article:hover {
+    background-color: #1e293b;
+}
+
+:global(.dark) .kitb-landing #anak-usaha article h3 {
+    color: #f1f5f9;
+}
+
+:global(.dark) .kitb-landing #anak-usaha article p {
+    color: #cbd5e1;
+}
+
+:global(.dark) .kitb-landing #anak-usaha article > div:first-child {
+    background-color: #1e293b;
+    border-color: rgb(148 163 184 / 0.2);
+}
+
+:global(.dark) .kitb-landing #anak-usaha article > div:first-child svg {
+    color: #7dd3fc;
+}
+
+/* Partner, news and career cards must use opaque theme-aware surfaces.
+   These selectors cover the translucent Tailwind backgrounds used by cards. */
+:global(.dark) .kitb-landing #mitra-perusahaan {
+    background-color: #0b1220;
+}
+:global(.dark) .kitb-landing #mitra-perusahaan article {
+    color: #e2e8f0;
+    background-color: #111c30;
+    border-color: rgb(148 163 184 / 0.24);
+}
+:global(.dark) .kitb-landing #mitra-perusahaan article > div.relative {
+    background-color: #1e293b;
+    border-color: rgb(148 163 184 / 0.2);
+}
+:global(.dark) .kitb-landing #mitra-perusahaan article h3,
+:global(.dark) .kitb-landing #mitra-perusahaan article .text-kitb-green-900 {
+    color: #f1f5f9;
+}
+:global(.dark) .kitb-landing #mitra-perusahaan article a {
+    color: #7dd3fc;
+}
+:global(.dark) .kitb-landing #mitra-perusahaan button {
+    background-color: #172338;
+    color: #bae6fd;
+    border-color: rgb(148 163 184 / 0.3);
+}
+:global(.dark) .kitb-landing #berita article,
+:global(.dark) .kitb-landing #news article {
+    background-color: #111c30;
+    border-color: rgb(148 163 184 / 0.22);
+}
+:global(.dark) .kitb-landing #berita article h3,
+:global(.dark) .kitb-landing #news article h3,
+:global(.dark) .kitb-landing #karier a.group h3 {
+    color: #f1f5f9;
+}
+:global(.dark) .kitb-landing #berita article p,
+:global(.dark) .kitb-landing #news article p,
+:global(.dark) .kitb-landing #karier a.group {
+    color: #cbd5e1;
+}
+:global(.dark) .kitb-landing #karier {
+    background-color: #0f1d33;
+}
+:global(.dark) .kitb-landing #karier a.group {
+    background-color: #172338;
+    border-color: rgb(148 163 184 / 0.22);
+}
+:global(.dark) .kitb-landing #karier a.group:hover {
+    background-color: #1e293b;
+}
+
+/* Explicit light mode prevents pale dark-theme text on white backgrounds. */
+:global(html.light) .kitb-landing #mitra-perusahaan {
+    background-color: #ffffff;
+}
+:global(html.light) .kitb-landing #mitra-perusahaan h2,
+:global(html.light) .kitb-landing #mitra-perusahaan article h3,
+:global(html.light) .kitb-landing #berita h2,
+:global(html.light) .kitb-landing #berita article h3,
+:global(html.light) .kitb-landing #karier h2,
+:global(html.light) .kitb-landing #karier a.group h3 {
+    color: #12345b;
+}
+:global(html.light) .kitb-landing #mitra-perusahaan article {
+    background-color: #ffffff;
+    border-color: #e2e8f0;
+}
+:global(html.light) .kitb-landing #mitra-perusahaan article > div.relative {
+    background-color: #f8fafc;
+    border-color: #f1f5f9;
+}
+:global(html.light) .kitb-landing #berita article {
+    background-color: #ffffff;
+    border-color: #e2e8f0;
+}
+:global(html.light) .kitb-landing #karier {
+    background-color: #f1f5f9;
+}
+:global(html.light) .kitb-landing #karier a.group {
+    background-color: #ffffff;
+    border-color: #e2e8f0;
+}
+
+/* The hero is transparent; retain its blue visual identity in both themes. */
+:global(.dark) .kitb-landing .hero-blob-field {
+    background-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+    /* System preference fallback when the app has not applied a theme class. */
+    :global(html:not(.light):not(.dark)) .kitb-landing {
+        background-color: #020617;
+        color: #e2e8f0;
+    }
+
+    :global(html:not(.light):not(.dark)) .kitb-landing .bg-slate-50,
+    :global(html:not(.light):not(.dark)) .kitb-landing .bg-kitb-sand-50 {
+        background-color: #0f172a;
+    }
+
+    :global(html:not(.light):not(.dark)) .kitb-landing .bg-white {
+        background-color: #111c30;
+    }
+
+    :global(html:not(.light):not(.dark)) .kitb-landing .text-slate-900,
+    :global(html:not(.light):not(.dark)) .kitb-landing .text-slate-800,
+    :global(html:not(.light):not(.dark)) .kitb-landing .text-kitb-ink-900,
+    :global(html:not(.light):not(.dark)) .kitb-landing .text-kitb-green-900 {
+        color: #e2e8f0;
+    }
+
+    :global(html:not(.light):not(.dark)) .kitb-landing .text-slate-700,
+    :global(html:not(.light):not(.dark)) .kitb-landing .text-slate-600,
+    :global(html:not(.light):not(.dark)) .kitb-landing .text-slate-500,
+    :global(html:not(.light):not(.dark)) .kitb-landing .text-kitb-ink-900\/70 {
+        color: #cbd5e1;
+    }
+
+    :global(html:not(.light):not(.dark)) .kitb-landing .border-slate-200,
+    :global(html:not(.light):not(.dark)) .kitb-landing .border-slate-200\/80 {
+        border-color: rgb(148 163 184 / 0.22);
+    }
+
+    :global(html:not(.light):not(.dark)) .kitb-landing .rich-content {
+        color: #cbd5e1;
     }
 }
 </style>

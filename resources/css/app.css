@@ -71,18 +71,25 @@
     --color-kitb-green-800: var(--kitb-green-800);
     --color-kitb-green-900: var(--kitb-green-900);
 
+    --color-kitb-navy-100: var(--kitb-navy-100);
+    --color-kitb-navy-300: var(--kitb-navy-300);
     --color-kitb-navy-900: var(--kitb-navy-900);
     --color-kitb-surface: var(--kitb-surface);
 
+    --color-kitb-teal-50: var(--kitb-teal-50);
+    --color-kitb-teal-100: var(--kitb-teal-100);
+    --color-kitb-teal-200: var(--kitb-teal-200);
     --color-kitb-teal-300: var(--kitb-teal-300);
     --color-kitb-teal-500: var(--kitb-teal-500);
     --color-kitb-teal-600: var(--kitb-teal-600);
+    --color-kitb-teal-700: var(--kitb-teal-700);
 
     --color-kitb-sand-50: var(--kitb-sand-50);
     --color-kitb-sand-100: var(--kitb-sand-100);
 
     --color-kitb-ink-900: var(--kitb-ink-900);
     --color-kitb-amber-500: var(--kitb-amber-500);
+    --color-kitb-amber-700: var(--kitb-amber-700);
 }
 
 /*
@@ -234,18 +241,25 @@
     --kitb-green-800: #10294f; /* angka statistik, judul */
     --kitb-green-900: #0b1f3f; /* teks judul utama */
 
+    --kitb-navy-100: #d9e4f3;
+    --kitb-navy-300: #7fa0cf;
     --kitb-navy-900: #0b1f3f; /* background gelap: Visi, footer, kartu luas */
     --kitb-surface: #ffffff; /* kartu, dropdown, input */
 
+    --kitb-teal-50: #eef4fb;
+    --kitb-teal-100: #dbe8f6;
+    --kitb-teal-200: #bcd4ef;
     --kitb-teal-300: #8fb8e8;
     --kitb-teal-500: #2e6fbf;
     --kitb-teal-600: #245aa0;
+    --kitb-teal-700: #1d4c85;
 
     --kitb-sand-50: #f6f8fb;
     --kitb-sand-100: #eaeff6;
 
     --kitb-ink-900: #0f172a;
     --kitb-amber-500: #c8963e;
+    --kitb-amber-700: #8a5f17;
 }
 
 /*
@@ -310,26 +324,52 @@
     --kitb-green-800: #bfd4f2; /* terang, dipakai sebagai teks */
     --kitb-green-900: #eaf1fb; /* terang, dipakai sebagai teks judul */
 
+    --kitb-navy-100: #12294a;
+    --kitb-navy-300: #2e5b9a;
     --kitb-navy-900: #0c2345; /* tetap biru dongker pekat */
     --kitb-surface: #12223d;
 
+    --kitb-teal-50: #10233f;
+    --kitb-teal-100: #14305a;
+    --kitb-teal-200: #1e4577;
     --kitb-teal-300: #8fb8e8;
     --kitb-teal-500: #4c8bdb;
     --kitb-teal-600: #7fb0ee;
+    --kitb-teal-700: #a9c9f2;
 
     --kitb-sand-50: #081224; /* background halaman */
     --kitb-sand-100: #0c1a31; /* background section selang-seling */
 
     --kitb-ink-900: #e6edf8;
     --kitb-amber-500: #d9a94f;
+    --kitb-amber-700: #f0c875;
 }
 
 /*
 |--------------------------------------------------------------------------
-| KITB Landing — penyesuaian dark mode
+| KITB Landing — dark mode (berbasis token)
+|--------------------------------------------------------------------------
+| Token brand sudah berganti otomatis lewat .dark. Blok ini hanya menangani
+| utility Tailwind yang TIDAK memakai token (white, slate, black/xx) serta
+| beberapa kombinasi yang kontrasnya buruk saat warna dibalik.
+| Taruh di sini (bukan di <style scoped> Vue) agar satu sumber kebenaran.
 |--------------------------------------------------------------------------
 */
 
+.dark .kitb-landing {
+    --kd-surface: #0d1b33; /* kartu */
+    --kd-surface-2: #12223d; /* kartu hover */
+    --kd-surface-3: #172b4d; /* tile ikon */
+    --kd-logo-tile: #eef2f8; /* wadah logo (logo dirancang utk latar terang) */
+    --kd-border: rgb(255 255 255 / 0.09);
+    --kd-border-strong: rgb(255 255 255 / 0.18);
+    --kd-text-muted: #b4c3dc;
+    --kd-text-subtle: #8fa3c2;
+    --kd-accent: var(--kitb-teal-300);
+    --kd-accent-soft: rgb(143 184 232 / 0.12);
+}
+
+/* ---------- Border ---------- */
 .dark .kitb-landing .border-black\/5 {
     border-color: rgb(255 255 255 / 0.08);
 }
@@ -342,14 +382,258 @@
     border-color: rgb(255 255 255 / 0.2);
 }
 
-.dark .kitb-landing .text-black\/50 {
-    color: rgb(255 255 255 / 0.55);
+.dark .kitb-landing [class*="border-slate-"] {
+    border-color: var(--kd-border);
 }
 
-.dark .kitb-landing .hover\:bg-black\/5:hover {
-    background: rgb(255 255 255 / 0.06);
+.dark .kitb-landing [class*="border-kitb-green-700/"] {
+    border-color: var(--kd-border-strong);
 }
 
+/* ---------- Latar & kartu ---------- */
+.dark .kitb-landing .bg-slate-50 {
+    background-color: var(--kitb-sand-100);
+}
+
+.dark .kitb-landing .bg-slate-100 {
+    background-color: var(--kd-surface-3);
+}
+
+.dark .kitb-landing [class*="bg-slate-50/"] {
+    background-color: var(--kd-surface-2);
+}
+
+.dark .kitb-landing .bg-white,
+.dark .kitb-landing [class*="bg-white/6"],
+.dark .kitb-landing [class*="bg-white/7"],
+.dark .kitb-landing [class*="bg-white/8"] {
+    background-color: var(--kd-surface);
+}
+
+/* Kartu gelap "Tentang Kami" — beri border agar terpisah dari latar */
+.dark .kitb-landing .bg-slate-900 {
+    background-color: var(--kitb-navy-900);
+    border-color: var(--kd-border-strong);
+}
+
+/* Section bergaya putih (Mitra) */
+.dark .kitb-landing #mitra-perusahaan {
+    background-color: var(--kitb-sand-100);
+}
+
+/* Pengecualian: tombol putih di dalam CTA hijau/biru tetap putih */
+.dark .kitb-landing .bg-kitb-green-700 a.bg-white {
+    background-color: #ffffff;
+}
+
+/* Hover kartu */
+.dark .kitb-landing article.group:hover,
+.dark .kitb-landing a.group:hover,
+.dark .kitb-landing [class*="hover:bg-white"]:hover {
+    background-color: var(--kd-surface-2);
+    border-color: var(--kd-border-strong);
+}
+
+/* Blur dekoratif: redam supaya tidak jadi noda abu-abu */
+.dark .kitb-landing [class*="bg-slate-200/"] {
+    background-color: rgb(46 111 191 / 0.12);
+}
+
+/* Shadow lebih pekat di dark */
+.dark .kitb-landing .shadow-sm,
+.dark .kitb-landing .shadow-md,
+.dark .kitb-landing .shadow-lg,
+.dark .kitb-landing .shadow-xl {
+    --tw-shadow-color: rgb(0 0 0 / 0.45);
+}
+
+/* ---------- Teks (utility slate tidak memakai token) ---------- */
+.dark .kitb-landing .text-slate-900,
+.dark .kitb-landing .text-slate-800 {
+    color: var(--kitb-ink-900);
+}
+
+.dark .kitb-landing .text-slate-700,
+.dark .kitb-landing .text-slate-600,
+.dark .kitb-landing .text-slate-500 {
+    color: var(--kd-text-muted);
+}
+
+.dark .kitb-landing .text-slate-400 {
+    color: var(--kd-text-subtle);
+}
+
+/* text-kitb-green-700 dipakai sebagai warna link/tombol. Di dark token ini
+   adalah biru tua (#1a4484) sehingga kontras buruk → pakai aksen terang. */
+.dark .kitb-landing .text-kitb-green-700 {
+    color: var(--kd-accent);
+}
+
+/* Teks hover yang berubah ke navy pekat → ganti terang */
+.dark .kitb-landing [class*="hover:text-kitb-navy-900"]:hover,
+.dark .kitb-landing .group:hover [class*="group-hover:text-kitb-navy-900"] {
+    color: #e0f2fe;
+}
+
+/* ---------- Ikon ---------- */
+.dark .kitb-landing [class*="text-kitb-green-700/"] {
+    color: rgb(148 163 184 / 0.5); /* ikon dekoratif besar di header section */
+}
+
+/* Ikon kutipan dekoratif (Quote) */
+.dark .kitb-landing [class*="text-kitb-navy-900/["] {
+    color: rgb(255 255 255 / 0.07);
+}
+
+/* Ikon cadangan saat logo kosong (berada di tile terang) */
+.dark .kitb-landing #anak-usaha article > div:first-child svg,
+.dark .kitb-landing #mitra-perusahaan article > div.h-24 svg {
+    color: #64748b;
+}
+
+/* ---------- Logo (anak usaha & mitra) ---------- */
+.dark .kitb-landing #anak-usaha article > div:first-child,
+.dark .kitb-landing #mitra-perusahaan article > div.h-24 {
+    background-color: var(--kd-logo-tile);
+    border-color: transparent;
+}
+
+.dark .kitb-landing #mitra-perusahaan article:hover > div.h-24 {
+    background-color: #ffffff;
+}
+
+/* ---------- Tombol ---------- */
+.dark .kitb-landing .btn-primary {
+    background: var(--kitb-teal-500);
+}
+
+.dark .kitb-landing .btn-primary:hover {
+    background: #5b96e3;
+    box-shadow: 0 12px 28px rgb(46 111 191 / 0.35);
+}
+
+/* Tombol outline & pill: hover jangan menjadi putih/terang */
+.dark .kitb-landing a[href="#kawasan"] {
+    color: var(--kitb-ink-900);
+}
+
+.dark .kitb-landing a[href="#kawasan"]:hover {
+    background-color: rgb(255 255 255 / 0.06);
+    border-color: var(--kd-accent);
+}
+
+.dark .kitb-landing a[class*="hover:bg-kitb-green-700"]:hover,
+.dark .kitb-landing button[class*="hover:bg-kitb-green-700"]:hover,
+.dark .kitb-landing .group:hover [class*="group-hover:bg-kitb-green-700"] {
+    background-color: var(--kitb-teal-500);
+    border-color: var(--kitb-teal-500);
+    color: #ffffff;
+}
+
+/* Focus */
+.dark .kitb-landing a:focus-visible,
+.dark .kitb-landing button:focus-visible {
+    outline-color: var(--kd-accent);
+}
+
+.dark .kitb-landing [class*="focus:ring-offset-2"]:focus {
+    --tw-ring-offset-color: var(--background);
+}
+
+/* ---------- Tabel rute ---------- */
+.dark .kitb-landing .route-row:nth-child(odd) {
+    background: rgb(255 255 255 / 0.03);
+}
+
+.dark .kitb-landing .route-row:hover {
+    background: rgb(143 184 232 / 0.08);
+}
+
+/* ---------- Gambar ---------- */
+.dark .kitb-landing img[loading="lazy"]:not(.object-contain) {
+    filter: brightness(0.92) contrast(1.03);
+    transition:
+        filter 0.4s ease,
+        transform 0.7s ease;
+}
+
+.dark .kitb-landing .group:hover img[loading="lazy"]:not(.object-contain) {
+    filter: brightness(1) contrast(1.03);
+}
+
+/* Blob dekoratif (sudah ada, dipertahankan) */
+.dark .kitb-landing .blob {
+    filter: saturate(0.85) brightness(0.75);
+}
+
+/* ---------- Gradient overlay (sambutan direktur collapsed) ---------- */
+.dark .kitb-landing .from-white {
+    --tw-gradient-from: var(--kd-surface) var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(13 27 51 / 0) var(--tw-gradient-to-position);
+}
+
+.dark .kitb-landing .via-white\/85 {
+    --tw-gradient-to: rgb(13 27 51 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops:
+        var(--tw-gradient-from),
+        rgb(13 27 51 / 0.85) var(--tw-gradient-via-position),
+        var(--tw-gradient-to);
+}
+
+/* ---------- Rich content (sambutan direktur) ---------- */
+.dark .kitb-landing .rich-content {
+    color: var(--kd-text-muted);
+}
+
+.dark .kitb-landing .rich-content strong,
+.dark .kitb-landing .rich-content b,
+.dark .kitb-landing .rich-content h1,
+.dark .kitb-landing .rich-content h2,
+.dark .kitb-landing .rich-content h3,
+.dark .kitb-landing .rich-content h4,
+.dark .kitb-landing .rich-content h5,
+.dark .kitb-landing .rich-content h6 {
+    color: var(--kitb-ink-900);
+}
+
+.dark .kitb-landing .rich-content a {
+    color: var(--kd-accent);
+}
+
+.dark .kitb-landing .rich-content a:hover {
+    color: #e0f2fe;
+}
+
+.dark .kitb-landing .rich-content li::marker {
+    color: var(--kd-accent);
+}
+
+.dark .kitb-landing .rich-content mark {
+    background: rgb(143 184 232 / 0.18);
+}
+
+.dark .kitb-landing .rich-content blockquote {
+    border-left-color: var(--kd-accent);
+    background: rgb(255 255 255 / 0.05);
+    color: var(--kd-text-muted);
+}
+
+.dark .kitb-landing .rich-content figcaption {
+    color: var(--kd-text-subtle);
+}
+
+.dark .kitb-landing .rich-content th {
+    background: var(--kd-surface-3);
+    color: var(--kitb-ink-900);
+}
+
+.dark .kitb-landing .rich-content th,
+.dark .kitb-landing .rich-content td,
+.dark .kitb-landing .rich-content hr {
+    border-color: var(--kd-border-strong);
+}
+
+/* ---------- Form ---------- */
 .dark .kitb-landing input,
 .dark .kitb-landing textarea {
     color: var(--kitb-ink-900);
@@ -360,6 +644,48 @@
     color: rgb(255 255 255 / 0.35);
 }
 
-.dark .kitb-landing .blob {
-    filter: saturate(0.85) brightness(0.75);
+.dark .kitb-landing .text-black\/50 {
+    color: rgb(255 255 255 / 0.55);
+}
+
+.dark .kitb-landing .hover\:bg-black\/5:hover {
+    background: rgb(255 255 255 / 0.06);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Login Form — dark mode
+|--------------------------------------------------------------------------
+*/
+
+.dark .login-form input:not([type="checkbox"]) {
+    background-color: var(--card);
+    border-color: var(--border);
+    color: var(--foreground);
+}
+
+.dark .login-form input:not([type="checkbox"]):hover {
+    border-color: #2a4170;
+}
+
+.dark .login-form input:not([type="checkbox"]):focus {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px rgb(91 150 227 / 0.2);
+}
+
+.dark .login-form input:not([type="checkbox"]):disabled {
+    background-color: var(--muted);
+}
+
+.dark .login-form input:-webkit-autofill,
+.dark .login-form input:-webkit-autofill:hover,
+.dark .login-form input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #e6edf8;
+    -webkit-box-shadow: 0 0 0 1000px #0d1b33 inset;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dark .kitb-landing img[loading="lazy"] {
+        transition: none;
+    }
 }
