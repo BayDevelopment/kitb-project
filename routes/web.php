@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\PetaKawasanController;
 use App\Http\Controllers\Admin\ProfilKawasanController;
 use App\Http\Controllers\Admin\ProfilPerusahaanController;
 use App\Http\Controllers\Admin\RuteController;
+use App\Http\Controllers\Admin\SambutanBupatiController;
 use App\Http\Controllers\Admin\SambutanDirekturController;
 use App\Http\Controllers\Admin\StrukturPerusahaanController;
 use App\Http\Controllers\Admin\VisiMisiController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\PublicLowonganKerjaController;
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
@@ -134,6 +136,16 @@ Route::post(
 )
     ->middleware('throttle:5,1')
     ->name('ajukan-kunjungan.store');
+
+
+
+Route::get('/kebijakan-privasi/PrivacyPolicy', function () {
+    return Inertia::render('PrivacyPolicy');
+})->name('kebijakan-privasi');
+
+Route::get('/pengaduan/Complaints', function () {
+    return Inertia::render('Complaints');
+})->name('pengaduan');
 
 /*
 |--------------------------------------------------------------------------
@@ -373,6 +385,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             |--------------------------------------------------------------------------
             */
 
+        /* **
+ * |--------------------------------------------------------------------------
+ * | Profil Perusahaan - Sambutan
+ * |--------------------------------------------------------------------------
+ * */
+
         Route::get(
             '/profil-perusahaan/sambutan',
             [SambutanDirekturController::class, 'index']
@@ -382,6 +400,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             '/profil-perusahaan/sambutan',
             [SambutanDirekturController::class, 'update']
         )->name('profil-perusahaan.sambutan.update');
+
+        Route::put(
+            '/profil-perusahaan/sambutan/bupati',
+            [SambutanBupatiController::class, 'update']
+        )->name('profil-perusahaan.sambutan.bupati.update');
 
         /*
         |--------------------------------------------------------------------------

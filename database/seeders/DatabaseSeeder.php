@@ -1707,33 +1707,67 @@ class DatabaseSeeder extends Seeder
 
 
             /*
-            |--------------------------------------------------------------------------
-            | 28. SAMBUTAN DIREKTUR
-            |--------------------------------------------------------------------------
-            */
+|--------------------------------------------------------------------------
+| 17. SAMBUTAN DIREKTUR
+|--------------------------------------------------------------------------
+*/
+
             DB::table('sambutan_direkturs')->updateOrInsert(
                 ['id' => 1],
                 [
                     // Bahasa Indonesia
                     'nama_direktur' => 'Budi Santoso',
                     'jabatan_direktur' => 'Direktur Utama',
-                    'sambutan_direktur' => '<p>Selamat datang di situs resmi PT Kawasan Industri Tanjung Buton.</p><p>Kami berkomitmen untuk mengembangkan kawasan industri yang terintegrasi, kompetitif, dan berkelanjutan. Melalui dukungan infrastruktur, pelayanan profesional, serta kolaborasi dengan para mitra, kami berharap dapat menciptakan nilai tambah bagi investor, masyarakat, dan perekonomian Indonesia.</p><p>Terima kasih atas kepercayaan dan dukungan Anda terhadap pengembangan Kawasan Industri Tanjung Buton.</p>',
+                    'sambutan_direktur' => '<p>Selamat datang di PT Kawasan Industri Tanjung Buton.</p><p>Kami berkomitmen untuk terus mengembangkan kawasan industri yang terintegrasi, berkelanjutan, dan memberikan nilai tambah bagi industri, masyarakat, serta perekonomian nasional.</p><p>Melalui dukungan infrastruktur yang memadai, konektivitas logistik, serta pelayanan yang profesional, kami berupaya menciptakan lingkungan investasi yang aman, nyaman, dan kompetitif.</p><p>Kami mengundang para investor dan mitra strategis untuk bersama-sama membangun masa depan industri Indonesia.</p>',
 
-                    // Bahasa Inggris
+                    // English
                     'nama_direktur_en' => 'Budi Santoso',
                     'jabatan_direktur_en' => 'President Director',
-                    'sambutan_direktur_en' => '<p>Welcome to the official website of PT Kawasan Industri Tanjung Buton.</p><p>We are committed to developing an integrated, competitive, and sustainable industrial estate. Through reliable infrastructure, professional services, and collaboration with our partners, we aim to create added value for investors, communities, and the Indonesian economy.</p><p>Thank you for your trust and support in the development of Tanjung Buton Industrial Estate.</p>',
+                    'sambutan_direktur_en' => '<p>Welcome to PT Kawasan Industri Tanjung Buton.</p><p>We are committed to continuously developing an integrated and sustainable industrial estate that creates added value for industries, communities, and the national economy.</p><p>Through reliable infrastructure, strong logistics connectivity, and professional services, we strive to create a safe, comfortable, and competitive investment environment.</p><p>We welcome investors and strategic partners to work together in building the future of Indonesia’s industrial sector.</p>',
 
-                    // Bahasa Mandarin
+                    // Mandarin
                     'nama_direktur_zh' => '布迪·桑托索',
                     'jabatan_direktur_zh' => '总裁董事',
-                    'sambutan_direktur_zh' => '<p>欢迎访问 PT Kawasan Industri Tanjung Buton 官方网站。</p><p>我们致力于打造一体化、具有竞争力且可持续发展的工业园区。通过可靠的基础设施、专业的服务以及与合作伙伴的协作，我们希望为投资者、当地社区和印度尼西亚经济创造更多价值。</p><p>感谢您对丹绒布顿工业园区发展的信任与支持。</p>',
+                    'sambutan_direktur_zh' => '<p>欢迎来到丹绒布顿工业园区。</p><p>我们致力于持续发展一体化、可持续的工业园区，为产业、社会以及国家经济创造更多价值。</p><p>通过完善的基础设施、强大的物流连接以及专业的服务，我们努力打造安全、舒适且具有竞争力的投资环境。</p><p>我们诚挚邀请投资者和战略合作伙伴携手合作，共同建设印度尼西亚工业发展的未来。</p>',
 
-                    // Data umum
                     'foto_direktur' => null,
                     'status' => true,
-                    'created_at' => $now,
-                    'updated_at' => $now,
+
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+
+
+            /*
+|--------------------------------------------------------------------------
+| 18. SAMBUTAN BUPATI
+|--------------------------------------------------------------------------
+*/
+
+            DB::table('sambutan_bupatis')->updateOrInsert(
+                ['id' => 1],
+                [
+                    // Bahasa Indonesia
+                    'nama_bupati' => 'Dr. H. Alfedri',
+                    'jabatan_bupati' => 'Bupati Siak',
+                    'sambutan_bupati' => '<p>Selamat datang di Kawasan Industri Tanjung Buton.</p><p>Pemerintah Kabupaten Siak mendukung pengembangan kawasan industri sebagai salah satu langkah strategis dalam mendorong pertumbuhan ekonomi daerah, meningkatkan investasi, serta membuka peluang kerja bagi masyarakat.</p><p>Kami berharap Kawasan Industri Tanjung Buton dapat berkembang menjadi kawasan industri yang maju, berdaya saing, dan berkelanjutan dengan tetap memperhatikan kepentingan masyarakat serta kelestarian lingkungan.</p><p>Semoga kerja sama antara pemerintah, pengelola kawasan, investor, dan masyarakat dapat terus diperkuat demi mewujudkan pembangunan yang memberikan manfaat bagi seluruh pihak.</p>',
+
+                    // English
+                    'nama_bupati_en' => 'Dr. H. Alfedri',
+                    'jabatan_bupati_en' => 'Regent of Siak',
+                    'sambutan_bupati_en' => '<p>Welcome to Tanjung Buton Industrial Estate.</p><p>The Siak Regency Government supports the development of the industrial estate as a strategic initiative to encourage regional economic growth, increase investment, and create employment opportunities for the community.</p><p>We hope that Tanjung Buton Industrial Estate will grow into a modern, competitive, and sustainable industrial estate while continuing to consider the interests of the community and environmental sustainability.</p><p>May cooperation between the government, estate management, investors, and the community continue to be strengthened to achieve development that benefits all stakeholders.</p>',
+
+                    // Mandarin
+                    'nama_bupati_zh' => '阿尔费德里博士',
+                    'jabatan_bupati_zh' => '锡亚克县县长',
+                    'sambutan_bupati_zh' => '<p>欢迎来到丹绒布顿工业园区。</p><p>锡亚克县政府支持工业园区的发展，将其作为推动地区经济增长、促进投资以及创造就业机会的重要战略举措。</p><p>我们希望丹绒布顿工业园区能够发展成为现代化、具有竞争力和可持续发展的工业园区，同时兼顾社区利益和环境保护。</p><p>希望政府、园区管理方、投资者以及社会各界继续加强合作，共同实现惠及各方的发展目标。</p>',
+
+                    'foto_bupati' => null,
+                    'status' => true,
+
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]
             );
 

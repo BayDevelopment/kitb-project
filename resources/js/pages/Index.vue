@@ -14,6 +14,7 @@ import {
     Factory,
     Globe2,
     Handshake,
+    Landmark,
     MapPin,
     MoveRight,
     Navigation,
@@ -21,6 +22,7 @@ import {
     Ship,
     Sparkles,
     TrendingUp,
+    UserRound,
 } from "lucide-vue-next";
 
 import PublicLayout from "@/layouts/PublicLayout.vue";
@@ -50,9 +52,39 @@ interface CompanyProfile {
 interface SambutanDirektur {
     id?: number;
     nama_direktur?: string | null;
+    nama_direktur_en?: string | null;
+    nama_direktur_zh?: string | null;
+
     jabatan_direktur?: string | null;
+    jabatan_direktur_en?: string | null;
+    jabatan_direktur_zh?: string | null;
+
     sambutan_direktur?: string | null;
+    sambutan_direktur_en?: string | null;
+    sambutan_direktur_zh?: string | null;
+
     foto_direktur?: string | null;
+
+    status?: string | boolean | number | null;
+    index?: number | null;
+}
+
+interface SambutanBupati {
+    id?: number;
+    nama_bupati?: string | null;
+    nama_bupati_en?: string | null;
+    nama_bupati_zh?: string | null;
+
+    jabatan_bupati?: string | null;
+    jabatan_bupati_en?: string | null;
+    jabatan_bupati_zh?: string | null;
+
+    sambutan_bupati?: string | null;
+    sambutan_bupati_en?: string | null;
+    sambutan_bupati_zh?: string | null;
+
+    foto_bupati?: string | null;
+
     status?: string | boolean | number | null;
     index?: number | null;
 }
@@ -204,6 +236,7 @@ const props = withDefaults(
     defineProps<{
         companyProfile?: CompanyProfile | null;
         sambutanDirektur?: SambutanDirektur | null;
+        sambutanBupati?: SambutanBupati | null;
         visi?: Visi | null;
         anakUsahas?: AnakUsaha[];
         mitraPerusahaans?: MitraPerusahaan[];
@@ -217,6 +250,7 @@ const props = withDefaults(
     {
         companyProfile: null,
         sambutanDirektur: null,
+        sambutanBupati: null,
         visi: null,
         anakUsahas: () => [],
         mitraPerusahaans: () => [],
@@ -670,10 +704,14 @@ const companyDescription = computed(() =>
 );
 
 /* =========================================================
- * SAMBUTAN DIREKTUR
+ * SAMBUTAN DIREKTUR & BUPATI
  * ========================================================= */
 
 const isMounted = ref(false);
+
+type SambutanType = "direktur" | "bupati";
+
+const activeSambutan = ref<SambutanType>("direktur");
 const sambutanExpanded = ref(false);
 
 const direkturName = computed(() =>
@@ -690,6 +728,74 @@ const direkturPhoto = computed(() =>
 
 const direkturRaw = computed(() =>
     localizedFirstValue(props.sambutanDirektur, ["sambutan_direktur"]),
+);
+
+const bupatiName = computed(() =>
+    localizedFirstValue(props.sambutanBupati, ["nama_bupati"]),
+);
+
+const bupatiPosition = computed(() =>
+    localizedFirstValue(props.sambutanBupati, ["jabatan_bupati"]),
+);
+
+const bupatiPhoto = computed(() =>
+    storageUrl(firstValue(props.sambutanBupati, ["foto_bupati"])),
+);
+
+const bupatiRaw = computed(() =>
+    localizedFirstValue(props.sambutanBupati, ["sambutan_bupati"]),
+);
+
+function isStatusActive(
+    value: string | boolean | number | null | undefined,
+): boolean {
+    return value === true || value === 1 || value === "1";
+}
+
+const hasSambutanDirektur = computed(() => {
+    return Boolean(
+        props.sambutanDirektur &&
+        isStatusActive(props.sambutanDirektur.status) &&
+        (direkturName.value ||
+            direkturPosition.value ||
+            direkturRaw.value ||
+            direkturPhoto.value),
+    );
+});
+
+const hasSambutanBupati = computed(() => {
+    return Boolean(
+        props.sambutanBupati &&
+        isStatusActive(props.sambutanBupati.status) &&
+        (bupatiName.value ||
+            bupatiPosition.value ||
+            bupatiRaw.value ||
+            bupatiPhoto.value),
+    );
+});
+
+const hasSambutan = computed(
+    () => hasSambutanDirektur.value || hasSambutanBupati.value,
+);
+
+const activeSambutanName = computed(() =>
+    activeSambutan.value === "direktur" ? direkturName.value : bupatiName.value,
+);
+
+const activeSambutanPosition = computed(() =>
+    activeSambutan.value === "direktur"
+        ? direkturPosition.value
+        : bupatiPosition.value,
+);
+
+const activeSambutanPhoto = computed(() =>
+    activeSambutan.value === "direktur"
+        ? direkturPhoto.value
+        : bupatiPhoto.value,
+);
+
+const activeSambutanRaw = computed(() =>
+    activeSambutan.value === "direktur" ? direkturRaw.value : bupatiRaw.value,
 );
 
 function stripTags(value: string): string {
@@ -777,7 +883,6 @@ function cleanRichNode(node: Node, documentRef: Document): Node | null {
 
             if (/^https?:\/\//i.test(href)) {
                 target.setAttribute("target", "_blank");
-
                 target.setAttribute("rel", "noopener noreferrer");
             }
         }
@@ -804,9 +909,7 @@ function sanitizeRichText(value: string): string {
     }
 
     const parser = new DOMParser();
-
     const parsed = parser.parseFromString(value, "text/html");
-
     const container = parsed.createElement("div");
 
     Array.from(parsed.body.childNodes).forEach((node) => {
@@ -820,33 +923,42 @@ function sanitizeRichText(value: string): string {
     return container.innerHTML;
 }
 
-const direkturHtml = computed(() => {
-    if (!direkturRaw.value) {
+const activeSambutanHtml = computed(() => {
+    const raw = activeSambutanRaw.value;
+
+    if (!raw) {
         return "";
     }
 
-    const raw = direkturRaw.value.trim();
+    const value = raw.trim();
 
-    if (!raw.includes("<")) {
-        return plainTextToHtml(raw);
+    if (!value.includes("<")) {
+        return plainTextToHtml(value);
     }
 
-    return sanitizeRichText(raw);
+    return sanitizeRichText(value);
 });
 
 const sambutanIsLong = computed(() => {
-    return stripTags(direkturRaw.value).length > 700;
+    return stripTags(activeSambutanRaw.value).length > 700;
 });
 
-const hasSambutanDirektur = computed(() => {
-    return Boolean(
-        props.sambutanDirektur &&
-        (direkturName.value ||
-            direkturPosition.value ||
-            direkturRaw.value ||
-            direkturPhoto.value),
-    );
-});
+function selectSambutan(type: SambutanType): void {
+    if (type === "direktur" && !hasSambutanDirektur.value) {
+        return;
+    }
+
+    if (type === "bupati" && !hasSambutanBupati.value) {
+        return;
+    }
+
+    activeSambutan.value = type;
+    sambutanExpanded.value = false;
+}
+
+if (!hasSambutanDirektur.value && hasSambutanBupati.value) {
+    activeSambutan.value = "bupati";
+}
 
 /* =========================================================
  * VISI & MISI
@@ -1575,170 +1687,321 @@ onBeforeUnmount(() => {
         </section>
 
         <!-- =====================================================
-             SAMBUTAN DIREKTUR
+             SAMBUTAN DIREKTUR & BUPATI
              ===================================================== -->
 
         <section
-            v-if="hasSambutanDirektur"
-            id="sambutan-direktur"
-            class="relative overflow-hidden bg-slate-50 py-16 sm:py-24 md:py-28"
+            v-if="hasSambutan"
+            id="sambutan"
+            class="relative overflow-hidden bg-slate-50 py-16 sm:py-24 md:py-28 dark:bg-slate-900"
         >
             <div
-                class="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full bg-kitb-teal-100/60 blur-3xl"
+                class="pointer-events-none absolute -left-40 top-10 h-80 w-80 rounded-full bg-kitb-teal-100/60 blur-3xl dark:bg-kitb-teal-500/10"
                 aria-hidden="true"
             />
 
             <div
-                class="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-kitb-navy-100/60 blur-3xl"
+                class="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-kitb-navy-100/60 blur-3xl dark:bg-kitb-navy-500/10"
                 aria-hidden="true"
             />
 
             <div class="relative mx-auto max-w-7xl px-5 sm:px-6 md:px-10">
                 <div
                     v-fade-in
-                    class="grid gap-10 lg:gap-16"
-                    :class="
-                        direkturPhoto
-                            ? 'lg:grid-cols-[minmax(280px,0.62fr)_minmax(0,1.38fr)] lg:items-start'
-                            : ''
-                    "
+                    class="mb-10 flex flex-col items-center text-center"
                 >
-                    <figure
-                        v-if="direkturPhoto"
-                        class="relative mx-auto w-full max-w-[22rem] sm:max-w-sm lg:sticky lg:top-28 lg:mx-0 lg:max-w-md"
+                    <div class="mb-5 flex items-center gap-3">
+                        <span class="h-px w-10 bg-kitb-teal-500" />
+                        <p
+                            class="text-[12px] font-semibold uppercase tracking-[0.16em] text-kitb-teal-600 dark:text-kitb-teal-300"
+                        >
+                            {{
+                                currentLanguage === "en"
+                                    ? "Leadership Message"
+                                    : currentLanguage === "zh"
+                                      ? "领导致辞"
+                                      : "Sambutan"
+                            }}
+                        </p>
+                        <span class="h-px w-10 bg-kitb-teal-500" />
+                    </div>
+
+                    <h2
+                        class="font-display text-3xl font-bold tracking-[-0.025em] text-kitb-green-900 dark:text-white sm:text-4xl md:text-5xl"
                     >
-                        <div
-                            class="pointer-events-none absolute -left-8 -top-8 h-32 w-32 rounded-full bg-kitb-teal-300/25 blur-2xl"
-                            aria-hidden="true"
-                        />
+                        {{
+                            currentLanguage === "en"
+                                ? "A Message for the Future"
+                                : currentLanguage === "zh"
+                                  ? "面向未来的致辞"
+                                  : "Sambutan untuk Masa Depan"
+                        }}
+                    </h2>
 
-                        <div
-                            class="pointer-events-none absolute -bottom-10 -right-8 h-40 w-40 rounded-full bg-kitb-navy-300/25 blur-3xl"
-                            aria-hidden="true"
-                        />
+                    <p
+                        class="mt-4 max-w-2xl text-sm leading-7 text-slate-500 dark:text-slate-400 sm:text-base"
+                    >
+                        {{
+                            currentLanguage === "en"
+                                ? "Messages from the leadership and regional government for the development of Tanjung Buton Industrial Estate."
+                                : currentLanguage === "zh"
+                                  ? "来自企业领导及地方政府对丹戎布通工业园区发展的寄语。"
+                                  : "Pesan dari pimpinan perusahaan dan pemerintah daerah untuk pengembangan Kawasan Industri Tanjung Buton."
+                        }}
+                    </p>
+                </div>
 
-                        <div
-                            class="relative overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white p-2 shadow-xl shadow-kitb-navy-900/10 sm:rounded-[2rem]"
+                <div v-fade-in class="mb-10 flex justify-center">
+                    <div
+                        class="inline-flex w-full max-w-xl gap-[5px] rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-white/10 dark:bg-slate-800"
+                        role="tablist"
+                        aria-label="Sambutan"
+                    >
+                        <button
+                            v-if="hasSambutanDirektur"
+                            type="button"
+                            role="tab"
+                            :aria-selected="activeSambutan === 'direktur'"
+                            class="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300"
+                            :class="
+                                activeSambutan === 'direktur'
+                                    ? 'bg-kitb-green-800 text-white shadow-md'
+                                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
+                            "
+                            @click="selectSambutan('direktur')"
+                        >
+                            <UserRound class="h-4 w-4 shrink-0" />
+                            <span>
+                                {{
+                                    currentLanguage === "en"
+                                        ? "Director's Message"
+                                        : currentLanguage === "zh"
+                                          ? "董事致辞"
+                                          : "Sambutan Direktur"
+                                }}
+                            </span>
+                        </button>
+
+                        <button
+                            v-if="hasSambutanBupati"
+                            type="button"
+                            role="tab"
+                            :aria-selected="activeSambutan === 'bupati'"
+                            class="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300"
+                            :class="
+                                activeSambutan === 'bupati'
+                                    ? 'bg-kitb-green-800 text-white shadow-md'
+                                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
+                            "
+                            @click="selectSambutan('bupati')"
+                        >
+                            <Landmark class="h-4 w-4 shrink-0" />
+                            <span>
+                                {{
+                                    currentLanguage === "en"
+                                        ? "Regent's Message"
+                                        : currentLanguage === "zh"
+                                          ? "摄政致辞"
+                                          : "Sambutan Bupati"
+                                }}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <Transition
+                    mode="out-in"
+                    enter-active-class="transition duration-300 ease-out"
+                    enter-from-class="translate-y-3 opacity-0"
+                    enter-to-class="translate-y-0 opacity-100"
+                    leave-active-class="transition duration-200 ease-in"
+                    leave-from-class="translate-y-0 opacity-100"
+                    leave-to-class="-translate-y-2 opacity-0"
+                >
+                    <div
+                        :key="activeSambutan"
+                        v-fade-in
+                        class="grid gap-10 lg:gap-16"
+                        :class="
+                            activeSambutanPhoto
+                                ? 'lg:grid-cols-[minmax(280px,0.62fr)_minmax(0,1.38fr)] lg:items-start'
+                                : ''
+                        "
+                    >
+                        <figure
+                            v-if="activeSambutanPhoto"
+                            class="relative mx-auto w-full max-w-[22rem] sm:max-w-sm lg:sticky lg:top-28 lg:mx-0 lg:max-w-md"
                         >
                             <div
-                                class="overflow-hidden rounded-[1.4rem] bg-slate-100 sm:rounded-[1.6rem]"
-                            >
-                                <img
-                                    :src="direkturPhoto"
-                                    :alt="
-                                        direkturName
-                                            ? trans(
-                                                  'home.director.photo_alt_named',
-                                                  { name: direkturName },
-                                              )
-                                            : trans('home.director.photo_alt')
-                                    "
-                                    class="aspect-[4/5] h-auto w-full object-cover object-top transition-transform duration-700 hover:scale-[1.025]"
-                                    loading="lazy"
-                                    decoding="async"
-                                />
-                            </div>
-                        </div>
-
-                        <figcaption
-                            v-if="direkturName || direkturPosition"
-                            class="relative mt-5 text-center lg:hidden"
-                        >
-                            <p
-                                v-if="direkturName"
-                                class="font-display text-lg font-bold text-slate-900"
-                            >
-                                {{ direkturName }}
-                            </p>
-
-                            <p
-                                v-if="direkturPosition"
-                                class="mt-0.5 text-sm font-medium text-kitb-teal-600"
-                            >
-                                {{ direkturPosition }}
-                            </p>
-                        </figcaption>
-                    </figure>
-
-                    <div class="relative min-w-0">
-                        <div class="mb-5 flex items-center gap-3">
-                            <span class="h-px w-10 bg-kitb-teal-500" />
-
-                            <p
-                                class="text-[12px] font-semibold uppercase tracking-[0.16em] text-kitb-teal-600"
-                            >
-                                {{ trans("home.director.eyebrow") }}
-                            </p>
-                        </div>
-
-                        <div
-                            class="relative rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur-sm sm:rounded-[2rem] sm:p-9 md:p-10"
-                        >
-                            <Quote
-                                class="pointer-events-none absolute right-5 top-5 h-10 w-10 text-kitb-navy-900/[0.07] sm:right-8 sm:top-7 sm:h-14 sm:w-14"
+                                class="pointer-events-none absolute -left-8 -top-8 h-32 w-32 rounded-full bg-kitb-teal-300/25 blur-2xl"
                                 aria-hidden="true"
                             />
 
-                            <div class="relative">
-                                <div
-                                    class="rich-content"
-                                    :class="
-                                        sambutanIsLong && !sambutanExpanded
-                                            ? 'rich-content-collapsed'
-                                            : ''
-                                    "
-                                    v-html="direkturHtml"
-                                />
-
-                                <div
-                                    v-if="sambutanIsLong && !sambutanExpanded"
-                                    class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/85 to-transparent"
-                                    aria-hidden="true"
-                                />
-                            </div>
-
-                            <button
-                                v-if="sambutanIsLong"
-                                type="button"
-                                class="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-kitb-green-700 transition-all duration-200 hover:border-kitb-green-700/30 hover:bg-kitb-green-700 hover:text-white"
-                                :aria-expanded="sambutanExpanded"
-                                @click="sambutanExpanded = !sambutanExpanded"
-                            >
-                                {{
-                                    sambutanExpanded
-                                        ? trans("home.director.show_less")
-                                        : trans("home.director.read_more")
-                                }}
-
-                                <ChevronDown
-                                    class="h-4 w-4 transition-transform duration-300"
-                                    :class="
-                                        sambutanExpanded ? 'rotate-180' : ''
-                                    "
-                                />
-                            </button>
+                            <div
+                                class="pointer-events-none absolute -bottom-10 -right-8 h-40 w-40 rounded-full bg-kitb-navy-300/25 blur-3xl"
+                                aria-hidden="true"
+                            />
 
                             <div
-                                v-if="direkturName || direkturPosition"
-                                class="mt-8 border-t border-slate-200 pt-6"
+                                class="relative overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white p-2 shadow-xl shadow-kitb-navy-900/10 dark:border-white/10 dark:bg-slate-800 dark:shadow-black/20 sm:rounded-[2rem]"
+                            >
+                                <div
+                                    class="overflow-hidden rounded-[1.4rem] bg-slate-100 dark:bg-slate-700 sm:rounded-[1.6rem]"
+                                >
+                                    <img
+                                        :src="activeSambutanPhoto"
+                                        :alt="
+                                            activeSambutanName
+                                                ? activeSambutan === 'direktur'
+                                                    ? trans(
+                                                          'home.director.photo_alt_named',
+                                                          {
+                                                              name: activeSambutanName,
+                                                          },
+                                                      )
+                                                    : currentLanguage === 'en'
+                                                      ? `Photo of ${activeSambutanName}`
+                                                      : currentLanguage === 'zh'
+                                                        ? `${activeSambutanName}的照片`
+                                                        : `Foto ${activeSambutanName}`
+                                                : activeSambutan === 'direktur'
+                                                  ? trans(
+                                                        'home.director.photo_alt',
+                                                    )
+                                                  : currentLanguage === 'en'
+                                                    ? 'Regent photo'
+                                                    : currentLanguage === 'zh'
+                                                      ? '摄政照片'
+                                                      : 'Foto Bupati'
+                                        "
+                                        class="aspect-[4/5] h-auto w-full object-cover object-top transition-transform duration-700 hover:scale-[1.025]"
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                </div>
+                            </div>
+
+                            <figcaption
+                                v-if="
+                                    activeSambutanName || activeSambutanPosition
+                                "
+                                class="relative mt-5 text-center lg:hidden"
                             >
                                 <p
-                                    v-if="direkturName"
-                                    class="font-display text-lg font-bold text-slate-900 sm:text-xl"
+                                    v-if="activeSambutanName"
+                                    class="font-display text-lg font-bold text-slate-900 dark:text-white"
                                 >
-                                    {{ direkturName }}
+                                    {{ activeSambutanName }}
                                 </p>
 
                                 <p
-                                    v-if="direkturPosition"
-                                    class="mt-1 text-sm font-medium text-kitb-teal-600"
+                                    v-if="activeSambutanPosition"
+                                    class="mt-0.5 text-sm font-medium text-kitb-teal-600 dark:text-kitb-teal-300"
                                 >
-                                    {{ direkturPosition }}
+                                    {{ activeSambutanPosition }}
                                 </p>
+                            </figcaption>
+                        </figure>
+
+                        <div class="relative min-w-0">
+                            <div class="mb-5 flex items-center gap-3">
+                                <span class="h-px w-10 bg-kitb-teal-500" />
+
+                                <p
+                                    class="text-[12px] font-semibold uppercase tracking-[0.16em] text-kitb-teal-600 dark:text-kitb-teal-300"
+                                >
+                                    {{
+                                        activeSambutan === "direktur"
+                                            ? currentLanguage === "en"
+                                                ? "Director"
+                                                : currentLanguage === "zh"
+                                                  ? "董事"
+                                                  : "Direktur"
+                                            : currentLanguage === "en"
+                                              ? "Regent"
+                                              : currentLanguage === "zh"
+                                                ? "摄政"
+                                                : "Bupati"
+                                    }}
+                                </p>
+                            </div>
+
+                            <div
+                                class="relative rounded-[1.5rem] border border-slate-200/80 bg-white/90 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-800/90 sm:rounded-[2rem] sm:p-9 md:p-10"
+                            >
+                                <Quote
+                                    class="pointer-events-none absolute right-5 top-5 h-10 w-10 text-kitb-navy-900/[0.07] dark:text-white/[0.06] sm:right-8 sm:top-7 sm:h-14 sm:w-14"
+                                    aria-hidden="true"
+                                />
+
+                                <div class="relative">
+                                    <div
+                                        class="rich-content dark:text-slate-200"
+                                        :class="
+                                            sambutanIsLong && !sambutanExpanded
+                                                ? 'rich-content-collapsed'
+                                                : ''
+                                        "
+                                        v-html="activeSambutanHtml"
+                                    />
+
+                                    <div
+                                        v-if="
+                                            sambutanIsLong && !sambutanExpanded
+                                        "
+                                        class="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/85 to-transparent dark:from-slate-800 dark:via-slate-800/90"
+                                        aria-hidden="true"
+                                    />
+                                </div>
+
+                                <button
+                                    v-if="sambutanIsLong"
+                                    type="button"
+                                    class="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-kitb-green-700 transition-all duration-200 hover:border-kitb-green-700/30 hover:bg-kitb-green-700 hover:text-white dark:border-white/10 dark:bg-slate-700 dark:text-kitb-teal-300"
+                                    :aria-expanded="sambutanExpanded"
+                                    @click="
+                                        sambutanExpanded = !sambutanExpanded
+                                    "
+                                >
+                                    {{
+                                        sambutanExpanded
+                                            ? trans("home.director.show_less")
+                                            : trans("home.director.read_more")
+                                    }}
+
+                                    <ChevronDown
+                                        class="h-4 w-4 transition-transform duration-300"
+                                        :class="
+                                            sambutanExpanded ? 'rotate-180' : ''
+                                        "
+                                    />
+                                </button>
+
+                                <div
+                                    v-if="
+                                        activeSambutanName ||
+                                        activeSambutanPosition
+                                    "
+                                    class="mt-8 border-t border-slate-200 pt-6 dark:border-white/10"
+                                >
+                                    <p
+                                        v-if="activeSambutanName"
+                                        class="font-display text-lg font-bold text-slate-900 dark:text-white sm:text-xl"
+                                    >
+                                        {{ activeSambutanName }}
+                                    </p>
+
+                                    <p
+                                        v-if="activeSambutanPosition"
+                                        class="mt-1 text-sm font-medium text-kitb-teal-600 dark:text-kitb-teal-300"
+                                    >
+                                        {{ activeSambutanPosition }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </Transition>
             </div>
         </section>
 

@@ -407,14 +407,14 @@ const socialLinks = computed(() => {
                     class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/40"
                 >
                     <Link
-                        href="/kebijakan-privasi"
+                        href="/kebijakan-privasi/PrivacyPolicy"
                         class="transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                     >
                         {{ trans("footer.privacy_policy") }}
                     </Link>
 
                     <Link
-                        href="/pengaduan"
+                        href="/pengaduan/Complaints"
                         class="transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kitb-teal-300 focus-visible:ring-offset-2 focus-visible:ring-offset-kitb-navy-900"
                     >
                         {{ trans("footer.complaints") }}

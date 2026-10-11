@@ -12,6 +12,7 @@ use App\Models\PeluangInvestasi;
 use App\Models\PetaKawasan;
 use App\Models\ProfilKawasan;
 use App\Models\Rute;
+use App\Models\SambutanBupati;
 use App\Models\SambutanDirektur;
 use App\Models\Visi;
 use Inertia\Inertia;
@@ -107,9 +108,18 @@ class HomeController extends Controller
         | Sambutan Direktur
         |--------------------------------------------------------------------------
         | Hanya data dengan status aktif yang dikirim ke halaman publik.
-        | Jika status false atau data belum tersedia, hasilnya null.
         */
         $sambutanDirektur = SambutanDirektur::query()
+            ->where('status', true)
+            ->first();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Sambutan Bupati
+        |--------------------------------------------------------------------------
+        | Hanya data dengan status aktif yang dikirim ke halaman publik.
+        */
+        $sambutanBupati = SambutanBupati::query()
             ->where('status', true)
             ->first();
 
@@ -124,7 +134,10 @@ class HomeController extends Controller
             'rutes' => $rutes,
             'beritas' => $beritas,
             'lowongans' => $lowongans,
+
+            // Sambutan
             'sambutanDirektur' => $sambutanDirektur,
+            'sambutanBupati' => $sambutanBupati,
         ]);
     }
 }

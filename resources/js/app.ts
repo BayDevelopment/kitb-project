@@ -33,6 +33,8 @@ void createInertiaApp({
         switch (true) {
             case name === "Welcome":
             case name === "Index":
+            case name === "PrivacyPolicy":
+            case name === "Complaints":
             case name === "auth/Login":
             case name === "auth/ForgotPassword":
             case name === "auth/ConfirmPassword":
